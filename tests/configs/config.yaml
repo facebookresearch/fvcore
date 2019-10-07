@@ -1,0 +1,4 @@
+_BASE_: "base.yaml"
+KEY2: "config"
+EXPRESSION: !!python/object/apply:eval ["[x ** 2 for x in [1, 2, 3]]"]
+
