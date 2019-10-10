@@ -80,7 +80,6 @@ class TestNativeIO(unittest.TestCase):
             self.assertEqual(f.read(), self._tmpfile_contents)
 
     def test_rm(self):
-        self._tmpdir = tempfile.mkdtemp()
         with open(os.path.join(self._tmpdir, "test_rm.txt"), "w") as f:
             rm_file = f.name
             f.write(self._tmpfile_contents)

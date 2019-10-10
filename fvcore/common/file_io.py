@@ -175,7 +175,7 @@ class PathHandler:
         """
         raise NotImplementedError()
 
-    def _rm(self, path: str):
+    def _rm(self, path: str) -> None:
         """
         Remove the file (not directory) at the provided URI.
 
@@ -241,7 +241,7 @@ class NativePathHandler(PathHandler):
             if e.errno != errno.EEXIST:
                 raise
 
-    def _rm(self, path: str):
+    def _rm(self, path: str) -> None:
         os.remove(path)
 
 
@@ -419,7 +419,7 @@ class PathManager:
         return PathManager.__get_path_handler(path)._mkdirs(path)
 
     @staticmethod
-    def rm(path: str):
+    def rm(path: str) -> None:
         """
         Remove the file (not directory) at the provided URI.
 
