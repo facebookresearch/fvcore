@@ -7,8 +7,9 @@ setup(
     name="fvcore",
     version="0.1",
     author="FAIR",
-    url="unknown",
-    description="Bags of Reusable Components for Computer Vision Research",
+    url="https://github.com/facebookresearch/fvcore",
+    description="Collection of common code shared among different research "
+        "projects in FAIR computer vision team",
     install_requires=[
         "yacs>=0.1.6",
         "pyyaml>=5.1",
@@ -17,5 +18,5 @@ setup(
         "termcolor>=1.1",
         "shapely",
     ],
-    packages=find_packages(exclude=("configs", "tests")),
+    packages=find_packages(exclude=("tests")),
 )
