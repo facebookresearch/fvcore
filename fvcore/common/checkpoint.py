@@ -52,6 +52,7 @@ class Checkpointer(object):
     def save(self, name: str, **kwargs: dict):
         """
         Dump model and checkpointables to a file.
+
         Args:
             name (str): name of the file.
             kwargs (dict): extra arbitrary data to save.
@@ -77,11 +78,12 @@ class Checkpointer(object):
         """
         Load from the given checkpoint. When path points to network file, this
         function has to be called on all ranks.
+
         Args:
             path (str): path or url to the checkpoint. If empty, will not load
                 anything.
         Returns:
-            (dict): extra data loaded from the checkpoint that has not been
+            dict: extra data loaded from the checkpoint that has not been
                 processed. For example, those saved with
                 :meth:`.save(**extra_data)`.
         """
@@ -109,7 +111,7 @@ class Checkpointer(object):
     def has_checkpoint(self):
         """
         Returns:
-            (bool): whether a checkpoint exists in the target directory.
+            bool: whether a checkpoint exists in the target directory.
         """
         save_file = os.path.join(self.save_dir, "last_checkpoint")
         return PathManager.exists(save_file)
@@ -117,7 +119,7 @@ class Checkpointer(object):
     def get_checkpoint_file(self):
         """
         Returns:
-            (str): The latest checkpoint file in target directory.
+            str: The latest checkpoint file in target directory.
         """
         save_file = os.path.join(self.save_dir, "last_checkpoint")
         try:
@@ -132,7 +134,7 @@ class Checkpointer(object):
     def get_all_checkpoint_files(self):
         """
         Returns:
-            (list): All available checkpoint files (.pth files) in target
+            list: All available checkpoint files (.pth files) in target
                 directory.
         """
         all_model_checkpoints = [
@@ -148,12 +150,12 @@ class Checkpointer(object):
         If `resume` is True, this method attempts to resume from the last
         checkpoint, if exists. Otherwise, load checkpoint from the given path.
         This is useful when restarting an interrupted training job.
+
         Args:
             path (str): path to the checkpoint.
-            resume (bool): if True, resume from the last checkpoint if it
-                exists.
+            resume (bool): if True, resume from the last checkpoint if it exists.
         Returns:
-            (checkpoint): loaded checkpoint.
+            checkpoint: loaded checkpoint.
         """
         if resume and self.has_checkpoint():
             path = self.get_checkpoint_file()
@@ -162,6 +164,7 @@ class Checkpointer(object):
     def tag_last_checkpoint(self, last_filename_basename: str):
         """
         Tag the last checkpoint.
+
         Args:
             last_filename_basename (str): the basename of the last filename.
         """
@@ -176,7 +179,7 @@ class Checkpointer(object):
         Args:
             f (str): a locally mounted file path.
         Returns:
-            (dict): with keys "model" and optionally others that are saved by
+            dict: with keys "model" and optionally others that are saved by
                 the checkpointer dict["model"] must be a dict which maps strings
                 to torch.Tensor or numpy arrays.
         """
@@ -269,6 +272,7 @@ class PeriodicCheckpointer:
     def step(self, iteration: int, **kwargs: Any):
         """
         Perform the appropriate action at the given iteration.
+
         Args:
             iteration (int): the current iteration, ranged in [0, max_iter-1].
             kwargs (Any): extra data to save, same as in
@@ -288,6 +292,7 @@ class PeriodicCheckpointer:
         """
         Same argument as :meth:`Checkpointer.save`.
         Use this method to manually save checkpoints outside the schedule.
+
         Args:
             name (str): file name.
             kwargs (Any): extra data to save, same as in
@@ -303,7 +308,7 @@ def get_missing_parameters_message(keys: list):
     Args:
         keys (list[str]): List of keys that were not found in the checkpoint.
     Returns:
-        msg (str): message.
+        str: message.
     """
     groups = _group_checkpoint_keys(keys)
     msg = "Some model parameters are not in the checkpoint:\n"
@@ -320,7 +325,7 @@ def get_unexpected_parameters_message(keys: list):
     Args:
         keys (list[str]): List of keys that were not found in the model.
     Returns:
-        msg (str): message.
+        str: message.
     """
     groups = _group_checkpoint_keys(keys)
     msg = "The checkpoint contains parameters not used by the model:\n"
@@ -372,7 +377,7 @@ def _group_checkpoint_keys(keys: list):
         keys (list[str]): list of parameter names, i.e. keys in the model
             checkpoint dict.
     Returns:
-        groups (dict[list]): keys with common prefixes are grouped into lists.
+        dict[list]: keys with common prefixes are grouped into lists.
     """
     groups = defaultdict(list)
     for key in keys:
@@ -391,7 +396,7 @@ def _group_to_str(group: list):
     Args:
         group (list[str]): list of parameter name suffixes.
     Returns:
-        (str): formated string.
+        str: formated string.
     """
     if len(group) == 0:
         return ""

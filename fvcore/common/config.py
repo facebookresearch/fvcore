@@ -92,9 +92,11 @@ class CfgNode(_CfgNode):
 
     def merge_from_file(self, cfg_filename: str, allow_unsafe: bool = False):
         """
+        Merge configs from a given yaml file.
+
         Args:
-            cfg_filename (str): the file name of the yaml config.
-            allow_unsafe (bool): whether to allow loading the config file with
+            cfg_filename: the file name of the yaml config.
+            allow_unsafe: whether to allow loading the config file with
                 `yaml.unsafe_load`.
         """
         loaded_cfg = CfgNode.load_yaml_with_base(

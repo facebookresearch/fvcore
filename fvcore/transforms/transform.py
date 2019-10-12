@@ -21,6 +21,10 @@ __all__ = [
 ]
 
 
+# NOTE: to document methods in subclasses, it's sufficient to only document those whose
+# implemenation needs special attention.
+
+
 class Transform(metaclass=ABCMeta):
     """
     Base class for implementations of __deterministic__ transformations for
@@ -37,6 +41,7 @@ class Transform(metaclass=ABCMeta):
     def _set_attributes(self, params: list = None):
         """
         Set attributes from the input list of parameters.
+
         Args:
             params (list): list of parameters.
         """
@@ -50,12 +55,13 @@ class Transform(metaclass=ABCMeta):
     def apply_image(self, img: np.ndarray):
         """
         Apply the transform on an image.
+
         Args:
             img (ndarray): of shape NxHxWxC, or HxWxC or HxW. The array can be
                 of type uint8 in range [0, 255], or floating point in range
                 [0, 1] or [0, 255].
         Returns:
-            img (ndarray): image after apply the transformation.
+            ndarray: image after apply the transformation.
         """
         pass
 
@@ -63,11 +69,11 @@ class Transform(metaclass=ABCMeta):
     def apply_coords(self, coords: np.ndarray):
         """
         Apply the transform on coordinates.
+
         Args:
-            coords (ndarray): floating point array of shape Nx2. Each row is
-                (x, y).
+            coords (ndarray): floating point array of shape Nx2. Each row is (x, y).
         Returns:
-            coords (ndarray): coordinates after apply the transformation.
+            ndarray: coordinates after apply the transformation.
         """
 
         pass
@@ -76,11 +82,13 @@ class Transform(metaclass=ABCMeta):
         """
         Apply the transform on a full-image segmentation.
         By default will just perform "apply_image".
+
         Args:
             segmentation (ndarray): of shape HxW. The array should have integer
             or bool dtype.
+
         Returns:
-            segmentation (ndarray): segmentation after apply the transformation.
+            ndarray: segmentation after apply the transformation.
         """
         return self.apply_image(segmentation)
 
@@ -91,11 +99,12 @@ class Transform(metaclass=ABCMeta):
         minimum/maximum to create a new axis-aligned box.
         Note that this default may change the size of your box, e.g. in
         rotations.
+
         Args:
             box (ndarray): Nx4 floating point array of XYXY format in absolute
                 coordinates.
         Returns:
-            box (ndarray): box after apply the transformation.
+            ndarray: box after apply the transformation.
         """
         # Indexes of converting (x0, y0, x1, y1) box into 4 coordinates of
         # ([x0, y0], [x1, y0], [x0, y1], [x1, y1]).
@@ -112,11 +121,12 @@ class Transform(metaclass=ABCMeta):
         Apply the transform on a list of polygons, each represented by a Nx2
         array.
         By default will just transform all the points.
+
         Args:
             polygon (list[ndarray]): each is a Nx2 floating point array of
                 (x, y) format in absolute coordinates.
         Returns:
-            polygon (list[ndarray]): polygon after apply the transformation.
+            list[ndarray]: polygon after apply the transformation.
         """
         return [self.apply_coords(p) for p in polygons]
 
@@ -178,10 +188,10 @@ class TransformList:
         """
         Apply the transforms on the input.
         Args:
-            x (_T): input to apply the transform operations.
+            x: input to apply the transform operations.
             meth (str): meth.
         Returns:
-            x (_T): after apply the transformation.
+            x: after apply the transformation.
         """
         for t in self.transforms:
             x = getattr(t, meth)(x)
@@ -203,7 +213,7 @@ class TransformList:
         Args:
             other (TransformList): transformation to add.
         Returns:
-            (TransformList): list of transforms.
+            TransformList: list of transforms.
         """
         others = (
             other.transforms if isinstance(other, TransformList) else [other]
@@ -215,7 +225,7 @@ class TransformList:
         Args:
             other (TransformList): transformation to add.
         Returns:
-            (TransformList): list of transforms.
+            TransformList: list of transforms.
         """
         others = (
             other.transforms if isinstance(other, TransformList) else [other]
@@ -228,7 +238,7 @@ class TransformList:
         Args:
             other (TransformList): transformation to add.
         Returns:
-            (TransformList): list of transforms.
+            TransformList: list of transforms.
         """
         others = (
             other.transforms if isinstance(other, TransformList) else [other]
@@ -246,15 +256,6 @@ class HFlipTransform(Transform):
         self._set_attributes(locals())
 
     def apply_image(self, img: np.ndarray) -> np.ndarray:
-        """
-        Flip the image(s).
-        Args:
-            img (ndarray): of shape HxW, HxWxC, or NxHxWxC. The array can be
-                of type uint8 in range [0, 255], or floating point in range
-                [0, 1] or [0, 255].
-        Returns:
-            (ndarray): the flipped image(s).
-        """
         tensor = torch.from_numpy(np.ascontiguousarray(img))
         if len(tensor.shape) == 2:
             # For dimension of HxW.
@@ -265,14 +266,6 @@ class HFlipTransform(Transform):
         return tensor.numpy()
 
     def apply_coords(self, coords: np.ndarray) -> np.ndarray:
-        """
-        Flip the coordinates.
-        Args:
-            coords (ndarray): floating point array of shape Nx2. Each row is
-                (x, y).
-        Returns:
-            coords (ndarray): the flipped coordinates.
-        """
         coords[:, 0] = self.width - coords[:, 0]
         return coords
 
@@ -286,26 +279,9 @@ class NoOpTransform(Transform):
         super().__init__()
 
     def apply_image(self, img: np.ndarray) -> np.ndarray:
-        """
-        Return the image(s).
-        Args:
-            img (ndarray): of shape NxHxWxC, or HxWxC or HxW. The array can be
-                of type uint8 in range [0, 255], or floating point in range
-                [0, 1] or [0, 255].
-        Returns:
-            img (ndarray): the image(s).
-        """
         return img
 
     def apply_coords(self, coords: np.ndarray) -> np.ndarray:
-        """
-        Return the coordinates.
-        Args:
-            coords (ndarray): floating point array of shape Nx2. Each row is
-                (x, y).
-        Returns:
-            coords (ndarray): the coordinates.
-        """
         return coords
 
 
@@ -330,6 +306,7 @@ class ScaleTransform(Transform):
     def apply_image(self, img: np.ndarray, interp: str = None) -> np.ndarray:
         """
         Resize the image(s).
+
         Args:
             img (ndarray): of shape NxHxWxC, or HxWxC or HxW. The array can be
                 of type uint8 in range [0, 255], or floating point in range
@@ -339,7 +316,7 @@ class ScaleTransform(Transform):
                 Details can be found in:
                 https://pytorch.org/docs/stable/nn.functional.html
         Returns:
-            (ndarray): resized image(s).
+            ndarray: resized image(s).
         """
         interp_method = interp if interp is not None else self.interp
         # Option of align_corners is only supported for linear, bilinear,
@@ -358,27 +335,11 @@ class ScaleTransform(Transform):
         return to_numpy(float_tensor, img.shape, img.dtype)
 
     def apply_coords(self, coords: np.ndarray) -> np.ndarray:
-        """
-        Resize the coordinates.
-        Args:
-            coords (ndarray): floating point array of shape Nx2. Each row is
-                (x, y).
-        Returns:
-            coords (ndarray): resized coordinates.
-        """
         coords[:, 0] = coords[:, 0] * (self.new_w * 1.0 / self.w)
         coords[:, 1] = coords[:, 1] * (self.new_h * 1.0 / self.h)
         return coords
 
     def apply_segmentation(self, segmentation: np.ndarray) -> np.ndarray:
-        """
-        Apply resize on the full-image segmentation.
-        Args:
-            segmentation (ndarray): of shape HxW. The array should have integer
-                or bool dtype.
-        Returns:
-            segmentation (ndarray): resized segmentation.
-        """
         segmentation = self.apply_image(segmentation, interp="nearest")
         return segmentation
 
@@ -400,6 +361,7 @@ class GridSampleTransform(Transform):
     def apply_image(self, img: np.ndarray, interp: str = None) -> np.ndarray:
         """
         Apply grid sampling on the image(s).
+
         Args:
             img (ndarray): of shape NxHxWxC, or HxWxC or HxW. The array can be
                 of type uint8 in range [0, 255], or floating point in range
@@ -407,7 +369,7 @@ class GridSampleTransform(Transform):
             interp (str): interpolation methods. Options include `nearest` and
                 `bilinear`.
         Returns:
-            (ndarray): grid sampled image(s).
+            ndarray: grid sampled image(s).
         """
         interp_method = interp if interp is not None else self.interp
         float_tensor = torch.nn.functional.grid_sample(
@@ -421,22 +383,11 @@ class GridSampleTransform(Transform):
 
     def apply_coords(self, coords: np.ndarray):
         """
-        Apply no the transform on coordinates.
-        Args:
-            coords (ndarray): floating point array of shape Nx2. Each row is
-                (x, y).
+        Not supported.
         """
         raise NotImplementedError()
 
     def apply_segmentation(self, segmentation: np.ndarray) -> np.ndarray:
-        """
-        Apply grad sampling on the full-image segmentation.
-        Args:
-            segmentation (ndarray): of shape HxW. The array should have integer
-                or bool dtype.
-        Returns:
-            segmentation (ndarray): grid sampled segmentation.
-        """
         segmentation = self.apply_image(segmentation, interp="nearest")
         return segmentation
 
@@ -451,15 +402,6 @@ class CropTransform(Transform):
         self._set_attributes(locals())
 
     def apply_image(self, img: np.ndarray) -> np.ndarray:
-        """
-        Crop the image(s).
-        Args:
-            img (ndarray): of shape NxHxWxC, or HxWxC or HxW. The array can be
-                of type uint8 in range [0, 255], or floating point in range
-                [0, 1] or [0, 255].
-        Returns:
-            (ndarray): cropped image(s).
-        """
         if len(img.shape) <= 3:
             return img[self.y0 : self.y0 + self.h, self.x0 : self.x0 + self.w]
         else:
@@ -468,27 +410,15 @@ class CropTransform(Transform):
             ]
 
     def apply_coords(self, coords: np.ndarray) -> np.ndarray:
-        """
-        Apply crop transform on coordinates.
-        Args:
-            coords (ndarray): floating point array of shape Nx2. Each row is
-                (x, y).
-        Returns:
-            (ndarray): cropped coordinates.
-        """
         coords[:, 0] -= self.x0
         coords[:, 1] -= self.y0
         return coords
 
     def apply_polygons(self, polygons: list) -> list:
         """
-        Apply crop transform on a list of polygons, each represented by a Nx2
-        array.
-        Args:
-            polygon (list[ndarray]): each is a Nx2 floating point array of
-                (x, y) format in absolute coordinates.
-        Returns:
-            (ndarray): cropped polygons.
+        Apply crop transform on a list of polygons, each represented by a Nx2 array.
+        It will crop the polygon with the box, therefore
+        the number of points in the polygon might change.
         """
         import shapely.geometry as geometry
 
@@ -534,7 +464,8 @@ class BlendTransform(Transform):
     ):
         """
         Blends the input image (dst_image) with the src_image using formula:
-            src_weight * src_image + dst_weight * dst_image
+        ``src_weight * src_image + dst_weight * dst_image``
+
         Args:
             src_image (ndarray): Input image is blended with this image
             src_weight (float): Blend weighting of src_image
@@ -546,6 +477,7 @@ class BlendTransform(Transform):
     def apply_image(self, img: np.ndarray, interp: str = None) -> np.ndarray:
         """
         Apply blend transform on the image(s).
+
         Args:
             img (ndarray): of shape NxHxWxC, or HxWxC or HxW. The array can be
                 of type uint8 in range [0, 255], or floating point in range
@@ -553,7 +485,7 @@ class BlendTransform(Transform):
             interp (str): keep this option for consistency, perform blend would not
                 require interpolation.
         Returns:
-            (ndarray): blended image(s).
+            ndarray: blended image(s).
         """
         if img.dtype == np.uint8:
             img = img.astype(np.float32)
@@ -563,23 +495,7 @@ class BlendTransform(Transform):
             return self.src_weight * self.src_image + self.dst_weight * img
 
     def apply_coords(self, coords: np.ndarray) -> np.ndarray:
-        """
-        Apply no transform on the coordinates.
-        Args:
-            coords (ndarray): floating point array of shape Nx2. Each row is
-                (x, y).
-        Returns:
-            coords (ndarray): original coordinates.
-        """
         return coords
 
     def apply_segmentation(self, segmentation: np.ndarray) -> np.ndarray:
-        """
-        Apply no transform on the full-image segmentation.
-        Args:
-            segmentation (ndarray): of shape HxW. The array should have integer
-                or bool dtype.
-        Returns:
-            segmentation (ndarray): original segmentation.
-        """
         return segmentation
