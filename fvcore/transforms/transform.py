@@ -72,8 +72,13 @@ class Transform(metaclass=ABCMeta):
 
         Args:
             coords (ndarray): floating point array of shape Nx2. Each row is (x, y).
+
         Returns:
             ndarray: coordinates after apply the transformation.
+
+        Note:
+            The coordinates are not pixel indices. Coordinates on an image of
+            shape (H, W) are in range [0, W] or [0, H].
         """
 
         pass
@@ -105,6 +110,10 @@ class Transform(metaclass=ABCMeta):
                 coordinates.
         Returns:
             ndarray: box after apply the transformation.
+
+        Note:
+            The coordinates are not pixel indices. Coordinates on an image of
+            shape (H, W) are in range [0, W] or [0, H].
         """
         # Indexes of converting (x0, y0, x1, y1) box into 4 coordinates of
         # ([x0, y0], [x1, y0], [x0, y1], [x1, y1]).
@@ -127,6 +136,10 @@ class Transform(metaclass=ABCMeta):
                 (x, y) format in absolute coordinates.
         Returns:
             list[ndarray]: polygon after apply the transformation.
+
+        Note:
+            The coordinates are not pixel indices. Coordinates on an image of
+            shape (H, W) are in range [0, W] or [0, H].
         """
         return [self.apply_coords(p) for p in polygons]
 
@@ -135,11 +148,16 @@ class Transform(metaclass=ABCMeta):
         """
         Register the given function as a handler that this transform will use
         for a specific data type.
+
         Args:
             data_type (str): the name of the data type (e.g., box)
             func (callable): takes a transform and a data, returns the
                 transformed data.
+
         Examples:
+
+        .. code-block:: python
+
             def func(flip_transform, voxel_data):
                 return transformed_voxel_data
             HFlipTransform.register_type("voxel", func)
@@ -256,6 +274,16 @@ class HFlipTransform(Transform):
         self._set_attributes(locals())
 
     def apply_image(self, img: np.ndarray) -> np.ndarray:
+        """
+        Flip the image(s).
+
+        Args:
+            img (ndarray): of shape HxW, HxWxC, or NxHxWxC. The array can be
+                of type uint8 in range [0, 255], or floating point in range
+                [0, 1] or [0, 255].
+        Returns:
+            ndarray: the flipped image(s).
+        """
         tensor = torch.from_numpy(np.ascontiguousarray(img))
         if len(tensor.shape) == 2:
             # For dimension of HxW.
@@ -266,6 +294,20 @@ class HFlipTransform(Transform):
         return tensor.numpy()
 
     def apply_coords(self, coords: np.ndarray) -> np.ndarray:
+        """
+        Flip the coordinates.
+
+        Args:
+            coords (ndarray): floating point array of shape Nx2. Each row is
+                (x, y).
+        Returns:
+            ndarray: the flipped coordinates.
+
+        Note:
+            The inputs are floating point coordinates, not pixel indices.
+            Therefore they are flipped by `(W - x, H - y)`, not
+            `(W - 1 - x, H 1 - y)`.
+        """
         coords[:, 0] = self.width - coords[:, 0]
         return coords
 
@@ -315,6 +357,7 @@ class ScaleTransform(Transform):
                 (3D-only), `bilinear`, `bicubic` (4D-only), and `area`.
                 Details can be found in:
                 https://pytorch.org/docs/stable/nn.functional.html
+
         Returns:
             ndarray: resized image(s).
         """
@@ -335,11 +378,29 @@ class ScaleTransform(Transform):
         return to_numpy(float_tensor, img.shape, img.dtype)
 
     def apply_coords(self, coords: np.ndarray) -> np.ndarray:
+        """
+        Compute the coordinates after resize.
+
+        Args:
+            coords (ndarray): floating point array of shape Nx2. Each row is
+                (x, y).
+        Returns:
+            ndarray: resized coordinates.
+        """
         coords[:, 0] = coords[:, 0] * (self.new_w * 1.0 / self.w)
         coords[:, 1] = coords[:, 1] * (self.new_h * 1.0 / self.h)
         return coords
 
     def apply_segmentation(self, segmentation: np.ndarray) -> np.ndarray:
+        """
+        Apply resize on the full-image segmentation.
+
+        Args:
+            segmentation (ndarray): of shape HxW. The array should have integer
+                or bool dtype.
+        Returns:
+            ndarray: resized segmentation.
+        """
         segmentation = self.apply_image(segmentation, interp="nearest")
         return segmentation
 
@@ -388,6 +449,15 @@ class GridSampleTransform(Transform):
         raise NotImplementedError()
 
     def apply_segmentation(self, segmentation: np.ndarray) -> np.ndarray:
+        """
+        Apply grid sampling on the full-image segmentation.
+
+        Args:
+            segmentation (ndarray): of shape HxW. The array should have integer
+                or bool dtype.
+        Returns:
+            ndarray: grid sampled segmentation.
+        """
         segmentation = self.apply_image(segmentation, interp="nearest")
         return segmentation
 
@@ -402,6 +472,16 @@ class CropTransform(Transform):
         self._set_attributes(locals())
 
     def apply_image(self, img: np.ndarray) -> np.ndarray:
+        """
+        Crop the image(s).
+
+        Args:
+            img (ndarray): of shape NxHxWxC, or HxWxC or HxW. The array can be
+                of type uint8 in range [0, 255], or floating point in range
+                [0, 1] or [0, 255].
+        Returns:
+            ndarray: cropped image(s).
+        """
         if len(img.shape) <= 3:
             return img[self.y0 : self.y0 + self.h, self.x0 : self.x0 + self.w]
         else:
@@ -410,6 +490,15 @@ class CropTransform(Transform):
             ]
 
     def apply_coords(self, coords: np.ndarray) -> np.ndarray:
+        """
+        Apply crop transform on coordinates.
+
+        Args:
+            coords (ndarray): floating point array of shape Nx2. Each row is
+                (x, y).
+        Returns:
+            ndarray: cropped coordinates.
+        """
         coords[:, 0] -= self.x0
         coords[:, 1] -= self.y0
         return coords
@@ -417,8 +506,14 @@ class CropTransform(Transform):
     def apply_polygons(self, polygons: list) -> list:
         """
         Apply crop transform on a list of polygons, each represented by a Nx2 array.
-        It will crop the polygon with the box, therefore
-        the number of points in the polygon might change.
+        It will crop the polygon with the box, therefore the number of points in the
+        polygon might change.
+
+        Args:
+            polygon (list[ndarray]): each is a Nx2 floating point array of
+                (x, y) format in absolute coordinates.
+        Returns:
+            ndarray: cropped polygons.
         """
         import shapely.geometry as geometry
 
@@ -495,7 +590,13 @@ class BlendTransform(Transform):
             return self.src_weight * self.src_image + self.dst_weight * img
 
     def apply_coords(self, coords: np.ndarray) -> np.ndarray:
+        """
+        Apply no transform on the coordinates.
+        """
         return coords
 
     def apply_segmentation(self, segmentation: np.ndarray) -> np.ndarray:
+        """
+        Apply no transform on the full-image segmentation.
+        """
         return segmentation
