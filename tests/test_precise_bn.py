@@ -41,7 +41,7 @@ class TestPreciseBN(unittest.TestCase):
         NB = 5
         _bn_types = [nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d]
         _stats_dims = [[0, 2], [0, 2, 3], [0, 2, 3, 4]]
-        _input_dims = [(16, 32, 24), (16, 32, 24, 24), (16, 32, 4, 12, 12)]
+        _input_dims = [(16, 16, 24), (16, 16, 24, 24), (16, 16, 4, 12, 12)]
         assert len({len(_bn_types), len(_stats_dims), len(_input_dims)}) == 1
 
         for bn, stats_dim, input_dim in zip(
@@ -60,3 +60,11 @@ class TestPreciseBN(unittest.TestCase):
             self.assertTrue(
                 np.allclose(model.weight.detach().numpy(), old_weight)
             )
+
+    def test_precise_bn_insufficient_data(self):
+        input_dim = (16, 32, 24, 24)
+        model = nn.BatchNorm2d(input_dim[1])
+        model.train()
+        tensor = torch.randn(input_dim)
+        with self.assertRaises(AssertionError):
+            update_bn_stats(model, itertools.repeat(tensor, 10), 20)

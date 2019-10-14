@@ -65,6 +65,10 @@ def update_bn_stats(model, data_loader, num_iters: int = 200):
             running_mean[i] += (bn.running_mean - running_mean[i]) / (ind + 1)
             running_var[i] += (bn.running_var - running_var[i]) / (ind + 1)
             # We compute the "average of variance" across iterations.
+    assert ind == num_iters - 1, (
+        "update_bn_stats is meant to run for {} iterations, "
+        "but the dataloader stops at {} iterations.".format(num_iters, ind)
+    )
 
     for i, bn in enumerate(bn_layers):
         # Sets the precise bn stats.
