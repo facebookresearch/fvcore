@@ -116,10 +116,10 @@ class CfgNode(_CfgNode):
         ), "The reserved key '{}' can only be used in files!".format(BASE_KEY)
         return super().merge_from_other_cfg(cfg_other)
 
-    def merge_from_list(self, cfg_list: dict):
+    def merge_from_list(self, cfg_list: list):
         """
         Args:
-            cfg_list (dict): list of configs to merge from.
+            cfg_list (list): list of configs to merge from.
         """
         keys = set(cfg_list[0::2])
         assert (
