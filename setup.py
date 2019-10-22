@@ -16,7 +16,7 @@ setup(
         "tqdm",
         "portalocker",
         "termcolor>=1.1",
-        "shapely",
     ],
+    extras_require={"all": ["shapely"]},
     packages=find_packages(exclude=("tests")),
 )

@@ -83,7 +83,8 @@ class Checkpointer(object):
             path (str): path or url to the checkpoint. If empty, will not load
                 anything.
         Returns:
-            dict: extra data loaded from the checkpoint that has not been
+            dict:
+                extra data loaded from the checkpoint that has not been
                 processed. For example, those saved with
                 :meth:`.save(**extra_data)`.
         """
@@ -154,8 +155,9 @@ class Checkpointer(object):
         Args:
             path (str): path to the checkpoint.
             resume (bool): if True, resume from the last checkpoint if it exists.
+
         Returns:
-            checkpoint: loaded checkpoint.
+            same as :meth:`load`.
         """
         if resume and self.has_checkpoint():
             path = self.get_checkpoint_file()
