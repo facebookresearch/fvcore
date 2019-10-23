@@ -151,6 +151,18 @@ class PathHandler:
         """
         raise NotImplementedError()
 
+    def _isdir(self, path: str) -> bool:
+        """
+        Checks if the resource at the given URI is a directory.
+
+        Args:
+            path (str): A URI supported by this PathHandler
+
+        Returns:
+            bool: true if the path is a directory
+        """
+        raise NotImplementedError()
+
     def _ls(self, path: str) -> List[str]:
         """
         List the contents of the directory at the provided URI.
@@ -228,6 +240,9 @@ class NativePathHandler(PathHandler):
 
     def _isfile(self, path: str) -> bool:
         return os.path.isfile(path)
+
+    def _isdir(self, path: str) -> bool:
+        return os.path.isdir(path)
 
     def _ls(self, path: str) -> List[str]:
         return os.listdir(path)
@@ -391,6 +406,19 @@ class PathManager:
             bool: true if the path is a file
         """
         return PathManager.__get_path_handler(path)._isfile(path)
+
+    @staticmethod
+    def isdir(path: str) -> bool:
+        """
+        Checks if the resource at the given URI is a directory.
+
+        Args:
+            path (str): A URI supported by this PathHandler
+
+        Returns:
+            bool: true if the path is a directory
+        """
+        return PathManager.__get_path_handler(path)._isdir(path)
 
     @staticmethod
     def ls(path: str) -> List[str]:
