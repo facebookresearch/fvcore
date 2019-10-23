@@ -5,6 +5,7 @@ import os
 import shutil
 import tempfile
 import unittest
+import uuid
 from typing import Optional
 from unittest.mock import patch
 
@@ -41,13 +42,24 @@ class TestNativeIO(unittest.TestCase):
 
     def test_exists(self):
         self.assertTrue(PathManager.exists(self._tmpfile))
-        fake_path = os.path.join(self._tmpdir, "not", "a", "path")
+        fake_path = os.path.join(self._tmpdir, uuid.uuid4().hex)
         self.assertFalse(PathManager.exists(fake_path))
 
     def test_isfile(self):
         self.assertTrue(PathManager.isfile(self._tmpfile))
-        # Directory, not a file:
+        # This is a directory, not a file, so it should fail
         self.assertFalse(PathManager.isfile(self._tmpdir))
+        # This is a non-existing path, so it should fail
+        fake_path = os.path.join(self._tmpdir, uuid.uuid4().hex)
+        self.assertFalse(PathManager.isfile(fake_path))
+
+    def test_isdir(self):
+        self.assertTrue(PathManager.isdir(self._tmpdir))
+        # This is a file, not a directory, so it should fail
+        self.assertFalse(PathManager.isdir(self._tmpfile))
+        # This is a non-existing path, so it should fail
+        fake_path = os.path.join(self._tmpdir, uuid.uuid4().hex)
+        self.assertFalse(PathManager.isdir(fake_path))
 
     def test_ls(self):
         # Create some files in the tempdir to ls out.
