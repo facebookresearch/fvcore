@@ -5,6 +5,8 @@ import logging
 import os
 from typing import Any
 import yaml
+import urllib
+import requests
 from yacs.config import CfgNode as _CfgNode
 
 BASE_KEY = "_BASE_"
@@ -44,22 +46,25 @@ class CfgNode(_CfgNode):
         Returns:
             (dict): the loaded yaml
         """
-        with open(filename, "r") as f:
-            try:
-                cfg = yaml.safe_load(f)
-            except yaml.constructor.ConstructorError:
-                if not allow_unsafe:
-                    raise
-                logger = logging.getLogger(__name__)
-                logger.warning(
-                    "Loading config {} with yaml.unsafe_load. Your machine may "
-                    "be at risk if the file contains malicious content.".format(
-                        filename
+        if urllib.parse.urlparse(filename).scheme in ('http', 'https',):
+            cfg = yaml.safe_load(requests.get(filename).text)
+        else:
+            with open(filename, "r") as f:
+                try:
+                    cfg = yaml.safe_load(f)
+                except yaml.constructor.ConstructorError:
+                    if not allow_unsafe:
+                        raise
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
+                        "Loading config {} with yaml.unsafe_load. Your machine may "
+                        "be at risk if the file contains malicious content.".format(
+                            filename
+                        )
                     )
-                )
-                f.close()
-                with open(filename, "r") as f:
-                    cfg = yaml.unsafe_load(f)
+                    f.close()
+                    with open(filename, "r") as f:
+                        cfg = yaml.unsafe_load(f)
 
         def merge_a_into_b(a, b):
             # merge dict a into dict b. values in a will overwrite b.
