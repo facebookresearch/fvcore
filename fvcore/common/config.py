@@ -7,6 +7,8 @@ from typing import Any
 import yaml
 from yacs.config import CfgNode as _CfgNode
 
+from fvcore.common.file_io import PathManager
+
 BASE_KEY = "_BASE_"
 
 
@@ -44,7 +46,7 @@ class CfgNode(_CfgNode):
         Returns:
             (dict): the loaded yaml
         """
-        with open(filename, "r") as f:
+        with PathManager.open(filename, "r") as f:
             try:
                 cfg = yaml.safe_load(f)
             except yaml.constructor.ConstructorError:
