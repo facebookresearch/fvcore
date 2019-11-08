@@ -78,7 +78,7 @@ class CfgNode(_CfgNode):
             base_cfg_file = cfg[BASE_KEY]
             if base_cfg_file.startswith("~"):
                 base_cfg_file = os.path.expanduser(base_cfg_file)
-            if not base_cfg_file.startswith("/"):
+            if not any(map(base_cfg_file.startswith, ["/", "https://", "http://"])):
                 # the path to base cfg is relative to the config file itself.
                 base_cfg_file = os.path.join(
                     os.path.dirname(filename), base_cfg_file
