@@ -306,7 +306,7 @@ class HFlipTransform(Transform):
         Note:
             The inputs are floating point coordinates, not pixel indices.
             Therefore they are flipped by `(W - x, H - y)`, not
-            `(W - 1 - x, H 1 - y)`.
+            `(W - 1 - x, H - 1 - y)`.
         """
         coords[:, 0] = self.width - coords[:, 0]
         return coords
@@ -355,7 +355,7 @@ class VFlipTransform(Transform):
         Note:
             The inputs are floating point coordinates, not pixel indices.
             Therefore they are flipped by `(W - x, H - y)`, not
-            `(W - 1 - x, H 1 - y)`.
+            `(W - 1 - x, H - 1 - y)`.
         """
         coords[:, 1] = self.height - coords[:, 1]
         return coords
