@@ -306,9 +306,57 @@ class HFlipTransform(Transform):
         Note:
             The inputs are floating point coordinates, not pixel indices.
             Therefore they are flipped by `(W - x, H - y)`, not
-            `(W - 1 - x, H 1 - y)`.
+            `(W - 1 - x, H - 1 - y)`.
         """
         coords[:, 0] = self.width - coords[:, 0]
+        return coords
+
+
+class VFlipTransform(Transform):
+    """
+    Perform vertical flip.
+    """
+
+    def __init__(self, height: int):
+        super().__init__()
+        self._set_attributes(locals())
+
+    def apply_image(self, img: np.ndarray) -> np.ndarray:
+        """
+        Flip the image(s).
+
+        Args:
+            img (ndarray): of shape HxW, HxWxC, or NxHxWxC. The array can be
+                of type uint8 in range [0, 255], or floating point in range
+                [0, 1] or [0, 255].
+        Returns:
+            ndarray: the flipped image(s).
+        """
+        tensor = torch.from_numpy(np.ascontiguousarray(img))
+        if len(tensor.shape) == 2:
+            # For dimension of HxW.
+            tensor = tensor.flip((-2))
+        elif len(tensor.shape) > 2:
+            # For dimension of HxWxC, NxHxWxC.
+            tensor = tensor.flip((-3))
+        return tensor.numpy()
+
+    def apply_coords(self, coords: np.ndarray) -> np.ndarray:
+        """
+        Flip the coordinates.
+
+        Args:
+            coords (ndarray): floating point array of shape Nx2. Each row is
+                (x, y).
+        Returns:
+            ndarray: the flipped coordinates.
+
+        Note:
+            The inputs are floating point coordinates, not pixel indices.
+            Therefore they are flipped by `(W - x, H - y)`, not
+            `(W - 1 - x, H - 1 - y)`.
+        """
+        coords[:, 1] = self.height - coords[:, 1]
         return coords
 
 

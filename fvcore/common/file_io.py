@@ -8,10 +8,9 @@ import shutil
 from collections import OrderedDict
 from typing import IO, Any, Dict, List, MutableMapping, Optional, Union
 from urllib.parse import urlparse
+import portalocker  # type: ignore
 
 from fvcore.common.download import download
-
-import portalocker  # type: ignore
 
 __all__ = ["PathManager", "get_cache_dir", "file_lock"]
 
