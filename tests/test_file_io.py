@@ -35,6 +35,19 @@ class TestNativeIO(unittest.TestCase):
         with PathManager.open(self._tmpfile, "r") as f:
             self.assertEqual(f.read(), self._tmpfile_contents)
 
+    def test_open_args(self):
+        PathManager.set_strict_kwargs_checking(True)
+        PathManager.open(
+            self._tmpfile,  # type: ignore
+            mode="r",
+            buffering=1,
+            encoding="UTF-8",
+            errors="ignore",
+            newline=None,
+            closefd=True,
+            opener=None,
+        )
+
     def test_get_local_path(self):
         self.assertEqual(
             PathManager.get_local_path(self._tmpfile), self._tmpfile

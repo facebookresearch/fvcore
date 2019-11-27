@@ -6,7 +6,16 @@ import logging
 import os
 import shutil
 from collections import OrderedDict
-from typing import IO, Any, Dict, List, MutableMapping, Optional, Union
+from typing import (
+    IO,
+    Any,
+    Callable,
+    Dict,
+    List,
+    MutableMapping,
+    Optional,
+    Union,
+)
 from urllib.parse import urlparse
 import portalocker  # type: ignore
 
@@ -237,7 +246,16 @@ class NativePathHandler(PathHandler):
         return path
 
     def _open(
-        self, path: str, mode: str = "r", buffering: int = -1, **kwargs: Any
+        self,
+        path: str,
+        mode: str = "r",
+        buffering: int = -1,
+        encoding: Optional[str] = None,
+        errors: Optional[str] = None,
+        newline: Optional[str] = None,
+        closefd: bool = True,
+        opener: Optional[Callable] = None,
+        **kwargs: Any,
     ) -> Union[IO[str], IO[bytes]]:
         """
         Open a path.
@@ -255,12 +273,40 @@ class NativePathHandler(PathHandler):
                     underlying device’s “block size” and falling back on
                     io.DEFAULT_BUFFER_SIZE. On many systems, the buffer will
                     typically be 4096 or 8192 bytes long.
+            encoding (Optional[str]): the name of the encoding used to decode or
+                encode the file. This should only be used in text mode.
+            errors (Optional[str]): an optional string that specifies how encoding
+                and decoding errors are to be handled. This cannot be used in binary
+                mode.
+            newline (Optional[str]): controls how universal newlines mode works
+                (it only applies to text mode). It can be None, '', '\n', '\r',
+                and '\r\n'.
+            closefd (bool): If closefd is False and a file descriptor rather than
+                a filename was given, the underlying file descriptor will be kept
+                open when the file is closed. If a filename is given closefd must
+                be True (the default) otherwise an error will be raised.
+            opener (Optional[Callable]): A custom opener can be used by passing
+                a callable as opener. The underlying file descriptor for the file
+                object is then obtained by calling opener with (file, flags).
+                opener must return an open file descriptor (passing os.open as opener
+                results in functionality similar to passing None).
+
+            See https://docs.python.org/3/library/functions.html#open for details.
 
         Returns:
             file: a file-like object.
         """
         self._check_kwargs(kwargs)
-        return open(path, mode, buffering=buffering)
+        return open(  # type: ignore
+            path,
+            mode,
+            buffering=buffering,
+            encoding=encoding,
+            errors=errors,
+            newline=newline,
+            closefd=closefd,
+            opener=opener,
+        )
 
     def _copy(
         self,
