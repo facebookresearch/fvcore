@@ -102,6 +102,43 @@ class TestNativeIO(unittest.TestCase):
         self.assertFalse(PathManager.exists(rm_file))
         self.assertFalse(PathManager.isfile(rm_file))
 
+    def test_bad_args(self):
+        # TODO (T58240718): Replace with dynamic checks
+        with self.assertRaises(ValueError):
+            PathManager.copy(
+                self._tmpfile, self._tmpfile, foo="foo"  # type: ignore
+            )
+        with self.assertRaises(ValueError):
+            PathManager.exists(self._tmpfile, foo="foo")  # type: ignore
+        with self.assertRaises(ValueError):
+            PathManager.get_local_path(self._tmpfile, foo="foo")  # type: ignore
+        with self.assertRaises(ValueError):
+            PathManager.isdir(self._tmpfile, foo="foo")  # type: ignore
+        with self.assertRaises(ValueError):
+            PathManager.isfile(self._tmpfile, foo="foo")  # type: ignore
+        with self.assertRaises(ValueError):
+            PathManager.ls(self._tmpfile, foo="foo")  # type: ignore
+        with self.assertRaises(ValueError):
+            PathManager.mkdirs(self._tmpfile, foo="foo")  # type: ignore
+        with self.assertRaises(ValueError):
+            PathManager.open(self._tmpfile, foo="foo")  # type: ignore
+        with self.assertRaises(ValueError):
+            PathManager.rm(self._tmpfile, foo="foo")  # type: ignore
+
+        PathManager.set_strict_kwargs_checking(False)
+
+        PathManager.copy(
+            self._tmpfile, self._tmpfile, foo="foo"  # type: ignore
+        )
+        PathManager.exists(self._tmpfile, foo="foo")  # type: ignore
+        PathManager.get_local_path(self._tmpfile, foo="foo")  # type: ignore
+        PathManager.isdir(self._tmpfile, foo="foo")  # type: ignore
+        PathManager.isfile(self._tmpfile, foo="foo")  # type: ignore
+        PathManager.ls(self._tmpdir, foo="foo")  # type: ignore
+        PathManager.mkdirs(self._tmpdir, foo="foo")  # type: ignore
+        PathManager.open(self._tmpfile, foo="foo")  # type: ignore
+        PathManager.rm(self._tmpfile, foo="foo")  # type: ignore
+
 
 class TestHTTPIO(unittest.TestCase):
     _remote_uri = "https://www.facebook.com"
@@ -134,3 +171,32 @@ class TestHTTPIO(unittest.TestCase):
         with self.assertRaises(AssertionError):
             with PathManager.open(self._remote_uri, "w") as f:
                 f.write("foobar")
+
+    def test_bad_args(self):
+        with self.assertRaises(NotImplementedError):
+            PathManager.copy(
+                self._remote_uri, self._remote_uri, foo="foo"  # type: ignore
+            )
+        with self.assertRaises(NotImplementedError):
+            PathManager.exists(self._remote_uri, foo="foo")  # type: ignore
+        with self.assertRaises(ValueError):
+            PathManager.get_local_path(
+                self._remote_uri, foo="foo"  # type: ignore
+            )
+        with self.assertRaises(NotImplementedError):
+            PathManager.isdir(self._remote_uri, foo="foo")  # type: ignore
+        with self.assertRaises(NotImplementedError):
+            PathManager.isfile(self._remote_uri, foo="foo")  # type: ignore
+        with self.assertRaises(NotImplementedError):
+            PathManager.ls(self._remote_uri, foo="foo")  # type: ignore
+        with self.assertRaises(NotImplementedError):
+            PathManager.mkdirs(self._remote_uri, foo="foo")  # type: ignore
+        with self.assertRaises(ValueError):
+            PathManager.open(self._remote_uri, foo="foo")  # type: ignore
+        with self.assertRaises(NotImplementedError):
+            PathManager.rm(self._remote_uri, foo="foo")  # type: ignore
+
+        PathManager.set_strict_kwargs_checking(False)
+
+        PathManager.get_local_path(self._remote_uri, foo="foo")  # type: ignore
+        PathManager.open(self._remote_uri, foo="foo")  # type: ignore

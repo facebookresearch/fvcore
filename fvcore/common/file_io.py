@@ -73,6 +73,25 @@ class PathHandler:
     or a canonical filepath "/foo/bar/baz".
     """
 
+    _strict_kwargs_check = True
+
+    def _check_kwargs(self, kwargs: Dict[str, Any]) -> None:
+        """
+        Checks if the given arguments are empty. Throws a ValueError if strict
+        kwargs checking is enabled and args are non-empty. If strict kwargs
+        checking is disabled, only a warning is logged.
+
+        Args:
+            kwargs (Dict[str, Any])
+        """
+        if self._strict_kwargs_check:
+            if len(kwargs) > 0:
+                raise ValueError("Unused arguments: {}".format(kwargs))
+        else:
+            logger = logging.getLogger(__name__)
+            for k, v in kwargs.items():
+                logger.warning("{}={} argument ignored".format(k, v))
+
     def _get_supported_prefixes(self) -> List[str]:
         """
         Returns:
@@ -80,7 +99,7 @@ class PathHandler:
         """
         raise NotImplementedError()
 
-    def _get_local_path(self, path: str) -> str:
+    def _get_local_path(self, path: str, **kwargs: Any) -> str:
         """
         Get a filepath which is compatible with native Python I/O such as `open`
         and `os.path`.
@@ -98,7 +117,7 @@ class PathHandler:
         raise NotImplementedError()
 
     def _open(
-        self, path: str, mode: str = "r", buffering: int = -1
+        self, path: str, mode: str = "r", buffering: int = -1, **kwargs: Any
     ) -> Union[IO[str], IO[bytes]]:
         """
         Open a stream to a URI, similar to the built-in `open`.
@@ -119,7 +138,11 @@ class PathHandler:
         raise NotImplementedError()
 
     def _copy(
-        self, src_path: str, dst_path: str, overwrite: bool = False
+        self,
+        src_path: str,
+        dst_path: str,
+        overwrite: bool = False,
+        **kwargs: Any,
     ) -> bool:
         """
         Copies a source path to a destination path.
@@ -134,7 +157,7 @@ class PathHandler:
         """
         raise NotImplementedError()
 
-    def _exists(self, path: str) -> bool:
+    def _exists(self, path: str, **kwargs: Any) -> bool:
         """
         Checks if there is a resource at the given URI.
 
@@ -146,7 +169,7 @@ class PathHandler:
         """
         raise NotImplementedError()
 
-    def _isfile(self, path: str) -> bool:
+    def _isfile(self, path: str, **kwargs: Any) -> bool:
         """
         Checks if the resource at the given URI is a file.
 
@@ -158,7 +181,7 @@ class PathHandler:
         """
         raise NotImplementedError()
 
-    def _isdir(self, path: str) -> bool:
+    def _isdir(self, path: str, **kwargs: Any) -> bool:
         """
         Checks if the resource at the given URI is a directory.
 
@@ -170,7 +193,7 @@ class PathHandler:
         """
         raise NotImplementedError()
 
-    def _ls(self, path: str) -> List[str]:
+    def _ls(self, path: str, **kwargs: Any) -> List[str]:
         """
         List the contents of the directory at the provided URI.
 
@@ -182,7 +205,7 @@ class PathHandler:
         """
         raise NotImplementedError()
 
-    def _mkdirs(self, path: str) -> None:
+    def _mkdirs(self, path: str, **kwargs: Any) -> None:
         """
         Recursive directory creation function. Like mkdir(), but makes all
         intermediate-level directories needed to contain the leaf directory.
@@ -193,7 +216,7 @@ class PathHandler:
         """
         raise NotImplementedError()
 
-    def _rm(self, path: str) -> None:
+    def _rm(self, path: str, **kwargs: Any) -> None:
         """
         Remove the file (not directory) at the provided URI.
 
@@ -209,15 +232,12 @@ class NativePathHandler(PathHandler):
     handler uses `open()` and `os.*` calls on the given path.
     """
 
-    def _get_local_path(self, path: str) -> str:
+    def _get_local_path(self, path: str, **kwargs: Any) -> str:
+        self._check_kwargs(kwargs)
         return path
 
     def _open(
-        self,
-        path: str,
-        mode: str = "r",
-        buffering: int = -1,
-        **kwargs: Dict[str, Any],
+        self, path: str, mode: str = "r", buffering: int = -1, **kwargs: Any
     ) -> Union[IO[str], IO[bytes]]:
         """
         Open a path.
@@ -239,10 +259,15 @@ class NativePathHandler(PathHandler):
         Returns:
             file: a file-like object.
         """
+        self._check_kwargs(kwargs)
         return open(path, mode, buffering=buffering)
 
     def _copy(
-        self, src_path: str, dst_path: str, overwrite: bool = False
+        self,
+        src_path: str,
+        dst_path: str,
+        overwrite: bool = False,
+        **kwargs: Any,
     ) -> bool:
         """
         Copies a source path to a destination path.
@@ -255,6 +280,8 @@ class NativePathHandler(PathHandler):
         Returns:
             status (bool): True on success
         """
+        self._check_kwargs(kwargs)
+
         if os.path.exists(dst_path) and not overwrite:
             logger = logging.getLogger(__name__)
             logger.error("Destination file {} already exists.".format(dst_path))
@@ -268,19 +295,24 @@ class NativePathHandler(PathHandler):
             logger.error("Error in file copy - {}".format(str(e)))
             return False
 
-    def _exists(self, path: str) -> bool:
+    def _exists(self, path: str, **kwargs: Any) -> bool:
+        self._check_kwargs(kwargs)
         return os.path.exists(path)
 
-    def _isfile(self, path: str) -> bool:
+    def _isfile(self, path: str, **kwargs: Any) -> bool:
+        self._check_kwargs(kwargs)
         return os.path.isfile(path)
 
-    def _isdir(self, path: str) -> bool:
+    def _isdir(self, path: str, **kwargs: Any) -> bool:
+        self._check_kwargs(kwargs)
         return os.path.isdir(path)
 
-    def _ls(self, path: str) -> List[str]:
+    def _ls(self, path: str, **kwargs: Any) -> List[str]:
+        self._check_kwargs(kwargs)
         return os.listdir(path)
 
-    def _mkdirs(self, path: str) -> None:
+    def _mkdirs(self, path: str, **kwargs: Any) -> None:
+        self._check_kwargs(kwargs)
         try:
             os.makedirs(path, exist_ok=True)
         except OSError as e:
@@ -288,7 +320,8 @@ class NativePathHandler(PathHandler):
             if e.errno != errno.EEXIST:
                 raise
 
-    def _rm(self, path: str) -> None:
+    def _rm(self, path: str, **kwargs: Any) -> None:
+        self._check_kwargs(kwargs)
         os.remove(path)
 
 
@@ -303,11 +336,12 @@ class HTTPURLHandler(PathHandler):
     def _get_supported_prefixes(self) -> List[str]:
         return ["http://", "https://", "ftp://"]
 
-    def _get_local_path(self, path: str) -> str:
+    def _get_local_path(self, path: str, **kwargs: Any) -> str:
         """
         This implementation downloads the remote resource and caches it locally.
         The resource will only be downloaded if not previously requested.
         """
+        self._check_kwargs(kwargs)
         if path not in self.cache_map or not os.path.exists(
             self.cache_map[path]
         ):
@@ -327,11 +361,7 @@ class HTTPURLHandler(PathHandler):
         return self.cache_map[path]
 
     def _open(
-        self,
-        path: str,
-        mode: str = "r",
-        buffering: int = -1,
-        **kwargs: Dict[str, Any],
+        self, path: str, mode: str = "r", buffering: int = -1, **kwargs: Any
     ) -> Union[IO[str], IO[bytes]]:
         """
         Open a remote HTTP path. The resource is first downloaded and cached
@@ -346,6 +376,7 @@ class HTTPURLHandler(PathHandler):
         Returns:
             file: a file-like object.
         """
+        self._check_kwargs(kwargs)
         assert mode in (
             "r",
             "rb",
@@ -386,10 +417,7 @@ class PathManager:
 
     @staticmethod
     def open(
-        path: str,
-        mode: str = "r",
-        buffering: int = -1,
-        **kwargs: Dict[str, Any],
+        path: str, mode: str = "r", buffering: int = -1, **kwargs: Any
     ) -> Union[IO[str], IO[bytes]]:
         """
         Open a stream to a URI, similar to the built-in `open`.
@@ -408,11 +436,13 @@ class PathManager:
             file: a file-like object.
         """
         return PathManager.__get_path_handler(path)._open(  # type: ignore
-            path, mode, buffering=buffering
+            path, mode, buffering=buffering, **kwargs
         )
 
     @staticmethod
-    def copy(src_path: str, dst_path: str, overwrite: bool = False) -> bool:
+    def copy(
+        src_path: str, dst_path: str, overwrite: bool = False, **kwargs: Any
+    ) -> bool:
         """
         Copies a source path to a destination path.
 
@@ -430,11 +460,11 @@ class PathManager:
             src_path
         ) == PathManager.__get_path_handler(dst_path)
         return PathManager.__get_path_handler(src_path)._copy(
-            src_path, dst_path, overwrite
+            src_path, dst_path, overwrite, **kwargs
         )
 
     @staticmethod
-    def get_local_path(path: str) -> str:
+    def get_local_path(path: str, **kwargs: Any) -> str:
         """
         Get a filepath which is compatible with native Python I/O such as `open`
         and `os.path`.
@@ -450,10 +480,10 @@ class PathManager:
         """
         return PathManager.__get_path_handler(  # type: ignore
             path
-        )._get_local_path(path)
+        )._get_local_path(path, **kwargs)
 
     @staticmethod
-    def exists(path: str) -> bool:
+    def exists(path: str, **kwargs: Any) -> bool:
         """
         Checks if there is a resource at the given URI.
 
@@ -464,11 +494,11 @@ class PathManager:
             bool: true if the path exists
         """
         return PathManager.__get_path_handler(path)._exists(  # type: ignore
-            path
+            path, **kwargs
         )
 
     @staticmethod
-    def isfile(path: str) -> bool:
+    def isfile(path: str, **kwargs: Any) -> bool:
         """
         Checks if there the resource at the given URI is a file.
 
@@ -479,11 +509,11 @@ class PathManager:
             bool: true if the path is a file
         """
         return PathManager.__get_path_handler(path)._isfile(  # type: ignore
-            path
+            path, **kwargs
         )
 
     @staticmethod
-    def isdir(path: str) -> bool:
+    def isdir(path: str, **kwargs: Any) -> bool:
         """
         Checks if the resource at the given URI is a directory.
 
@@ -493,10 +523,12 @@ class PathManager:
         Returns:
             bool: true if the path is a directory
         """
-        return PathManager.__get_path_handler(path)._isdir(path)  # type: ignore
+        return PathManager.__get_path_handler(path)._isdir(  # type: ignore
+            path, **kwargs
+        )
 
     @staticmethod
-    def ls(path: str) -> List[str]:
+    def ls(path: str, **kwargs: Any) -> List[str]:
         """
         List the contents of the directory at the provided URI.
 
@@ -506,10 +538,12 @@ class PathManager:
         Returns:
             List[str]: list of contents in given path
         """
-        return PathManager.__get_path_handler(path)._ls(path)  # type: ignore
+        return PathManager.__get_path_handler(path)._ls(  # type: ignore
+            path, **kwargs
+        )
 
     @staticmethod
-    def mkdirs(path: str) -> None:
+    def mkdirs(path: str, **kwargs: Any) -> None:
         """
         Recursive directory creation function. Like mkdir(), but makes all
         intermediate-level directories needed to contain the leaf directory.
@@ -519,18 +553,20 @@ class PathManager:
             path (str): A URI supported by this PathHandler
         """
         return PathManager.__get_path_handler(path)._mkdirs(  # type: ignore
-            path
+            path, **kwargs
         )
 
     @staticmethod
-    def rm(path: str) -> None:
+    def rm(path: str, **kwargs: Any) -> None:
         """
         Remove the file (not directory) at the provided URI.
 
         Args:
             path (str): A URI supported by this PathHandler
         """
-        return PathManager.__get_path_handler(path)._rm(path)  # type: ignore
+        return PathManager.__get_path_handler(path)._rm(  # type: ignore
+            path, **kwargs
+        )
 
     @staticmethod
     def register_handler(handler: PathHandler) -> None:
@@ -555,6 +591,33 @@ class PathManager:
                 reverse=True,
             )
         )
+
+    @staticmethod
+    def set_strict_kwargs_checking(enable: bool) -> None:
+        """
+        Toggles strict kwargs checking. If enabled, a ValueError is thrown if any
+        unused parameters are passed to a PathHandler function. If disabled, only
+        a warning is given.
+
+        With a centralized file API, there's a tradeoff of convenience and
+        correctness delegating arguments to the proper I/O layers. An underlying
+        `PathHandler` may support custom arguments which should not be statically
+        exposed on the `PathManager` function. For example, a custom `HTTPURLHandler`
+        may want to expose a `cache_timeout` argument for `open()` which specifies
+        how old a locally cached resource can be before it's refetched from the
+        remote server. This argument would not make sense for a `NativePathHandler`.
+        If strict kwargs checking is disabled, `cache_timeout` can be passed to
+        `PathManager.open` which will forward the arguments to the underlying
+        handler. By default, checking is enabled since it is innately unsafe:
+        multiple `PathHandler`s could reuse arguments with different semantic
+        meanings or types.
+
+        Args:
+            enable (bool)
+        """
+        PathManager._NATIVE_PATH_HANDLER._strict_kwargs_check = enable
+        for handler in PathManager._PATH_HANDLERS.values():
+            handler._strict_kwargs_check = enable
 
 
 PathManager.register_handler(HTTPURLHandler())
