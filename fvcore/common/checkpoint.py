@@ -74,7 +74,7 @@ class Checkpointer(object):
             torch.save(data, f)
         self.tag_last_checkpoint(basename)
 
-    def load(self, path: str):
+    def load(self, path: str, resume: bool = False):
         """
         Load from the given checkpoint. When path points to network file, this
         function has to be called on all ranks.
@@ -82,6 +82,7 @@ class Checkpointer(object):
         Args:
             path (str): path or url to the checkpoint. If empty, will not load
                 anything.
+            resume (bool): if True, resume and update optimizer and LR scheduler.
         Returns:
             dict:
                 extra data loaded from the checkpoint that has not been
@@ -101,10 +102,12 @@ class Checkpointer(object):
 
         checkpoint = self._load_file(path)
         self._load_model(checkpoint)
-        for key, obj in self.checkpointables.items():
-            if key in checkpoint:
-                self.logger.info("Loading {} from {}".format(key, path))
-                obj.load_state_dict(checkpoint.pop(key))
+
+        if resume:
+            for key, obj in self.checkpointables.items():
+                if key in checkpoint:
+                    self.logger.info("Loading {} from {}".format(key, path))
+                    obj.load_state_dict(checkpoint.pop(key))
 
         # return any further checkpoint data
         return checkpoint
@@ -161,7 +164,7 @@ class Checkpointer(object):
         """
         if resume and self.has_checkpoint():
             path = self.get_checkpoint_file()
-        return self.load(path)
+        return self.load(path, resume)
 
     def tag_last_checkpoint(self, last_filename_basename: str):
         """
