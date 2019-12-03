@@ -7,6 +7,7 @@ import unittest
 
 from fvcore.common.config import CfgNode
 from fvcore.common.history_buffer import HistoryBuffer
+from fvcore.common.registry import Registry
 from fvcore.common.timer import Timer
 
 
@@ -176,3 +177,31 @@ class TestCfgNode(unittest.TestCase):
 
         # Resetting the same value should be safe:
         cfg.COMPUTED_1 = "computed1"
+
+
+class TestRegistry(unittest.TestCase):
+    def test_registry(self):
+        """
+        Test registering and accessing objects in the Registry.
+        """
+        OBJECT_REGISTRY = Registry("OBJECT")
+
+        @OBJECT_REGISTRY.register()
+        class Object1:
+            pass
+
+        with self.assertRaises(Exception) as err:
+            OBJECT_REGISTRY.register(Object1)
+        self.assertTrue(
+            "An object named 'Object1' was already registered in 'OBJECT' registry!"
+            in str(err.exception)
+        )
+
+        self.assertEqual(OBJECT_REGISTRY.get("Object1"), Object1)
+
+        with self.assertRaises(KeyError) as err:
+            OBJECT_REGISTRY.get("Object2")
+        self.assertTrue(
+            "No object named 'Object2' found in 'OBJECT' registry!"
+            in str(err.exception)
+        )
