@@ -402,7 +402,10 @@ class TestTransforms(unittest.TestCase):
     def test_crop_polygons(self):
         # Ensure that shapely produce an extra vertex at the end
         # This is assumed when copping polygons
-        import shapely.geometry as geometry
+        try:
+            import shapely.geometry as geometry
+        except ImportError:
+            return
 
         polygon = np.asarray([3, 3.5, 11, 10.0, 38, 98, 15.0, 100.0]).reshape(
             -1, 2

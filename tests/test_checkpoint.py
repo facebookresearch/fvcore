@@ -77,7 +77,7 @@ class TestCheckpointer(unittest.TestCase):
                 # different tensor references
                 self.assertFalse(id(trained_p) == id(loaded_p))
                 # same content
-                self.assertTrue(trained_p.equal(loaded_p))
+                self.assertTrue(trained_p.cpu().equal(loaded_p.cpu()))
 
     def test_from_name_file_model(self):
         """
@@ -115,7 +115,7 @@ class TestCheckpointer(unittest.TestCase):
                 # different tensor references.
                 self.assertFalse(id(trained_p) == id(loaded_p))
                 # same content.
-                self.assertTrue(trained_p.equal(loaded_p))
+                self.assertTrue(trained_p.cpu().equal(loaded_p.cpu()))
 
     def test_checkpointables(self):
         """
