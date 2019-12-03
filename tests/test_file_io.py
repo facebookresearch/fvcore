@@ -37,7 +37,7 @@ class TestNativeIO(unittest.TestCase):
 
     def test_open_args(self):
         PathManager.set_strict_kwargs_checking(True)
-        PathManager.open(
+        f = PathManager.open(
             self._tmpfile,  # type: ignore
             mode="r",
             buffering=1,
@@ -47,6 +47,7 @@ class TestNativeIO(unittest.TestCase):
             closefd=True,
             opener=None,
         )
+        f.close()
 
     def test_get_local_path(self):
         self.assertEqual(
@@ -149,8 +150,14 @@ class TestNativeIO(unittest.TestCase):
         PathManager.isfile(self._tmpfile, foo="foo")  # type: ignore
         PathManager.ls(self._tmpdir, foo="foo")  # type: ignore
         PathManager.mkdirs(self._tmpdir, foo="foo")  # type: ignore
-        PathManager.open(self._tmpfile, foo="foo")  # type: ignore
-        PathManager.rm(self._tmpfile, foo="foo")  # type: ignore
+        f = PathManager.open(self._tmpfile, foo="foo")  # type: ignore
+        f.close()
+
+        with open(os.path.join(self._tmpdir, "test_rm.txt"), "w") as f:
+            rm_file = f.name
+            f.write(self._tmpfile_contents)
+            f.flush()
+        PathManager.rm(rm_file, foo="foo")  # type: ignore
 
 
 class TestHTTPIO(unittest.TestCase):
@@ -160,7 +167,6 @@ class TestHTTPIO(unittest.TestCase):
 
     def setUp(self) -> None:
         if os.path.exists(self._cache_dir):
-            print(f"rmtree {self._cache_dir}")
             shutil.rmtree(self._cache_dir)
         os.makedirs(self._cache_dir, exist_ok=True)
 
@@ -212,4 +218,6 @@ class TestHTTPIO(unittest.TestCase):
         PathManager.set_strict_kwargs_checking(False)
 
         PathManager.get_local_path(self._remote_uri, foo="foo")  # type: ignore
-        PathManager.open(self._remote_uri, foo="foo")  # type: ignore
+        f = PathManager.open(self._remote_uri, foo="foo")  # type: ignore
+        f.close()
+        PathManager.set_strict_kwargs_checking(True)

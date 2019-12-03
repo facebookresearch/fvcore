@@ -38,7 +38,7 @@ class TestPreciseBN(unittest.TestCase):
 
     def test_precise_bn(self):
         # Number of batches to test.
-        NB = 5
+        NB = 8
         _bn_types = [nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d]
         _stats_dims = [[0, 2], [0, 2, 3], [0, 2, 3, 4]]
         _input_dims = [(16, 16, 24), (16, 16, 24, 24), (16, 16, 4, 12, 12)]

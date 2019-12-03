@@ -99,7 +99,7 @@ class PathHandler:
         else:
             logger = logging.getLogger(__name__)
             for k, v in kwargs.items():
-                logger.warning("{}={} argument ignored".format(k, v))
+                logger.warning("[PathManager] {}={} argument ignored".format(k, v))
 
     def _get_supported_prefixes(self) -> List[str]:
         """
