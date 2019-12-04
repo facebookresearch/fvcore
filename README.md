@@ -13,7 +13,7 @@ fvcore requires python >= 3.6.
 
 Use the following command to install:
 ```
-pip install 'git+https://github.com/facebookresearch/fvcore'
+pip install -U 'git+https://github.com/facebookresearch/fvcore'
 ```
 
 ## License

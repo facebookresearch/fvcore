@@ -3,8 +3,15 @@
 
 # Run this script at project root by "./linter.sh" before you commit.
 
+{
+	black --version | grep "19.3b0" > /dev/null
+} || {
+	echo "Linter requires black==19.3b0 !"
+	exit 1
+}
+
 echo "Running isort..."
-isort -y --multi-line 3 --trailing-comma -sp .
+isort -y -sp .
 
 echo "Running black..."
 black -l 80 .
