@@ -18,5 +18,5 @@ setup(
         "termcolor>=1.1",
     ],
     extras_require={"all": ["shapely"]},
-    packages=find_packages(exclude=("tests")),
+    packages=find_packages(exclude=("tests",)),
 )
