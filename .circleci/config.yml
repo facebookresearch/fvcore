@@ -138,9 +138,9 @@ jobs:
             docker exec -it fvcore nvidia-smi
 
       - run:
-          name: Build and Install fvcore
+          name: Install fvcore
           command: |
-            docker exec -it fvcore git clone https://github.com/facebookresearch/fvcore
+            docker cp ~/fvcore fvcore:fvcore
             docker exec -it fvcore pip install -e fvcore
 
       - run:
