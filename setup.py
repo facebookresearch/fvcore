@@ -26,7 +26,7 @@ def get_version():
         version = version + ".post" + date_str
 
         new_init_py = [l for l in init_py if not l.startswith("__version__")]
-        new_init_py.append('__version__ = "{}"'.format(version))
+        new_init_py.append('__version__ = "{}"\n'.format(version))
         with open(init_py_path, "w") as f:
             f.write("".join(new_init_py))
     return version

@@ -180,7 +180,7 @@ class TestHTTPIO(unittest.TestCase):
     @patch("fvcore.common.file_io.get_cache_dir")
     def test_open(self, mock_get_cache_dir):
         mock_get_cache_dir.return_value = self._cache_dir
-        with PathManager.open(self._remote_uri, "r") as f:
+        with PathManager.open(self._remote_uri, "rb") as f:
             self.assertTrue(os.path.exists(f.name))
             self.assertTrue(os.path.isfile(f.name))
             self.assertTrue(f.read() != "")
