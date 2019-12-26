@@ -140,13 +140,13 @@ jobs:
       - run:
           name: Install fvcore
           command: |
-            docker cp ~/fvcore fvcore:fvcore
-            docker exec -it fvcore pip install -e fvcore
+            docker cp ~/fvcore fvcore:/fvcore
+            docker exec -it fvcore pip install -e /fvcore
 
       - run:
           name: Run Unit Tests
           command: |
-            docker exec -it fvcore python -m unittest discover -v -s fvcore/tests
+            docker exec -it fvcore python -m unittest discover -v -s /fvcore/tests
 
   upload_wheel:
     docker:
