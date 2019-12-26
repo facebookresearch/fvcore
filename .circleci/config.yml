@@ -1,0 +1,185 @@
+# Python CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+version: 2
+
+# -------------------------------------------------------------------------------------
+# Environments to run the jobs in
+# -------------------------------------------------------------------------------------
+cpu: &cpu
+  docker:
+    - image: circleci/python:3.7
+  resource_class: medium
+
+gpu: &gpu
+  machine:
+    image: ubuntu-1604:201903-01
+    docker_layer_caching: true
+  resource_class: gpu.small
+
+# -------------------------------------------------------------------------------------
+# Re-usable commands
+# -------------------------------------------------------------------------------------
+setup_venv: &setup_venv
+  - run:
+      name: Setup Virtual Env
+      working_directory: ~/
+      command: |
+        python -m venv ~/venv
+        echo ". ~/venv/bin/activate" >> $BASH_ENV
+        . ~/venv/bin/activate
+        python --version
+        which python
+        which pip
+        pip install --upgrade pip
+
+install_dep: &install_dep
+  - run:
+      name: Install Dependencies
+      command: |
+        pip install --progress-bar off torch shapely flake8 isort black==19.3b0
+
+install_fvcore: &install_fvcore
+  - run:
+      environment:
+        BUILD_NIGHTLY: 1
+      name: Install fvcore
+      command: |
+        python setup.py install sdist
+        python -c 'import fvcore; print(fvcore.__version__)'
+
+run_unittests: &run_unittests
+  - run:
+      name: Run Unit Tests
+      command: |
+        python -m unittest discover -v -s tests
+
+# -------------------------------------------------------------------------------------
+# Jobs to run
+# -------------------------------------------------------------------------------------
+jobs:
+  cpu_tests:
+    <<: *cpu
+
+    working_directory: ~/fvcore
+
+    steps:
+      - checkout
+      - <<: *setup_venv
+
+      # Cache the venv directory that contains dependencies
+      - restore_cache:
+          keys:
+            - cache-key-{{ .Branch }}-ID-0
+
+      - <<: *install_dep
+
+      - save_cache:
+          paths:
+            - ~/venv
+          key: cache-key-{{ .Branch }}-ID-0
+
+      - <<: *install_fvcore
+
+      - run:
+          name: isort
+          command: |
+            isort -c -sp .
+      - run:
+          name: black
+          command: |
+            black --check -l 80 .
+      - run:
+          name: flake8
+          command: |
+            flake8 .
+
+      - <<: *run_unittests
+
+      - store_artifacts:
+          path: ~/fvcore/dist
+      - persist_to_workspace:
+          root: ~/fvcore/dist
+          paths:
+            - "*"
+
+  gpu_tests:
+    <<: *gpu
+
+    working_directory: ~/fvcore
+
+    steps:
+      - checkout
+      - run:
+          name: Install nvidia driver
+          working_directory: ~/
+          command: |
+            wget -q 'https://s3.amazonaws.com/ossci-linux/nvidia_driver/NVIDIA-Linux-x86_64-430.40.run'
+            sudo /bin/bash ./NVIDIA-Linux-x86_64-430.40.run -s --no-drm
+            nvidia-smi
+
+      - run:
+          name: Install nvidia-docker
+          working_directory: ~/
+          command: |
+            curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+            distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+            curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | \
+            sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+            sudo apt-get update && sudo apt-get install -y nvidia-docker2
+            # reload the docker daemon configuration
+            sudo pkill -SIGHUP dockerd
+
+      - run:
+          name: Launch docker
+          command: |
+            nvidia-docker run -itd --name fvcore pytorch/pytorch
+            docker exec -it fvcore nvidia-smi
+
+      - run:
+          name: Build and Install fvcore
+          command: |
+            docker exec -it fvcore git clone https://github.com/facebookresearch/fvcore
+            docker exec -it fvcore pip install -e fvcore
+
+      - run:
+          name: Run Unit Tests
+          command: |
+            docker exec -it fvcore python -m unittest discover -v -s fvcore/tests
+
+  upload_wheel:
+    docker:
+      - image: circleci/python:3.7
+    steps:
+      - attach_workspace:
+          at: ~/workspace
+      - run:
+          command: |
+            pip install --progress-bar off --user twine
+            for pkg in ~/workspace/*.tar.gz; do
+              twine upload $pkg
+            done
+
+workflows:
+  version: 2
+  regular_test:
+    jobs:
+      - cpu_tests
+      - gpu_tests
+
+  nightly:
+    jobs:
+      - cpu_tests
+      - gpu_tests
+      - upload_wheel:
+          requires:
+            - cpu_tests
+            - gpu_tests
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - master
