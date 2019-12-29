@@ -13,6 +13,9 @@ from fvcore.nn import update_bn_stats
 
 
 class TestPreciseBN(unittest.TestCase):
+    def setUp(self):
+        torch.set_rng_state(torch.manual_seed(42).get_state())
+
     @staticmethod
     def compute_bn_stats(
         tensors: list, dims: list
