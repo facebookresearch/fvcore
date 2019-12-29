@@ -15,6 +15,9 @@ class TestWeightInit(unittest.TestCase):
     Test creation of WeightInit.
     """
 
+    def setUp(self):
+        torch.set_rng_state(torch.manual_seed(42).get_state())
+
     @staticmethod
     def msra_fill_std(fan_out: int) -> float:
         # Given the fan_out, calculate the expected standard deviation for msra
