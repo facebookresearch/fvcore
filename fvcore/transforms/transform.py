@@ -14,6 +14,7 @@ __all__ = [
     "CropTransform",
     "GridSampleTransform",
     "HFlipTransform",
+    "VFlipTransform",
     "NoOpTransform",
     "ScaleTransform",
     "Transform",
