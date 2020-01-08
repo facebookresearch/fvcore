@@ -38,7 +38,7 @@ install_dep: &install_dep
   - run:
       name: Install Dependencies
       command: |
-        pip install --progress-bar off torch shapely flake8 isort black==19.3b0
+        pip install --progress-bar off torch shapely flake8 flake8-bugbear flake8-comprehensions isort black==19.3b0
 
 install_fvcore: &install_fvcore
   - run:
