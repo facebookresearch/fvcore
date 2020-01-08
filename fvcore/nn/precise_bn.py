@@ -58,7 +58,8 @@ def update_bn_stats(model, data_loader, num_iters: int = 200):
     running_var = [torch.zeros_like(bn.running_var) for bn in bn_layers]
 
     for ind, inputs in enumerate(itertools.islice(data_loader, num_iters)):
-        model(inputs)
+        with torch.no_grad():  # No need to backward
+            model(inputs)
 
         for i, bn in enumerate(bn_layers):
             # Accumulates the bn stats.
