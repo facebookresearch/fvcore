@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
+import math
 import numpy as np
 import time
 import unittest
@@ -79,6 +80,9 @@ class TestHistoryBuffer(unittest.TestCase):
 
 class TestTimer(unittest.TestCase):
     def test_timer(self):
+        """
+        Test basic timer functions (pause, resume, and reset).
+        """
         timer = Timer()
         time.sleep(0.5)
         self.assertTrue(0.99 > timer.seconds() >= 0.5)
@@ -94,6 +98,24 @@ class TestTimer(unittest.TestCase):
 
         timer.reset()
         self.assertTrue(0.49 > timer.seconds() >= 0)
+
+    def test_avg_second(self):
+        """
+        Test avg_seconds that counts the average time.
+        """
+        for pause_second in (0.1, 0.15):
+            timer = Timer()
+            for t in (pause_second,) * 10:
+                if timer.is_paused():
+                    timer.resume()
+                time.sleep(t)
+                timer.pause()
+                self.assertTrue(
+                    math.isclose(
+                        pause_second, timer.avg_seconds(), rel_tol=5e-2
+                    ),
+                    msg="{}: {}".format(pause_second, timer.avg_seconds()),
+                )
 
 
 class TestCfgNode(unittest.TestCase):
