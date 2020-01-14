@@ -8,3 +8,4 @@ from .focal_loss import (
 from .precise_bn import get_bn_modules, update_bn_stats
 from .smooth_l1_loss import smooth_l1_loss
 from .weight_init import c2_msra_fill, c2_xavier_fill
+from .flop_count import flop_count
