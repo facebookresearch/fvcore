@@ -19,9 +19,9 @@ pip install -U 'git+https://github.com/facebookresearch/fvcore'
 for the user using PyCharm Terminal or Conda Terminal
 
 Use the following command to install:
-```
+
 pip install -U git+https://github.com/facebookresearch/fvcore
-```
+
 ## License
 
 This library is released under the [Apache 2.0 license](https://github.com/facebookresearch/fvcore/blob/master/LICENSE).
