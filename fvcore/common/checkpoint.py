@@ -304,8 +304,8 @@ class PeriodicCheckpointer:
             files_to_delete = all_checkpoint_files[: -self.max_to_keep]
 
             for file in files_to_delete:
-                if os.path.exists(file):
-                    os.remove(file)
+                if PathManager.exists(file):
+                    PathManager.remove(file)
 
     def save(self, name: str, **kwargs: Any):
         """
