@@ -222,3 +222,36 @@ class TestPeriodicCheckpointer(unittest.TestCase):
                         self.assertTrue(os.path.exists(path))
                     else:
                         self.assertFalse(os.path.exists(path))
+
+    def test_periodic_checkpointer_max_to_keep(self):
+        """
+        Test parameter: max_to_keep
+        """
+        _period = 10
+        _max_iter = 100
+        _max_to_keep = 3
+        for trained_model in [
+            self._create_model(),
+            nn.DataParallel(self._create_model()),
+        ]:
+            with TemporaryDirectory() as f:
+                checkpointer = Checkpointer(
+                    trained_model, save_dir=f, save_to_disk=True
+                )
+                periodic_checkpointer = PeriodicCheckpointer(
+                    checkpointer, _period, 99, max_to_keep=_max_to_keep
+                )
+
+                checkpoint_paths = list()
+
+                for iteration in range(_max_iter):
+                    periodic_checkpointer.step(iteration)
+                    if (iteration + 1) % _period == 0:
+                        path = os.path.join(f, "model_{:07d}.pth".format(iteration))
+                        checkpoint_paths.append(path)
+
+                for path in checkpoint_paths[:-_max_to_keep]:
+                    self.assertFalse(os.path.exists(path))
+
+                for path in checkpoint_paths[-_max_to_keep:]:
+                    self.assertTrue(os.path.exists(path))
