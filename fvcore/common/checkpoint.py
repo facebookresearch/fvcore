@@ -298,12 +298,13 @@ class PeriodicCheckpointer:
 
             if self.max_to_keep is not None:
                 all_checkpoint_files = self.checkpointer.get_all_checkpoint_files()
+                all_checkpoint_files = [item for item in all_checkpoint_files if not item.endswith("model_final.pth")]
                 all_checkpoint_files.sort()
-                files_to_delete = all_checkpoint_files[: -self.max_to_keep]
+                files_to_delete = all_checkpoint_files[:-self.max_to_keep]
 
                 for file in files_to_delete:
                     if PathManager.exists(file):
-                        PathManager.remove(file)
+                        PathManager.rm(file)
 
         if iteration >= self.max_iter - 1:
             self.checkpointer.save("model_final", **additional_state)
