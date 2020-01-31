@@ -272,7 +272,7 @@ class PeriodicCheckpointer:
             period (int): the period to save checkpoint.
             max_iter (int): maximum number of iterations. When it is reached,
                 a checkpoint named "model_final" will be saved.
-            max_to_keep (int): maximum number of checkpoints to keep
+            max_to_keep (int): maximum number of most current checkpoints to keep, previous checkpoints will be deleted
         """
         self.checkpointer = checkpointer
         self.period = int(period)
