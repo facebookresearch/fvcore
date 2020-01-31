@@ -1,0 +1,28 @@
+name: CI
+on: [push, pull_request]
+
+# Run linter with github actions for quick feedbacks.
+# The unittests will be run on CircleCI instead.
+jobs:
+  linter:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+      matrix:
+        python-version: [3.6, 3.7]
+    steps:
+      - uses: actions/checkout@v1
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 flake8-bugbear flake8-comprehensions black==19.3b0 isort
+          flake8 --version
+      - name: Lint
+        run: |
+          isort -c -sp .
+          black --check -l 80 .
+          flake8 .

@@ -46,7 +46,8 @@ install_fvcore: &install_fvcore
         BUILD_NIGHTLY: 1
       name: Install fvcore
       command: |
-        python setup.py install sdist
+        pip install . -U
+        python setup.py sdist
         python -c 'import fvcore; print(fvcore.__version__)'
 
 run_unittests: &run_unittests
@@ -71,14 +72,14 @@ jobs:
       # Cache the venv directory that contains dependencies
       - restore_cache:
           keys:
-            - cache-key-{{ .Branch }}-ID-0
+            - cache-key-{{ .Branch }}-ID-20200130
 
       - <<: *install_dep
 
       - save_cache:
           paths:
             - ~/venv
-          key: cache-key-{{ .Branch }}-ID-0
+          key: cache-key-{{ .Branch }}-ID-20200130
 
       - <<: *install_fvcore
 
