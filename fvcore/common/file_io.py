@@ -127,6 +127,29 @@ class PathHandler:
         """
         raise NotImplementedError()
 
+    def _copy_from_local(
+        self,
+        local_path: str,
+        dst_path: str,
+        overwrite: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Copies a local file to the specified URI.
+
+        If the URI is another local path, this should be functionally identical
+        to copy.
+
+        Args:
+            local_path (str): a file path which exists on the local file system
+            dst_path (str): A URI supported by this PathHandler
+            overwrite (bool): Bool flag for forcing overwrite of existing URI
+
+        Returns:
+            status (bool): True on success
+        """
+        raise NotImplementedError()
+
     def _open(
         self, path: str, mode: str = "r", buffering: int = -1, **kwargs: Any
     ) -> Union[IO[str], IO[bytes]]:
@@ -246,6 +269,21 @@ class NativePathHandler(PathHandler):
     def _get_local_path(self, path: str, **kwargs: Any) -> str:
         self._check_kwargs(kwargs)
         return path
+
+    def _copy_from_local(
+        self,
+        local_path: str,
+        dst_path: str,
+        overwrite: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        self._check_kwargs(kwargs)
+        assert self._copy(
+            src_path=local_path,
+            dst_path=dst_path,
+            overwrite=overwrite,
+            **kwargs,
+        )
 
     def _open(
         self,
@@ -529,6 +567,32 @@ class PathManager:
         return PathManager.__get_path_handler(  # type: ignore
             path
         )._get_local_path(path, **kwargs)
+
+    @staticmethod
+    def copy_from_local(
+        local_path: str, dst_path: str, overwrite: bool = False, **kwargs: Any
+    ) -> None:
+        """
+        Copies a local file to the specified URI.
+
+        If the URI is another local path, this should be functionally identical
+        to copy.
+
+        Args:
+            local_path (str): a file path which exists on the local file system
+            dst_path (str): A URI supported by this PathHandler
+            overwrite (bool): Bool flag for forcing overwrite of existing URI
+
+        Returns:
+            status (bool): True on success
+        """
+        assert os.path.exists(local_path)
+        return PathManager.__get_path_handler(dst_path)._copy_from_local(
+            local_path=local_path,
+            dst_path=dst_path,
+            overwrite=overwrite,
+            **kwargs,
+        )
 
     @staticmethod
     def exists(path: str, **kwargs: Any) -> bool:
