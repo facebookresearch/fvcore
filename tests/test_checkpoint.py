@@ -242,12 +242,14 @@ class TestPeriodicCheckpointer(unittest.TestCase):
                     checkpointer, _period, 99, max_to_keep=_max_to_keep
                 )
 
-                checkpoint_paths = list()
+                checkpoint_paths = []
 
                 for iteration in range(_max_iter):
                     periodic_checkpointer.step(iteration)
                     if (iteration + 1) % _period == 0:
-                        path = os.path.join(f, "model_{:07d}.pth".format(iteration))
+                        path = os.path.join(
+                            f, "model_{:07d}.pth".format(iteration)
+                        )
                         checkpoint_paths.append(path)
 
                 for path in checkpoint_paths[:-_max_to_keep]:
