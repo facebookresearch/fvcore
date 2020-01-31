@@ -285,14 +285,12 @@ class HFlipTransform(Transform):
         Returns:
             ndarray: the flipped image(s).
         """
-        tensor = torch.from_numpy(np.ascontiguousarray(img))
-        if len(tensor.shape) == 2:
-            # For dimension of HxW.
-            tensor = tensor.flip((-1))
-        elif len(tensor.shape) > 2:
-            # For dimension of HxWxC, NxHxWxC.
-            tensor = tensor.flip((-2))
-        return tensor.numpy()
+        # NOTE: opencv would be faster:
+        # https://github.com/pytorch/pytorch/issues/16424#issuecomment-580695672
+        if img.ndim <= 3:  # HxW, HxWxC
+            return np.flip(img, axis=1)
+        else:
+            return np.flip(img, axis=-2)
 
     def apply_coords(self, coords: np.ndarray) -> np.ndarray:
         """
