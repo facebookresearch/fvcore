@@ -46,7 +46,8 @@ install_fvcore: &install_fvcore
         BUILD_NIGHTLY: 1
       name: Install fvcore
       command: |
-        python setup.py install sdist
+        pip install . -U
+        python setup.py sdist
         python -c 'import fvcore; print(fvcore.__version__)'
 
 run_unittests: &run_unittests

@@ -42,6 +42,7 @@ setup(
     "projects in FAIR computer vision team",
     python_requires=">=3.6",
     install_requires=[
+        "numpy",
         "yacs>=0.1.6",
         "pyyaml>=5.1",
         "tqdm",
