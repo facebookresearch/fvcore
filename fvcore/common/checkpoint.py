@@ -258,7 +258,13 @@ class PeriodicCheckpointer:
     multiple of period or if `max_iter` is reached.
     """
 
-    def __init__(self, checkpointer: Any, period: int, max_iter: int = None):
+    def __init__(
+        self,
+        checkpointer: Any,
+        period: int,
+        max_iter: int = None,
+        max_to_keep: int = None,
+    ):
         """
         Args:
             checkpointer (Any): the checkpointer object used to save
@@ -266,10 +272,13 @@ class PeriodicCheckpointer:
             period (int): the period to save checkpoint.
             max_iter (int): maximum number of iterations. When it is reached,
                 a checkpoint named "model_final" will be saved.
+            max_to_keep (int): maximum number of most current checkpoints to keep,
+                previous checkpoints will be deleted
         """
         self.checkpointer = checkpointer
         self.period = int(period)
         self.max_iter = max_iter
+        self.max_to_keep = max_to_keep
 
     def step(self, iteration: int, **kwargs: Any):
         """
@@ -287,6 +296,23 @@ class PeriodicCheckpointer:
             self.checkpointer.save(
                 "model_{:07d}".format(iteration), **additional_state
             )
+
+            if self.max_to_keep is not None:
+                all_checkpoint_files = (
+                    self.checkpointer.get_all_checkpoint_files()
+                )
+                all_checkpoint_files = [
+                    item
+                    for item in all_checkpoint_files
+                    if not item.endswith("model_final.pth")
+                ]
+                all_checkpoint_files.sort()
+                files_to_delete = all_checkpoint_files[: -self.max_to_keep]
+
+                for file in files_to_delete:
+                    if PathManager.exists(file):
+                        PathManager.rm(file)
+
         if iteration >= self.max_iter - 1:
             self.checkpointer.save("model_final", **additional_state)
 
