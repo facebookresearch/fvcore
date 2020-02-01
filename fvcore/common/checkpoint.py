@@ -301,10 +301,12 @@ class PeriodicCheckpointer:
                 all_checkpoint_files = (
                     self.checkpointer.get_all_checkpoint_files()
                 )
+                last_ckpt_file = self.checkpointer.get_checkpoint_file()
                 all_checkpoint_files = [
                     item
                     for item in all_checkpoint_files
                     if not item.endswith("model_final.pth")
+                    and item != last_ckpt_file
                 ]
                 all_checkpoint_files.sort()
                 files_to_delete = all_checkpoint_files[: -self.max_to_keep]
