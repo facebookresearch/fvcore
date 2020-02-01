@@ -76,6 +76,13 @@ def flop_count(
     else:
         whitelist_set = set(whitelist)
 
+    # Torch script does not support parallell torch models.
+    if isinstance(
+        model,
+        (nn.parallel.distributed.DistributedDataParallel, nn.DataParallel),
+    ):
+        model = model.module  # pyre-ignore
+
     assert set(whitelist_set).issubset(
         flop_count_ops
     ), "whitelist needs to be a subset of _SUPPORTED_OPS and customized_ops."
