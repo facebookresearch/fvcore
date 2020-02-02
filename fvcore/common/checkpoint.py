@@ -278,7 +278,10 @@ class PeriodicCheckpointer:
         self.checkpointer = checkpointer
         self.period = int(period)
         self.max_iter = max_iter
+        if max_to_keep is not None:
+            assert max_to_keep > 0
         self.max_to_keep = max_to_keep
+        self.recent_checkpoints = []
 
     def step(self, iteration: int, **kwargs: Any):
         """
@@ -298,20 +301,15 @@ class PeriodicCheckpointer:
             )
 
             if self.max_to_keep is not None:
-                all_checkpoint_files = (
-                    self.checkpointer.get_all_checkpoint_files()
+                self.recent_checkpoints.append(
+                    self.checkpointer.get_checkpoint_file()
                 )
-                all_checkpoint_files = [
-                    item
-                    for item in all_checkpoint_files
-                    if not item.endswith("model_final.pth")
-                ]
-                all_checkpoint_files.sort()
-                files_to_delete = all_checkpoint_files[: -self.max_to_keep]
-
-                for file in files_to_delete:
-                    if PathManager.exists(file):
-                        PathManager.rm(file)
+                if len(self.recent_checkpoints) > self.max_to_keep:
+                    file_to_delete = self.recent_checkpoints.pop(0)
+                    if PathManager.exists(
+                        file_to_delete
+                    ) and not file_to_delete.endswith("model_final.pth"):
+                        PathManager.rm(file_to_delete)
 
         if iteration >= self.max_iter - 1:
             self.checkpointer.save("model_final", **additional_state)
