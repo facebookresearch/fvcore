@@ -278,6 +278,8 @@ class PeriodicCheckpointer:
         self.checkpointer = checkpointer
         self.period = int(period)
         self.max_iter = max_iter
+        if max_to_keep is not None:
+            assert max_to_keep > 0
         self.max_to_keep = max_to_keep
         self.recent_checkpoints = []
 
@@ -301,7 +303,7 @@ class PeriodicCheckpointer:
                 self.checkpointer.get_checkpoint_file()
             )
 
-            if self.max_to_keep is not None and self.max_to_keep > 0:
+            if self.max_to_keep is not None:
                 if len(self.recent_checkpoints) > self.max_to_keep:
                     file_to_delete = self.recent_checkpoints.pop(0)
                     if PathManager.exists(
