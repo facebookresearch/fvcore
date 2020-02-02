@@ -299,11 +299,11 @@ class PeriodicCheckpointer:
             self.checkpointer.save(
                 "model_{:07d}".format(iteration), **additional_state
             )
-            self.recent_checkpoints.append(
-                self.checkpointer.get_checkpoint_file()
-            )
 
             if self.max_to_keep is not None:
+                self.recent_checkpoints.append(
+                    self.checkpointer.get_checkpoint_file()
+                )
                 if len(self.recent_checkpoints) > self.max_to_keep:
                     file_to_delete = self.recent_checkpoints.pop(0)
                     if PathManager.exists(
