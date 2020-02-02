@@ -306,7 +306,9 @@ class PeriodicCheckpointer:
                     item
                     for item in all_checkpoint_files
                     if not item.endswith("model_final.pth")
-                    and (item != last_ckpt_file or iteration >= self.max_iter - 1)
+                    and (
+                        item != last_ckpt_file or iteration >= self.max_iter - 1
+                    )
                 ]
 
                 all_checkpoint_files.sort()
