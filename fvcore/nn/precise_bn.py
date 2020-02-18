@@ -2,9 +2,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 import itertools
+from typing import Any, Iterable, List, Tuple, Type
 import torch
+from torch import nn
 
-BN_MODULE_TYPES = (
+BN_MODULE_TYPES: Tuple[Type[nn.Module]] = (
     torch.nn.BatchNorm1d,
     torch.nn.BatchNorm2d,
     torch.nn.BatchNorm3d,
@@ -13,7 +15,11 @@ BN_MODULE_TYPES = (
 
 
 @torch.no_grad()
-def update_bn_stats(model, data_loader, num_iters: int = 200):
+def update_bn_stats(
+    model: nn.Module,
+    data_loader: Iterable[Any],  # pyre-ignore
+    num_iters: int = 200,
+) -> None:
     """
     Recompute and update the batch norm stats to make them more precise. During
     training both BN stats and the weight are changing after every iteration, so
@@ -49,14 +55,19 @@ def update_bn_stats(model, data_loader, num_iters: int = 200):
     # momentum is disabled.
     # bn.running_mean = (1 - momentum) * bn.running_mean + momentum * batch_mean
     # Setting the momentum to 1.0 to compute the stats without momentum.
-    momentum_actual = [bn.momentum for bn in bn_layers]
+    momentum_actual = [bn.momentum for bn in bn_layers]  # pyre-ignore
     for bn in bn_layers:
         bn.momentum = 1.0
 
     # Note that running_var actually means "running average of variance"
-    running_mean = [torch.zeros_like(bn.running_mean) for bn in bn_layers]
-    running_var = [torch.zeros_like(bn.running_var) for bn in bn_layers]
+    running_mean = [
+        torch.zeros_like(bn.running_mean) for bn in bn_layers  # pyre-ignore
+    ]
+    running_var = [
+        torch.zeros_like(bn.running_var) for bn in bn_layers  # pyre-ignore
+    ]
 
+    ind = -1
     for ind, inputs in enumerate(itertools.islice(data_loader, num_iters)):
         with torch.no_grad():  # No need to backward
             model(inputs)
@@ -78,7 +89,7 @@ def update_bn_stats(model, data_loader, num_iters: int = 200):
         bn.momentum = momentum_actual[i]
 
 
-def get_bn_modules(model):
+def get_bn_modules(model: nn.Module) -> List[nn.Module]:
     """
     Find all BatchNorm (BN) modules that are in training mode. See
     fvcore.precise_bn.BN_MODULE_TYPES for a list of all modules that are

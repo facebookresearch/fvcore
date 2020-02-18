@@ -47,8 +47,8 @@ class TestWeightInit(unittest.TestCase):
     def test_conv_weight_init(self):
         # Test weight initialization for convolutional layers.
         kernel_sizes = [1, 3]
-        channel_in_dims = [128, 256, 512, 1024]
-        channel_out_dims = [256, 512, 1024, 2048]
+        channel_in_dims = [128, 256, 512]
+        channel_out_dims = [256, 512, 1024]
 
         for layer in [nn.Conv1d, nn.Conv2d, nn.Conv3d]:
             for k_size, c_in_dim, c_out_dim in itertools.product(
