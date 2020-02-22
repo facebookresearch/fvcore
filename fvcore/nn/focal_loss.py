@@ -6,12 +6,12 @@ from torch.nn import functional as F
 
 
 def sigmoid_focal_loss(
-    inputs,
-    targets,
+    inputs: torch.Tensor,
+    targets: torch.Tensor,
     alpha: float = -1,
     gamma: float = 2,
     reduction: str = "none",
-):
+) -> torch.Tensor:
     """
     Loss used in RetinaNet for dense detection: https://arxiv.org/abs/1708.02002.
     Args:
@@ -50,16 +50,18 @@ def sigmoid_focal_loss(
     return loss
 
 
-sigmoid_focal_loss_jit = torch.jit.script(sigmoid_focal_loss)
+sigmoid_focal_loss_jit = torch.jit.script(
+    sigmoid_focal_loss
+)  # type: torch.jit.ScriptModule
 
 
 def sigmoid_focal_loss_star(
-    inputs,
-    targets,
+    inputs: torch.Tensor,
+    targets: torch.Tensor,
     alpha: float = -1,
     gamma: float = 1,
     reduction: str = "none",
-):
+) -> torch.Tensor:
     """
     FL* described in RetinaNet paper Appendix: https://arxiv.org/abs/1708.02002.
     Args:
@@ -86,11 +88,13 @@ def sigmoid_focal_loss_star(
         loss *= alpha_t
 
     if reduction == "mean":
-        loss = loss.mean()
+        loss = loss.mean()  # pyre-ignore
     elif reduction == "sum":
-        loss = loss.sum()
+        loss = loss.sum()  # pyre-ignore
 
     return loss
 
 
-sigmoid_focal_loss_star_jit = torch.jit.script(sigmoid_focal_loss_star)
+sigmoid_focal_loss_star_jit = torch.jit.script(
+    sigmoid_focal_loss_star
+)  # type: torch.jit.ScriptModule
