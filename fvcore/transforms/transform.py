@@ -418,7 +418,7 @@ class ScaleTransform(Transform):
 
         float_tensor = torch.nn.functional.interpolate(
             to_float_tensor(img),
-            size=(self.new_w, self.new_h),
+            size=(self.new_h, self.new_w),
             mode=interp_method,
             align_corners=align_corners,
         )
