@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 
 from fvcore.nn.flop_count import flop_count
+from fvcore.nn.jit_handles import batchnorm_flop_jit
 
 
 class ThreeNet(nn.Module):
@@ -163,11 +164,9 @@ class TestFlopCount(unittest.TestCase):
         customNet = CustomNet(input_dim, output_dim)
         custom_ops = {"aten::sigmoid": dummy_sigmoid_flop_jit}
         x = torch.rand(batch_size, input_dim)
-        flop_dict1 = flop_count(customNet, (x,), customized_ops=custom_ops)
-        flop_fc = batch_size * input_dim * output_dim / 1e9
+        flop_dict1, _ = flop_count(customNet, (x,), supported_ops=custom_ops)
         flop_sigmoid = 10000 / 1e9
         gt_dict1 = defaultdict(float)
-        gt_dict1["addmm"] = flop_fc
         gt_dict1["sigmoid"] = flop_sigmoid
         self.assertDictEqual(
             flop_dict1,
@@ -190,7 +189,7 @@ class TestFlopCount(unittest.TestCase):
             return flop_dict
 
         custom_ops2 = {"aten::addmm": addmm_dummy_flop_jit}
-        flop_dict2 = flop_count(customNet, (x,), customized_ops=custom_ops2)
+        flop_dict2, _ = flop_count(customNet, (x,), supported_ops=custom_ops2)
         flop = 400000 / 1e9
         gt_dict2 = defaultdict(float)
         gt_dict2["addmm"] = flop
@@ -209,12 +208,30 @@ class TestFlopCount(unittest.TestCase):
         input_dim = 8
         output_dim = 4
         x = torch.randn(batch_size, input_dim)
-        flop_dict = flop_count(nn.Linear(input_dim, output_dim), (x,))
+        flop_dict, _ = flop_count(nn.Linear(input_dim, output_dim), (x,))
         gt_flop = batch_size * input_dim * output_dim / 1e9
         gt_dict = defaultdict(float)
         gt_dict["addmm"] = gt_flop
         self.assertDictEqual(
             flop_dict, gt_dict, "nn.Linear failed to pass the flop count test."
+        )
+
+    def test_skip_ops(self) -> None:
+        """
+        Test the return of skipped operations.
+        """
+        batch_size = 10
+        input_dim = 5
+        output_dim = 4
+        customNet = CustomNet(input_dim, output_dim)
+        x = torch.rand(batch_size, input_dim)
+        _, skip_dict = flop_count(customNet, (x,))
+        gt_dict = Counter()
+        gt_dict["aten::sigmoid"] = 1
+        self.assertDictEqual(
+            skip_dict,
+            gt_dict,
+            "Skipped operations failed to pass the flop count test.",
         )
 
     def test_linear(self) -> None:
@@ -226,7 +243,7 @@ class TestFlopCount(unittest.TestCase):
         output_dim = 20
         linearNet = LinearNet(input_dim, output_dim)
         x = torch.randn(batch_size, input_dim)
-        flop_dict = flop_count(linearNet, (x,))
+        flop_dict, _ = flop_count(linearNet, (x,))
         gt_flop = batch_size * input_dim * output_dim / 1e9
         gt_dict = defaultdict(float)
         gt_dict["addmm"] = gt_flop
@@ -279,7 +296,7 @@ class TestFlopCount(unittest.TestCase):
                     batch_size, input_dim, spatial_dim, spatial_dim, spatial_dim
                 )
 
-            flop_dict = flop_count(convNet, (x,))
+            flop_dict, _ = flop_count(convNet, (x,))
             spatial_out = (
                 (spatial_dim + 2 * padding) - kernel_size
             ) // stride + 1
@@ -443,7 +460,7 @@ class TestFlopCount(unittest.TestCase):
         mNet = MatmulNet()
         x = torch.randn(m, n)
         y = torch.randn(n, p)
-        flop_dict = flop_count(mNet, (x, y))
+        flop_dict, _ = flop_count(mNet, (x, y))
         gt_flop = m * n * p / 1e9
         gt_dict = defaultdict(float)
         gt_dict["matmul"] = gt_flop
@@ -467,7 +484,7 @@ class TestFlopCount(unittest.TestCase):
         eNet = EinsumNet(equation)
         x = torch.randn(n, c, t)
         y = torch.randn(n, c, p)
-        flop_dict = flop_count(eNet, (x, y))
+        flop_dict, _ = flop_count(eNet, (x, y))
         gt_flop = n * t * p * c / 1e9
         gt_dict = defaultdict(float)
         gt_dict["einsum"] = gt_flop
@@ -482,7 +499,7 @@ class TestFlopCount(unittest.TestCase):
         eNet = EinsumNet(equation)
         x = torch.randn(n, t, g)
         y = torch.randn(n, c, g)
-        flop_dict = flop_count(eNet, (x, y))
+        flop_dict, _ = flop_count(eNet, (x, y))
         gt_flop = n * t * g * c / 1e9
         gt_dict = defaultdict(float)
         gt_dict["einsum"] = gt_flop
@@ -498,11 +515,12 @@ class TestFlopCount(unittest.TestCase):
         BatchNorm1d, BatchNorm2d and BatchNorm3d.
         """
         # Test for BatchNorm1d.
+        supported_ops = {"aten::batch_norm": batchnorm_flop_jit}
         batch_size = 10
         input_dim = 10
         batch_1d = nn.BatchNorm1d(input_dim, affine=False)
         x = torch.randn(batch_size, input_dim)
-        flop_dict = flop_count(batch_1d, (x,))
+        flop_dict, _ = flop_count(batch_1d, (x,), supported_ops)
         gt_flop = 4 * batch_size * input_dim / 1e9
         gt_dict = defaultdict(float)
         gt_dict["batchnorm"] = gt_flop
@@ -519,7 +537,7 @@ class TestFlopCount(unittest.TestCase):
         spatial_dim_y = 5
         batch_2d = nn.BatchNorm2d(input_dim, affine=False)
         x = torch.randn(batch_size, input_dim, spatial_dim_x, spatial_dim_y)
-        flop_dict = flop_count(batch_2d, (x,))
+        flop_dict, _ = flop_count(batch_2d, (x,), supported_ops)
         gt_flop = (
             4 * batch_size * input_dim * spatial_dim_x * spatial_dim_y / 1e9
         )
@@ -541,7 +559,7 @@ class TestFlopCount(unittest.TestCase):
         x = torch.randn(
             batch_size, input_dim, spatial_dim_x, spatial_dim_y, spatial_dim_z
         )
-        flop_dict = flop_count(batch_3d, (x,))
+        flop_dict, _ = flop_count(batch_3d, (x,), supported_ops)
         gt_flop = (
             4
             * batch_size
@@ -577,7 +595,7 @@ class TestFlopCount(unittest.TestCase):
         flop_linear1 = batch_size * conv_dim * linear_dim / 1e9
         flop_linear2 = batch_size * linear_dim * 1 / 1e9
         flop2 = flop_linear1 + flop_linear2
-        flop_dict = flop_count(threeNet, (x,))
+        flop_dict, _ = flop_count(threeNet, (x,))
         gt_dict = defaultdict(float)
         gt_dict["conv"] = flop1
         gt_dict["addmm"] = flop2
@@ -586,33 +604,3 @@ class TestFlopCount(unittest.TestCase):
             gt_dict,
             "The three-layer network failed to pass the flop count test.",
         )
-
-    def test_whitelist(self) -> None:
-        """
-        Test the use of a whitelist. The first test only considers flop count
-        for convolution layers. The linear layers of the ThreeNet are ignored
-        and should not be counted towards total flops. The second test considers
-        the case when a whitelist contains out of dictionary vocabulary.
-        """
-        batch_size = 9
-        input_dim = 2
-        conv_dim = 5
-        spatial_dim = 10
-        linear_dim = 3
-        x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
-        threeNet = ThreeNet(input_dim, conv_dim, linear_dim)
-        flop = (
-            batch_size * input_dim * conv_dim * spatial_dim * spatial_dim / 1e9
-        )
-        white_list = ["aten::_convolution"]
-        flop_dict = flop_count(threeNet, (x,), white_list)
-        gt_dict = defaultdict(float)
-        gt_dict["conv"] = flop
-        self.assertDictEqual(
-            flop_dict, gt_dict, "Whitelist failed to pass the flop count test."
-        )
-
-        # The whitelist contains out of dictionary vocabulary.
-        white_list = ["division"]
-        with self.assertRaises(Exception):
-            flop_count(threeNet, (x,), white_list)

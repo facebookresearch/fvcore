@@ -3,6 +3,147 @@
 import typing
 from collections import Counter, OrderedDict
 from numpy import prod
+import torch
+import torch.nn as nn
+
+# A list that contains ignored operations.
+_IGNORED_OPS: typing.List[str] = [
+    "aten::Int",
+    "aten::__and__",
+    "aten::arange",
+    "aten::cat",
+    "aten::clamp",
+    "aten::clamp_",
+    "aten::contiguous",
+    "aten::copy_",
+    "aten::detach",
+    "aten::empty",
+    "aten::eq",
+    "aten::expand",
+    "aten::flatten",
+    "aten::floor",
+    "aten::full",
+    "aten::gt",
+    "aten::index",
+    "aten::index_put_",
+    "aten::max",
+    "aten::nonzero",
+    "aten::permute",
+    "aten::remainder",
+    "aten::reshape",
+    "aten::select",
+    "aten::size",
+    "aten::slice",
+    "aten::split_with_sizes",
+    "aten::squeeze",
+    "aten::t",
+    "aten::to",
+    "aten::transpose",
+    "aten::unsqueeze",
+    "aten::view",
+    "aten::zeros",
+    "aten::zeros_like",
+    "prim::Constant",
+    "prim::Int",
+    "prim::ListConstruct",
+    "prim::ListUnpack",
+    "prim::NumToTensor",
+    "prim::TupleConstruct",
+]
+
+
+def get_jit_model_analysis(
+    model: nn.Module,
+    inputs: typing.Tuple[object, ...],
+    ops_handles: typing.Dict[str, typing.Callable],
+) -> typing.Tuple[typing.Counter[str], typing.Counter[str]]:
+    """
+    Given a model, the inputs and the handles for each operation, return the
+    results for the model analysis.
+
+    Args:
+        model (nn.Module): The model for torch script to trace.
+        inputs (tuple): Inputs that are passed to `model` to trace. Inputs need
+            to be in a tuple.
+        ops_handles (typing.Dict[str, typing.Callable]): A dictionary of handles
+            for model analysis.
+
+    Returns:
+        typing.Tuple[typing.Counter[str], typing.Counter[str]]: A counter that
+            contains the results of per operation analysis of the model and a
+            Counter of ignored operations.
+    """
+    # Torch script does not support parallel torch models.
+    if isinstance(
+        model,
+        (nn.parallel.distributed.DistributedDataParallel, nn.DataParallel),
+    ):
+        model = model.module  # pyre-ignore
+
+    # Compatibility with torch.jit.
+    if hasattr(torch.jit, "get_trace_graph"):
+        trace, _ = torch.jit.get_trace_graph(model, inputs)
+        trace_nodes = trace.graph().nodes()
+    else:
+        trace, _ = torch.jit._get_trace_graph(model, inputs)
+        trace_nodes = trace.nodes()
+
+    skipped_ops = Counter()
+    total_count = Counter()
+
+    for node in trace_nodes:
+        kind = node.kind()
+        if kind not in ops_handles.keys():
+            # If the operation is not in _IGNORED_OPS, count skipped operations.
+            if kind not in _IGNORED_OPS:
+                skipped_ops[kind] += 1
+            continue
+
+        handle_count = ops_handles.get(kind, None)
+        if handle_count is None:
+            continue
+        # pyre-ignore
+        inputs, outputs = list(node.inputs()), list(node.outputs())
+        op_count = handle_count(inputs, outputs)
+        total_count += op_count
+    return total_count, skipped_ops
+
+
+def generic_activation_jit(
+    op_name: str
+) -> typing.Callable[
+    [typing.List[object], typing.List[object]], typing.Counter[str]
+]:
+    """
+    This method return a handle that counts the number of activation from the
+    output shape for the specified operation.
+
+    Args:
+        op_name (str): The name of the operation.
+
+    Returns:
+        typing.Callable: An activation handle for the given operation.
+    """
+
+    def _generic_activation_jit(outputs: typing.List[object]) -> int:
+        """
+        This is a generic jit handle that counts the number of activations for any
+        operation given the output shape.
+
+        Args:
+            outputs (list(torch._C.Value)): The output shape in the form of a list
+                of jit object.
+
+        Returns:
+            int: Total number of activations for each operation.
+        """
+        out_shape = get_shape(outputs[0])
+        ac_count = prod(out_shape)
+        return ac_count
+
+    return lambda inputs, outputs: Counter(
+        {op_name: _generic_activation_jit(outputs)}
+    )
 
 
 def get_shape(val: object) -> typing.List[int]:
