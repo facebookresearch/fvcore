@@ -7,9 +7,9 @@ import tempfile
 import unittest
 import uuid
 from typing import Optional
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from fvcore.common.file_io import PathManager, get_cache_dir
+from fvcore.common.file_io import LazyPath, PathManager, get_cache_dir
 
 
 class TestNativeIO(unittest.TestCase):
@@ -221,3 +221,39 @@ class TestHTTPIO(unittest.TestCase):
         f = PathManager.open(self._remote_uri, foo="foo")  # type: ignore
         f.close()
         PathManager.set_strict_kwargs_checking(True)
+
+
+class TestLazyPath(unittest.TestCase):
+    def test_materialize(self):
+        f = MagicMock(return_value="test")
+        x = LazyPath(f)
+        f.assert_not_called()
+
+        p = os.fspath(x)
+        f.assert_called()
+        self.assertEqual(p, "test")
+
+        p = os.fspath(x)
+        # should only be called once
+        f.assert_called_once()
+        self.assertEqual(p, "test")
+
+    def test_join(self):
+        f = MagicMock(return_value="test")
+        x = LazyPath(f)
+        p = os.path.join(x, "a.txt")
+        f.assert_called_once()
+        self.assertEqual(p, "test/a.txt")
+
+    def test_getattr(self):
+        x = LazyPath(lambda: "abc")
+        with self.assertRaises(AttributeError):
+            x.startswith("ab")
+        _ = os.fspath(x)
+        self.assertTrue(x.startswith("ab"))
+
+    def test_PathManager(self):
+        x = LazyPath(lambda: "./")
+        output = PathManager.ls(x)
+        output_gt = PathManager.ls("./")
+        self.assertEqual(sorted(output), sorted(output_gt))

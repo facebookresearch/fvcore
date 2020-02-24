@@ -21,7 +21,7 @@ import portalocker  # type: ignore
 
 from fvcore.common.download import download
 
-__all__ = ["PathManager", "get_cache_dir", "file_lock"]
+__all__ = ["LazyPath", "PathManager", "get_cache_dir", "file_lock"]
 
 
 def get_cache_dir(cache_dir: Optional[str] = None) -> str:
@@ -73,6 +73,44 @@ def file_lock(path: str):  # type: ignore
         # exceptions.
         pass
     return portalocker.Lock(path + ".lock", timeout=1800)  # type: ignore
+
+
+class LazyPath(os.PathLike):
+    """
+    A path that's lazily evaluated when it's used.
+
+    Users should be careful to not use it like a str, because
+    it behaves differently from a str.
+    Path manipulation functions in Python such as `os.path.*` all accept
+    PathLike objects already.
+
+    It can be materialized to a str using `os.fspath`.
+    """
+
+    def __init__(self, func: Callable[[], str]) -> None:
+        """
+        Args:
+            func: a function that takes no arguments and returns the
+                actual path as a str. It will be called at most once.
+        """
+        self._func = func
+        self._value: Optional[str] = None
+
+    def _get_value(self) -> str:
+        if self._value is None:
+            self._value = self._func()
+        return self._value  # pyre-ignore
+
+    def __fspath__(self) -> str:
+        return self._get_value()
+
+    # behave more like a str after evaluated
+    def __getattr__(self, name: str):  # type: ignore
+        if self._value is None:
+            raise AttributeError(
+                f"Uninitialized LazyPath has no attribute: {name}."
+            )
+        return getattr(self._value, name)
 
 
 class PathHandler:
@@ -485,17 +523,18 @@ class PathManager:
     _NATIVE_PATH_HANDLER = NativePathHandler()
 
     @staticmethod
-    def __get_path_handler(path: str) -> PathHandler:
+    def __get_path_handler(path: Union[str, os.PathLike]) -> PathHandler:
         """
         Finds a PathHandler that supports the given path. Falls back to the native
         PathHandler if no other handler is found.
 
         Args:
-            path (str): URI path to resource
+            path (str or os.PathLike): URI path to resource
 
         Returns:
             handler (PathHandler)
         """
+        path = os.fspath(path)  # pyre-ignore
         for p in PathManager._PATH_HANDLERS.keys():
             if path.startswith(p):
                 return PathManager._PATH_HANDLERS[p]
@@ -650,9 +689,7 @@ class PathManager:
         Returns:
             List[str]: list of contents in given path
         """
-        return PathManager.__get_path_handler(path)._ls(  # type: ignore
-            path, **kwargs
-        )
+        return PathManager.__get_path_handler(path)._ls(path, **kwargs)
 
     @staticmethod
     def mkdirs(path: str, **kwargs: Any) -> None:
