@@ -344,7 +344,7 @@ class TestTransforms(unittest.TestCase):
         Test ScaleTransform..
         """
         _trans_name = "ScaleTransform"
-        params = ((0, 0, 20, 20, "nearest"), (10, 10, 20, 20, "nearest"))
+        params = ((0, 0, 20, 20, "nearest"), (10, 10, 20, 20, "nearest"), (10, 15, 20, 40, "nearest"))
 
         for (img, array_type, shape_str), param in itertools.product(
             TestTransforms._img_provider(), params
