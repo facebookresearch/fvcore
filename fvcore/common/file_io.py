@@ -112,6 +112,11 @@ class LazyPath(os.PathLike):
             )
         return getattr(self._value, name)
 
+    def __getitem__(self, key):  # type: ignore
+        if self._value is None:
+            raise TypeError(f"Uninitialized LazyPath is not subscriptable.")
+        return self._value[key]  # type: ignore
+
 
 class PathHandler:
     """
@@ -306,7 +311,7 @@ class NativePathHandler(PathHandler):
 
     def _get_local_path(self, path: str, **kwargs: Any) -> str:
         self._check_kwargs(kwargs)
-        return path
+        return os.fspath(path)
 
     def _copy_from_local(
         self,

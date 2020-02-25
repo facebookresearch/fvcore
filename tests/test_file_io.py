@@ -257,3 +257,10 @@ class TestLazyPath(unittest.TestCase):
         output = PathManager.ls(x)
         output_gt = PathManager.ls("./")
         self.assertEqual(sorted(output), sorted(output_gt))
+
+    def test_getitem(self):
+        x = LazyPath(lambda: "abc")
+        with self.assertRaises(TypeError):
+            x[0]
+        _ = os.fspath(x)
+        self.assertEqual(x[0], "a")
