@@ -8,12 +8,12 @@ from fvcore.transforms.transform_util import to_float_tensor, to_numpy
 
 
 class TestTransformUtil(unittest.TestCase):
-    def test_convert(self):
+    def test_convert(self) -> None:
         N, C, H, W = 4, 64, 14, 14
         np.random.seed(0)
-        array_HW = np.random.rand(H, W)
-        array_HWC = np.random.rand(H, W, C)
-        array_NHWC = np.random.rand(N, H, W, C)
+        array_HW: np.ndarray = np.random.rand(H, W)
+        array_HWC: np.ndarray = np.random.rand(H, W, C)
+        array_NHWC: np.ndarray = np.random.rand(N, H, W, C)
         arrays = [
             array_HW,
             (array_HW * 255).astype(np.uint8),

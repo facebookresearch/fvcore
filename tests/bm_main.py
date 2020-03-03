@@ -6,14 +6,14 @@ import importlib
 from os.path import basename, dirname, isfile, join, sys
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:  # pyre-ignore[16]
+    if len(sys.argv) > 1:
         # Parse from flags.
-        module_names = [
+        module_names = [  # pyre-ignore
             n for n in sys.argv if n.startswith("bm_")
-        ]  # pyre-ignore[16]
+        ]
     else:
         # Get all the benchmark files (starting with "bm_").
-        bm_files = glob.glob(join(dirname(__file__), "bm_*.py"))
+        bm_files = glob.glob(join(dirname(__file__), "bm_*.py"))  # pyre-ignore
         module_names = [
             basename(f)[:-3]
             for f in bm_files

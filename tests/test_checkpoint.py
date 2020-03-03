@@ -5,6 +5,7 @@ import copy
 import os
 import random
 import string
+import typing
 import unittest
 from collections import OrderedDict
 from tempfile import TemporaryDirectory
@@ -15,13 +16,15 @@ from fvcore.common.checkpoint import Checkpointer, PeriodicCheckpointer
 
 
 class TestCheckpointer(unittest.TestCase):
-    def _create_model(self):
+    def _create_model(self) -> nn.Module:
         """
         Create a simple model.
         """
         return nn.Sequential(nn.Linear(2, 3), nn.Linear(3, 1))
 
-    def _create_complex_model(self):
+    def _create_complex_model(
+        self
+    ) -> typing.Tuple[nn.Module, typing.Dict[str, torch.Tensor]]:
         """
         Create a complex model.
         """
@@ -42,7 +45,7 @@ class TestCheckpointer(unittest.TestCase):
 
         return m, state_dict
 
-    def test_from_last_checkpoint_model(self):
+    def test_from_last_checkpoint_model(self) -> None:
         """
         test that loading works even if they differ by a prefix.
         """
@@ -79,7 +82,7 @@ class TestCheckpointer(unittest.TestCase):
                 # same content
                 self.assertTrue(trained_p.cpu().equal(loaded_p.cpu()))
 
-    def test_from_name_file_model(self):
+    def test_from_name_file_model(self) -> None:
         """
         test that loading works even if they differ by a prefix.
         """
@@ -117,7 +120,7 @@ class TestCheckpointer(unittest.TestCase):
                 # same content.
                 self.assertTrue(trained_p.cpu().equal(loaded_p.cpu()))
 
-    def test_checkpointables(self):
+    def test_checkpointables(self) -> None:
         """
         Test saving and loading checkpointables.
         """
@@ -134,7 +137,7 @@ class TestCheckpointer(unittest.TestCase):
                     for i in range(10)
                 }
 
-            def random_handle(self, str_len=100):
+            def random_handle(self, str_len=100) -> str:
                 """
                 Generate a random string of fixed length.
                 Args:
@@ -153,7 +156,7 @@ class TestCheckpointer(unittest.TestCase):
                 """
                 return self.state
 
-            def load_state_dict(self, state):
+            def load_state_dict(self, state) -> None:
                 """
                 Load the state from a given state.
                 Args:
@@ -192,13 +195,13 @@ class TestCheckpointer(unittest.TestCase):
 
 
 class TestPeriodicCheckpointer(unittest.TestCase):
-    def _create_model(self):
+    def _create_model(self) -> nn.Module:
         """
         Create a simple model.
         """
         return nn.Sequential(nn.Linear(2, 3), nn.Linear(3, 1))
 
-    def test_periodic_checkpointer(self):
+    def test_periodic_checkpointer(self) -> None:
         """
         test that loading works even if they differ by a prefix.
         """
@@ -223,7 +226,7 @@ class TestPeriodicCheckpointer(unittest.TestCase):
                     else:
                         self.assertFalse(os.path.exists(path))
 
-    def test_periodic_checkpointer_max_to_keep(self):
+    def test_periodic_checkpointer_max_to_keep(self) -> None:
         """
         Test parameter: max_to_keep
         """

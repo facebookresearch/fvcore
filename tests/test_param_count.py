@@ -13,7 +13,7 @@ class NetWithReuse(nn.Module):
         self.conv1 = nn.Conv2d(100, 100, 3)
         self.conv2 = nn.Conv2d(100, 100, 3)
         if reuse:
-            self.conv2.weight = self.conv1.weight
+            self.conv2.weight = self.conv1.weight  # pyre-ignore
 
 
 class TestParamCount(unittest.TestCase):

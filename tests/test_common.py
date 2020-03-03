@@ -4,6 +4,7 @@
 import math
 import numpy as np
 import time
+import typing
 import unittest
 
 from fvcore.common.config import CfgNode
@@ -18,7 +19,9 @@ class TestHistoryBuffer(unittest.TestCase):
         np.random.seed(42)
 
     @staticmethod
-    def create_buffer_with_init(num_values: int, buffer_len: int = 1000000):
+    def create_buffer_with_init(
+        num_values: int, buffer_len: int = 1000000
+    ) -> typing.Callable[[], typing.Union[object, np.ndarray]]:
         """
         Return a HistoryBuffer of the given length filled with random numbers.
 
@@ -28,9 +31,9 @@ class TestHistoryBuffer(unittest.TestCase):
         """
 
         max_value = 1000
-        values = np.random.randint(max_value, size=num_values)
+        values: np.ndarray = np.random.randint(max_value, size=num_values)
 
-        def create_buffer():
+        def create_buffer() -> typing.Union[object, np.ndarray]:
             buf = HistoryBuffer(buffer_len)
             for v in values:
                 buf.update(v)
@@ -50,7 +53,7 @@ class TestHistoryBuffer(unittest.TestCase):
             create_buffer = TestHistoryBuffer.create_buffer_with_init(
                 gt_len, buffer_len
             )
-            buf, gt = create_buffer()
+            buf, gt = create_buffer()  # pyre-ignore
 
             values, iterations = zip(*buf.values())
             self.assertEqual(len(values), buffer_len)
@@ -79,7 +82,7 @@ class TestHistoryBuffer(unittest.TestCase):
 
 
 class TestTimer(unittest.TestCase):
-    def test_timer(self):
+    def test_timer(self) -> None:
         """
         Test basic timer functions (pause, resume, and reset).
         """
@@ -99,7 +102,7 @@ class TestTimer(unittest.TestCase):
         timer.reset()
         self.assertTrue(0.49 > timer.seconds() >= 0)
 
-    def test_avg_second(self):
+    def test_avg_second(self) -> None:
         """
         Test avg_seconds that counts the average time.
         """
@@ -120,7 +123,7 @@ class TestTimer(unittest.TestCase):
 
 class TestCfgNode(unittest.TestCase):
     @staticmethod
-    def gen_default_cfg():
+    def gen_default_cfg() -> CfgNode:
         cfg = CfgNode()
         cfg.KEY1 = "default"
         cfg.KEY2 = "default"
@@ -128,7 +131,7 @@ class TestCfgNode(unittest.TestCase):
 
         return cfg
 
-    def test_merge_from_file(self):
+    def test_merge_from_file(self) -> None:
         """
         Test merge_from_file function provided in the class.
         """
@@ -158,7 +161,7 @@ class TestCfgNode(unittest.TestCase):
         self.assertEqual(cfg.KEY2, "config")
         self.assertEqual(cfg.EXPRESSION, [1, 4, 9])
 
-    def test_merge_from_list(self):
+    def test_merge_from_list(self) -> None:
         """
         Test merge_from_list function provided in the class.
         """
@@ -167,7 +170,7 @@ class TestCfgNode(unittest.TestCase):
         self.assertEqual(cfg.KEY1, "list1")
         self.assertEqual(cfg.KEY2, "list2")
 
-    def test_setattr(self):
+    def test_setattr(self) -> None:
         """
         Test __setattr__ function provided in the class.
         """
@@ -202,7 +205,7 @@ class TestCfgNode(unittest.TestCase):
 
 
 class TestRegistry(unittest.TestCase):
-    def test_registry(self):
+    def test_registry(self) -> None:
         """
         Test registering and accessing objects in the Registry.
         """

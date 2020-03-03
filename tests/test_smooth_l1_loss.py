@@ -13,7 +13,7 @@ class TestSmoothL1Loss(unittest.TestCase):
         super().setUp()
         np.random.seed(42)
 
-    def test_smooth_l1_loss(self):
+    def test_smooth_l1_loss(self) -> None:
         inputs = torch.tensor([1, 2, 3], dtype=torch.float32)
         targets = torch.tensor([1.1, 2, 4.5], dtype=torch.float32)
         beta = 0.5

@@ -10,7 +10,7 @@ from fvcore.common.download import download
 class TestDownload(unittest.TestCase):
     _filename = "facebook.html"
 
-    def test_download(self):
+    def test_download(self) -> None:
         download(
             "https://www.facebook.com",
             ".",

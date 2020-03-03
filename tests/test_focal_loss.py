@@ -2,6 +2,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 import numpy as np
+import typing
 import unittest
 import torch
 from torch.nn import functional as F
@@ -14,7 +15,7 @@ from fvcore.nn import (
 )
 
 
-def logit(p):
+def logit(p: torch.Tensor) -> torch.Tensor:
     return torch.log(p / (1 - p))
 
 
@@ -23,7 +24,7 @@ class TestFocalLoss(unittest.TestCase):
         super().setUp()
         np.random.seed(42)
 
-    def test_focal_loss_equals_ce_loss(self):
+    def test_focal_loss_equals_ce_loss(self) -> None:
         """
         No weighting of easy/hard (gamma = 0) or positive/negative (alpha = 0).
         """
@@ -49,10 +50,11 @@ class TestFocalLoss(unittest.TestCase):
         focal_loss.backward()
         ce_loss.backward()
         self.assertTrue(
+            # pyre-ignore
             torch.allclose(inputs_fl.grad.data, inputs_ce.grad.data)
         )
 
-    def test_easy_ex_focal_loss_less_than_ce_loss(self):
+    def test_easy_ex_focal_loss_less_than_ce_loss(self) -> None:
         """
         With gamma = 2 loss of easy examples is downweighted.
         """
@@ -69,7 +71,7 @@ class TestFocalLoss(unittest.TestCase):
         correct_ratio = 1.0 / ((1.0 - p_t) ** 2)
         self.assertTrue(np.allclose(loss_ratio, correct_ratio))
 
-    def test_easy_ex_focal_loss_weighted_less_than_ce_loss(self):
+    def test_easy_ex_focal_loss_weighted_less_than_ce_loss(self) -> None:
         """
         With gamma = 2, alpha = 0.5 loss of easy examples is downweighted.
         """
@@ -85,7 +87,7 @@ class TestFocalLoss(unittest.TestCase):
         correct_ratio = 2.0 / ((1.0 - inputs.squeeze().sigmoid()) ** 2)
         self.assertTrue(np.allclose(loss_ratio, correct_ratio))
 
-    def test_hard_ex_focal_loss_similar_to_ce_loss(self):
+    def test_hard_ex_focal_loss_similar_to_ce_loss(self) -> None:
         """
         With gamma = 2 loss of hard examples is unchanged.
         """
@@ -101,7 +103,7 @@ class TestFocalLoss(unittest.TestCase):
         correct_ratio = 1.0 / ((1.0 - inputs.sigmoid()) ** 2)
         self.assertTrue(np.allclose(loss_ratio, correct_ratio))
 
-    def test_negatives_ignored_focal_loss(self):
+    def test_negatives_ignored_focal_loss(self) -> None:
         """
         With alpha = 1 negative examples have focal loss of 0.
         """
@@ -127,7 +129,7 @@ class TestFocalLoss(unittest.TestCase):
         self.assertTrue(np.all(ce_loss[targets == 0] > 0))
         self.assertTrue(np.all(focal_loss[targets == 0] == 0))
 
-    def test_positives_ignored_focal_loss(self):
+    def test_positives_ignored_focal_loss(self) -> None:
         """
         With alpha = 0 postive examples have focal loss of 0.
         """
@@ -153,7 +155,7 @@ class TestFocalLoss(unittest.TestCase):
         self.assertTrue(np.all(ce_loss[targets == 1] > 0))
         self.assertTrue(np.all(focal_loss[targets == 1] == 0))
 
-    def test_mean_focal_loss_equals_ce_loss(self):
+    def test_mean_focal_loss_equals_ce_loss(self) -> None:
         """
         Mean value of focal loss across all examples matches ce loss.
         """
@@ -174,7 +176,7 @@ class TestFocalLoss(unittest.TestCase):
         )
         self.assertEqual(ce_loss, focal_loss)
 
-    def test_sum_focal_loss_equals_ce_loss(self):
+    def test_sum_focal_loss_equals_ce_loss(self) -> None:
         """
         Sum of focal loss across all examples matches ce loss.
         """
@@ -192,7 +194,7 @@ class TestFocalLoss(unittest.TestCase):
         )
         self.assertEqual(ce_loss, focal_loss)
 
-    def test_focal_loss_equals_ce_loss_multi_class(self):
+    def test_focal_loss_equals_ce_loss_multi_class(self) -> None:
         """
         Focal loss with predictions for multiple classes matches ce loss.
         """
@@ -222,7 +224,7 @@ class TestFocalLoss(unittest.TestCase):
         self.assertEqual(ce_loss, focal_loss)
 
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA unavailable")
-    def test_focal_loss_equals_ce_loss_jit(self):
+    def test_focal_loss_equals_ce_loss_jit(self) -> None:
         """
         No weighting of easy/hard (gamma = 0) or positive/negative (alpha = 0).
         """
@@ -237,13 +239,17 @@ class TestFocalLoss(unittest.TestCase):
         self.assertTrue(np.allclose(ce_loss, focal_loss.cpu()))
 
     @staticmethod
-    def focal_loss_with_init(N: int, alpha: float = -1):
+    def focal_loss_with_init(
+        N: int, alpha: float = -1
+    ) -> typing.Callable[[], None]:
         device = torch.device("cuda:0")
-        inputs = logit(torch.rand(N)).to(device).requires_grad_()
-        targets = torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
+        inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
+        targets: torch.Tensor = torch.randint(0, 2, (N,)).float().to(
+            device
+        ).requires_grad_()
         torch.cuda.synchronize()
 
-        def run_focal_loss():
+        def run_focal_loss() -> None:
             fl = sigmoid_focal_loss(
                 inputs, targets, gamma=0, alpha=alpha, reduction="mean"
             )
@@ -253,13 +259,17 @@ class TestFocalLoss(unittest.TestCase):
         return run_focal_loss
 
     @staticmethod
-    def focal_loss_jit_with_init(N: int, alpha: float = -1):
+    def focal_loss_jit_with_init(
+        N: int, alpha: float = -1
+    ) -> typing.Callable[[], None]:
         device = torch.device("cuda:0")
-        inputs = logit(torch.rand(N)).to(device).requires_grad_()
-        targets = torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
+        inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
+        targets: torch.Tensor = torch.randint(0, 2, (N,)).float().to(
+            device
+        ).requires_grad_()
         torch.cuda.synchronize()
 
-        def run_focal_loss_jit():
+        def run_focal_loss_jit() -> None:
             fl = sigmoid_focal_loss_jit(
                 inputs, targets, gamma=0, alpha=alpha, reduction="mean"
             )
@@ -274,7 +284,7 @@ class TestFocalLossStar(unittest.TestCase):
         super().setUp()
         np.random.seed(42)
 
-    def test_focal_loss_star_equals_ce_loss(self):
+    def test_focal_loss_star_equals_ce_loss(self) -> None:
         """
         No weighting of easy/hard (gamma = 1) or positive/negative (alpha = -1).
         """
@@ -300,10 +310,11 @@ class TestFocalLossStar(unittest.TestCase):
         focal_loss_star.backward()
         ce_loss.backward()
         self.assertTrue(
+            # pyre-ignore
             torch.allclose(inputs_fl.grad.data, inputs_ce.grad.data)
         )
 
-    def test_easy_ex_focal_loss_star_less_than_ce_loss(self):
+    def test_easy_ex_focal_loss_star_less_than_ce_loss(self) -> None:
         """
         With gamma = 3 loss of easy examples is downweighted.
         """
@@ -320,7 +331,7 @@ class TestFocalLossStar(unittest.TestCase):
         loss_ratio = (ce_loss / focal_loss_star).squeeze()
         self.assertTrue(torch.all(loss_ratio > 10.0))
 
-    def test_focal_loss_star_positive_weights(self):
+    def test_focal_loss_star_positive_weights(self) -> None:
         """
         With alpha = 0.5 loss of positive examples is downweighted.
         """
@@ -337,7 +348,7 @@ class TestFocalLossStar(unittest.TestCase):
         correct_ratio = torch.zeros((N,)).float() + 2.0
         self.assertTrue(np.allclose(loss_ratio, correct_ratio))
 
-    def test_hard_ex_focal_loss_star_similar_to_ce_loss(self):
+    def test_hard_ex_focal_loss_star_similar_to_ce_loss(self) -> None:
         """
         With gamma = 2 loss of hard examples is roughly unchanged.
         """
@@ -355,7 +366,7 @@ class TestFocalLossStar(unittest.TestCase):
         rough_ratio = torch.tensor([1.0, 1.0, 1.0, 1.0], dtype=torch.float64)
         self.assertTrue(torch.allclose(loss_ratio, rough_ratio, atol=0.1))
 
-    def test_negatives_ignored_focal_loss_star(self):
+    def test_negatives_ignored_focal_loss_star(self) -> None:
         """
         With alpha = 1 negative examples have focal loss of 0.
         """
@@ -381,7 +392,7 @@ class TestFocalLossStar(unittest.TestCase):
         self.assertTrue(np.all(ce_loss[targets == 0] > 0))
         self.assertTrue(np.all(focal_loss_star[targets == 0] == 0))
 
-    def test_positives_ignored_focal_loss_star(self):
+    def test_positives_ignored_focal_loss_star(self) -> None:
         """
         With alpha = 0 postive examples have focal loss of 0.
         """
@@ -407,7 +418,7 @@ class TestFocalLossStar(unittest.TestCase):
         self.assertTrue(np.all(ce_loss[targets == 1] > 0))
         self.assertTrue(np.all(focal_loss_star[targets == 1] == 0))
 
-    def test_mean_focal_loss_star_equals_ce_loss(self):
+    def test_mean_focal_loss_star_equals_ce_loss(self) -> None:
         """
         Mean value of focal loss across all examples matches ce loss.
         """
@@ -428,7 +439,7 @@ class TestFocalLossStar(unittest.TestCase):
         )
         self.assertTrue(torch.allclose(ce_loss, focal_loss_star))
 
-    def test_sum_focal_loss_star_equals_ce_loss(self):
+    def test_sum_focal_loss_star_equals_ce_loss(self) -> None:
         """
         Sum of focal loss across all examples matches ce loss.
         """
@@ -446,7 +457,7 @@ class TestFocalLossStar(unittest.TestCase):
         )
         self.assertTrue(torch.allclose(ce_loss, focal_loss_star))
 
-    def test_focal_loss_star_equals_ce_loss_multi_class(self):
+    def test_focal_loss_star_equals_ce_loss_multi_class(self) -> None:
         """
         Focal loss with predictions for multiple classes matches ce loss.
         """
@@ -476,7 +487,7 @@ class TestFocalLossStar(unittest.TestCase):
         self.assertEqual(ce_loss, focal_loss_star)
 
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA unavailable")
-    def test_focal_loss_star_equals_ce_loss_jit(self):
+    def test_focal_loss_star_equals_ce_loss_jit(self) -> None:
         """
         No weighting of easy/hard (gamma = 1) or positive/negative (alpha = 0).
         """
@@ -491,13 +502,17 @@ class TestFocalLossStar(unittest.TestCase):
         self.assertTrue(np.allclose(ce_loss, focal_loss_star.cpu()))
 
     @staticmethod
-    def focal_loss_star_with_init(N: int, alpha: float = -1):
+    def focal_loss_star_with_init(
+        N: int, alpha: float = -1
+    ) -> typing.Callable[[], None]:
         device = torch.device("cuda:0")
-        inputs = logit(torch.rand(N)).to(device).requires_grad_()
-        targets = torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
+        inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
+        targets: torch.Tensor = torch.randint(0, 2, (N,)).float().to(
+            device
+        ).requires_grad_()
         torch.cuda.synchronize()
 
-        def run_focal_loss_star():
+        def run_focal_loss_star() -> None:
             fl = sigmoid_focal_loss_star(
                 inputs, targets, gamma=1, alpha=alpha, reduction="mean"
             )
@@ -507,13 +522,17 @@ class TestFocalLossStar(unittest.TestCase):
         return run_focal_loss_star
 
     @staticmethod
-    def focal_loss_star_jit_with_init(N: int, alpha: float = -1):
+    def focal_loss_star_jit_with_init(
+        N: int, alpha: float = -1
+    ) -> typing.Callable[[], None]:
         device = torch.device("cuda:0")
-        inputs = logit(torch.rand(N)).to(device).requires_grad_()
-        targets = torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
+        inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
+        targets: torch.Tensor = torch.randint(0, 2, (N,)).float().to(
+            device
+        ).requires_grad_()
         torch.cuda.synchronize()
 
-        def run_focal_loss_star_jit():
+        def run_focal_loss_star_jit() -> None:
             fl = sigmoid_focal_loss_star_jit(
                 inputs, targets, gamma=1, alpha=alpha, reduction="mean"
             )

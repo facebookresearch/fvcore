@@ -15,7 +15,7 @@ class TestWeightInit(unittest.TestCase):
     Test creation of WeightInit.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         torch.set_rng_state(torch.manual_seed(42).get_state())
 
     @staticmethod
@@ -44,7 +44,7 @@ class TestWeightInit(unittest.TestCase):
         bias_dist_match = torch.nonzero(bias).nelement() == 0
         return weight_dist_match and bias_dist_match
 
-    def test_conv_weight_init(self):
+    def test_conv_weight_init(self) -> None:
         # Test weight initialization for convolutional layers.
         kernel_sizes = [1, 3]
         channel_in_dims = [128, 256, 512]
@@ -92,7 +92,7 @@ class TestWeightInit(unittest.TestCase):
                     )
                 )
 
-    def test_linear_weight_init(self):
+    def test_linear_weight_init(self) -> None:
         # Test weight initialization for linear layer.
         channel_in_dims = [128, 256, 512, 1024]
         channel_out_dims = [256, 512, 1024, 2048]

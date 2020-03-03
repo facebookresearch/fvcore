@@ -33,6 +33,7 @@ class TestPreciseBN(unittest.TestCase):
             .numpy()
         )
         var = (
+            # pyre-ignore
             torch.stack([tensor.var(dim=dims) for tensor in tensors])
             .mean(dim=0)
             .numpy()
