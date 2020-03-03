@@ -4,7 +4,7 @@
 import unittest
 from torch import nn
 
-from fvcore.nn.parameter_count import parameter_count
+from fvcore.nn.parameter_count import parameter_count, parameter_count_table
 
 
 class NetWithReuse(nn.Module):
@@ -14,6 +14,13 @@ class NetWithReuse(nn.Module):
         self.conv2 = nn.Conv2d(100, 100, 3)
         if reuse:
             self.conv2.weight = self.conv1.weight  # pyre-ignore
+
+
+class NetWithDupPrefix(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.conv1 = nn.Conv2d(100, 100, 3)
+        self.conv111 = nn.Conv2d(100, 100, 3)
 
 
 class TestParamCount(unittest.TestCase):
@@ -28,3 +35,11 @@ class TestParamCount(unittest.TestCase):
         count = parameter_count(net)
         self.assertTrue(count[""], 90200)
         self.assertTrue(count["conv2"], 100)
+
+    def test_param_with_same_prefix(self) -> None:
+        net = NetWithDupPrefix()
+        table = parameter_count_table(net)
+        c = ["conv111.weight" in line for line in table.split("\n")]
+        self.assertEqual(
+            sum(c), 1
+        )  # it only appears once, despite being a prefix of conv1

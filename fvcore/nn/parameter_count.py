@@ -68,7 +68,7 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
                     )
                 else:
                     table.append((indent + name, indent + format_size(v)))
-                    fill(lvl + 1, name)
+                    fill(lvl + 1, name + ".")
 
     table.append(("model", format_size(count.pop(""))))
     fill(0, "")
