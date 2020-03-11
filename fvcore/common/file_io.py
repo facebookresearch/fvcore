@@ -723,17 +723,19 @@ class PathManager:
         )
 
     @staticmethod
-    def register_handler(handler: PathHandler) -> None:
+    def register_handler(handler: PathHandler, allow_override: bool = False) -> None:
         """
         Register a path handler associated with `handler._get_supported_prefixes`
         URI prefixes.
 
         Args:
             handler (PathHandler)
+            allow_override (bool): allow overriding existing handler for prefix
         """
         assert isinstance(handler, PathHandler), handler
         for prefix in handler._get_supported_prefixes():
-            assert prefix not in PathManager._PATH_HANDLERS
+            if not allow_override:
+                assert prefix not in PathManager._PATH_HANDLERS
             PathManager._PATH_HANDLERS[prefix] = handler
 
         # Sort path handlers in reverse order so longer prefixes take priority,
