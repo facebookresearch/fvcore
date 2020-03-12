@@ -73,3 +73,6 @@ class Registry(object):
                 )
             )
         return ret
+
+    def __contains__(self, name: str) -> bool:
+        return name in self._obj_map

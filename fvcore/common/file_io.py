@@ -117,6 +117,12 @@ class LazyPath(os.PathLike):
             raise TypeError(f"Uninitialized LazyPath is not subscriptable.")
         return self._value[key]  # type: ignore
 
+    def __str__(self) -> str:
+        if self._value is not None:
+            return self._value  # type: str
+        else:
+            return super().__str__()
+
 
 class PathHandler:
     """

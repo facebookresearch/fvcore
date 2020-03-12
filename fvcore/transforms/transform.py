@@ -416,6 +416,8 @@ class ScaleTransform(Transform):
         else:
             align_corners = None
 
+        # note: this is quite slow for int8 images because torch does not
+        # support it https://github.com/pytorch/pytorch/issues/5580
         float_tensor = torch.nn.functional.interpolate(
             to_float_tensor(img),
             size=(self.new_w, self.new_h),
