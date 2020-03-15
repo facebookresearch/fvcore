@@ -10,10 +10,10 @@ class Timer:
     A timer which computes the time elapsed since the start/reset of the timer.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.reset()
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Reset the timer.
         """
@@ -22,7 +22,7 @@ class Timer:
         self._total_paused = 0
         self._count_start = 1
 
-    def pause(self):
+    def pause(self) -> None:
         """
         Pause the timer.
         """
@@ -37,13 +37,13 @@ class Timer:
         """
         return self._paused is not None
 
-    def resume(self):
+    def resume(self) -> None:
         """
         Resume the timer.
         """
         if self._paused is None:
             raise ValueError("Trying to resume a Timer that is not paused!")
-        self._total_paused += perf_counter() - self._paused
+        self._total_paused += perf_counter() - self._paused  # pyre-ignore
         self._paused = None
         self._count_start += 1
 

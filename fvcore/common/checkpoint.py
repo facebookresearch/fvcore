@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
-import collections
 import copy
 import logging
 import numpy as np
 import os
 from collections import defaultdict
-from typing import Any
+from typing import Any, Dict, List, Optional
 import torch
 import torch.nn as nn
 from termcolor import colored
@@ -29,7 +28,7 @@ class Checkpointer(object):
         *,
         save_to_disk: bool = True,
         **checkpointables: object,
-    ):
+    ) -> None:
         """
         Args:
             model (nn.Module): model.
@@ -44,12 +43,12 @@ class Checkpointer(object):
         if isinstance(model, (DistributedDataParallel, DataParallel)):
             model = model.module
         self.model = model
-        self.checkpointables = copy.copy(checkpointables)
-        self.logger = logging.getLogger(__name__)
+        self.checkpointables = copy.copy(checkpointables)  # pyre-ignore
+        self.logger = logging.getLogger(__name__)  # pyre-ignore
         self.save_dir = save_dir
         self.save_to_disk = save_to_disk
 
-    def save(self, name: str, **kwargs: dict):
+    def save(self, name: str, **kwargs: Dict[str, str]) -> None:
         """
         Dump model and checkpointables to a file.
 
@@ -74,7 +73,7 @@ class Checkpointer(object):
             torch.save(data, f)
         self.tag_last_checkpoint(basename)
 
-    def load(self, path: str):
+    def load(self, path: str) -> object:
         """
         Load from the given checkpoint. When path points to network file, this
         function has to be called on all ranks.
@@ -102,14 +101,14 @@ class Checkpointer(object):
         checkpoint = self._load_file(path)
         self._load_model(checkpoint)
         for key, obj in self.checkpointables.items():
-            if key in checkpoint:
+            if key in checkpoint:  # pyre-ignore
                 self.logger.info("Loading {} from {}".format(key, path))
-                obj.load_state_dict(checkpoint.pop(key))
+                obj.load_state_dict(checkpoint.pop(key))  # pyre-ignore
 
         # return any further checkpoint data
         return checkpoint
 
-    def has_checkpoint(self):
+    def has_checkpoint(self) -> bool:
         """
         Returns:
             bool: whether a checkpoint exists in the target directory.
@@ -117,7 +116,7 @@ class Checkpointer(object):
         save_file = os.path.join(self.save_dir, "last_checkpoint")
         return PathManager.exists(save_file)
 
-    def get_checkpoint_file(self):
+    def get_checkpoint_file(self) -> str:
         """
         Returns:
             str: The latest checkpoint file in target directory.
@@ -130,9 +129,9 @@ class Checkpointer(object):
             # if file doesn't exist, maybe because it has just been
             # deleted by a separate process
             return ""
-        return os.path.join(self.save_dir, last_saved)
+        return os.path.join(self.save_dir, last_saved)  # pyre-ignore
 
-    def get_all_checkpoint_files(self):
+    def get_all_checkpoint_files(self) -> List[str]:
         """
         Returns:
             list: All available checkpoint files (.pth files) in target
@@ -146,7 +145,7 @@ class Checkpointer(object):
         ]
         return all_model_checkpoints
 
-    def resume_or_load(self, path: str, *, resume: bool = True):
+    def resume_or_load(self, path: str, *, resume: bool = True) -> object:
         """
         If `resume` is True, this method attempts to resume from the last
         checkpoint, if exists. Otherwise, load checkpoint from the given path.
@@ -163,7 +162,7 @@ class Checkpointer(object):
             path = self.get_checkpoint_file()
         return self.load(path)
 
-    def tag_last_checkpoint(self, last_filename_basename: str):
+    def tag_last_checkpoint(self, last_filename_basename: str) -> None:
         """
         Tag the last checkpoint.
 
@@ -172,9 +171,9 @@ class Checkpointer(object):
         """
         save_file = os.path.join(self.save_dir, "last_checkpoint")
         with PathManager.open(save_file, "w") as f:
-            f.write(last_filename_basename)
+            f.write(last_filename_basename)  # pyre-ignore
 
-    def _load_file(self, f: str):
+    def _load_file(self, f: str) -> object:
         """
         Load a checkpoint file. Can be overwritten by subclasses to support
         different formats.
@@ -187,7 +186,7 @@ class Checkpointer(object):
         """
         return torch.load(f, map_location=torch.device("cpu"))
 
-    def _load_model(self, checkpoint: Any):
+    def _load_model(self, checkpoint: Any) -> None:  # pyre-ignore
         """
         Load weights from a checkpoint.
         Args:
@@ -215,7 +214,7 @@ class Checkpointer(object):
                         )
                     )
                     checkpoint_state_dict.pop(k)
-
+        # pyre-ignore
         incompatible = self.model.load_state_dict(
             checkpoint_state_dict, strict=False
         )
@@ -228,7 +227,7 @@ class Checkpointer(object):
                 get_unexpected_parameters_message(incompatible.unexpected_keys)
             )
 
-    def _convert_ndarray_to_tensor(self, state_dict: dict):
+    def _convert_ndarray_to_tensor(self, state_dict: Dict[str, Any]) -> None:
         """
         In-place convert all numpy arrays in the state_dict to torch tensor.
         Args:
@@ -260,11 +259,11 @@ class PeriodicCheckpointer:
 
     def __init__(
         self,
-        checkpointer: Any,
+        checkpointer: Any,  # pyre-ignore
         period: int,
-        max_iter: int = None,
-        max_to_keep: int = None,
-    ):
+        max_iter: Optional[int] = None,
+        max_to_keep: Optional[int] = None,
+    ) -> None:
         """
         Args:
             checkpointer (Any): the checkpointer object used to save
@@ -281,9 +280,9 @@ class PeriodicCheckpointer:
         if max_to_keep is not None:
             assert max_to_keep > 0
         self.max_to_keep = max_to_keep
-        self.recent_checkpoints = []
+        self.recent_checkpoints = []  # pyre-ignore
 
-    def step(self, iteration: int, **kwargs: Any):
+    def step(self, iteration: int, **kwargs: Any) -> None:
         """
         Perform the appropriate action at the given iteration.
 
@@ -311,10 +310,10 @@ class PeriodicCheckpointer:
                     ) and not file_to_delete.endswith("model_final.pth"):
                         PathManager.rm(file_to_delete)
 
-        if iteration >= self.max_iter - 1:
+        if iteration >= self.max_iter - 1:  # pyre-ignore
             self.checkpointer.save("model_final", **additional_state)
 
-    def save(self, name: str, **kwargs: Any):
+    def save(self, name: str, **kwargs: Any) -> None:
         """
         Same argument as :meth:`Checkpointer.save`.
         Use this method to manually save checkpoints outside the schedule.
@@ -327,7 +326,7 @@ class PeriodicCheckpointer:
         self.checkpointer.save(name, **kwargs)
 
 
-def get_missing_parameters_message(keys: list):
+def get_missing_parameters_message(keys: List[str]) -> str:
     """
     Get a logging-friendly message to report parameter names (keys) that are in
     the model but not found in a checkpoint.
@@ -344,7 +343,7 @@ def get_missing_parameters_message(keys: list):
     return msg
 
 
-def get_unexpected_parameters_message(keys: list):
+def get_unexpected_parameters_message(keys: List[str]) -> str:
     """
     Get a logging-friendly message to report parameter names (keys) that are in
     the checkpoint but not found in the model.
@@ -362,7 +361,7 @@ def get_unexpected_parameters_message(keys: list):
     return msg
 
 
-def _strip_prefix_if_present(state_dict: collections.OrderedDict, prefix: str):
+def _strip_prefix_if_present(state_dict: Dict[str, Any], prefix: str) -> None:
     """
     Strip the prefix in metadata, if any.
     Args:
@@ -379,7 +378,7 @@ def _strip_prefix_if_present(state_dict: collections.OrderedDict, prefix: str):
 
     # also strip the prefix in metadata, if any..
     try:
-        metadata = state_dict._metadata
+        metadata = state_dict._metadata  # pyre-ignore
     except AttributeError:
         pass
     else:
@@ -395,7 +394,7 @@ def _strip_prefix_if_present(state_dict: collections.OrderedDict, prefix: str):
             metadata[newkey] = metadata.pop(key)
 
 
-def _group_checkpoint_keys(keys: list):
+def _group_checkpoint_keys(keys: List[str]) -> Dict[str, List[str]]:
     """
     Group keys based on common prefixes. A prefix is the string up to the final
     "." in each key.
@@ -416,7 +415,7 @@ def _group_checkpoint_keys(keys: list):
     return groups
 
 
-def _group_to_str(group: list):
+def _group_to_str(group: List[str]) -> str:
     """
     Format a group of parameter name suffixes into a loggable string.
     Args:

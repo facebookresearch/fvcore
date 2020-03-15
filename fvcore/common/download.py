@@ -43,7 +43,7 @@ def download(
             import tqdm
 
             def hook(t: tqdm.tqdm) -> Callable[[int, int, Optional[int]], None]:
-                last_b = [0]
+                last_b: list[int] = [0]
 
                 def inner(
                     b: int, bsize: int, tsize: Optional[int] = None

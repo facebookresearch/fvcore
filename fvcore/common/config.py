@@ -3,7 +3,7 @@
 
 import logging
 import os
-from typing import Any
+from typing import Any, Callable, Dict, List
 import yaml
 from yacs.config import CfgNode as _CfgNode
 
@@ -32,7 +32,7 @@ class CfgNode(_CfgNode):
     """
 
     @staticmethod
-    def load_yaml_with_base(filename: str, allow_unsafe: bool = False):
+    def load_yaml_with_base(filename: str, allow_unsafe: bool = False) -> None:
         """
         Just like `yaml.load(open(filename))`, but inherit attributes from its
             `_BASE_`.
@@ -61,9 +61,10 @@ class CfgNode(_CfgNode):
                 )
                 f.close()
                 with open(filename, "r") as f:
-                    cfg = yaml.unsafe_load(f)
+                    cfg = yaml.unsafe_load(f)  # pyre-ignore
 
-        def merge_a_into_b(a, b):
+        # pyre-ignore
+        def merge_a_into_b(a: Dict[Any, Any], b: Dict[Any, Any]) -> None:
             # merge dict a into dict b. values in a will overwrite b.
             for k, v in a.items():
                 if isinstance(v, dict) and k in b:
@@ -90,11 +91,13 @@ class CfgNode(_CfgNode):
             )
             del cfg[BASE_KEY]
 
-            merge_a_into_b(cfg, base_cfg)
+            merge_a_into_b(cfg, base_cfg)  # pyre-ignore
             return base_cfg
         return cfg
 
-    def merge_from_file(self, cfg_filename: str, allow_unsafe: bool = False):
+    def merge_from_file(
+        self, cfg_filename: str, allow_unsafe: bool = False
+    ) -> None:
         """
         Merge configs from a given yaml file.
 
@@ -110,17 +113,17 @@ class CfgNode(_CfgNode):
         self.merge_from_other_cfg(loaded_cfg)
 
     # Forward the following calls to base, but with a check on the BASE_KEY.
-    def merge_from_other_cfg(self, cfg_other):
+    def merge_from_other_cfg(self, cfg_other: object) -> Callable[[], None]:
         """
         Args:
             cfg_other (CfgNode): configs to merge from.
         """
         assert (
-            BASE_KEY not in cfg_other
+            BASE_KEY not in cfg_other  # pyre-ignore
         ), "The reserved key '{}' can only be used in files!".format(BASE_KEY)
         return super().merge_from_other_cfg(cfg_other)
 
-    def merge_from_list(self, cfg_list: list):
+    def merge_from_list(self, cfg_list: List[object]) -> Callable[[], None]:
         """
         Args:
             cfg_list (list): list of configs to merge from.
@@ -131,7 +134,7 @@ class CfgNode(_CfgNode):
         ), "The reserved key '{}' can only be used in files!".format(BASE_KEY)
         return super().merge_from_list(cfg_list)
 
-    def __setattr__(self, name: str, val: Any):
+    def __setattr__(self, name: str, val: Any) -> None:  # pyre-ignore
         if name.startswith("COMPUTED_"):
             if name in self:
                 old_val = self[name]

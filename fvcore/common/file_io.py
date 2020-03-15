@@ -119,7 +119,7 @@ class LazyPath(os.PathLike):
 
     def __str__(self) -> str:
         if self._value is not None:
-            return self._value  # type: str
+            return self._value  # type: ignore
         else:
             return super().__str__()
 
@@ -729,7 +729,9 @@ class PathManager:
         )
 
     @staticmethod
-    def register_handler(handler: PathHandler, allow_override: bool = False) -> None:
+    def register_handler(
+        handler: PathHandler, allow_override: bool = False
+    ) -> None:
         """
         Register a path handler associated with `handler._get_supported_prefixes`
         URI prefixes.
