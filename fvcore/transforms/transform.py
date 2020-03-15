@@ -22,10 +22,6 @@ __all__ = [
 ]
 
 
-# NOTE: to document methods in subclasses, it's sufficient to only document those whose
-# implemenation needs special attention.
-
-
 class Transform(metaclass=ABCMeta):
     """
     Base class for implementations of __deterministic__ transformations for
@@ -379,7 +375,9 @@ class ScaleTransform(Transform):
     Resize the image to a target size.
     """
 
-    def __init__(self, h: int, w: int, new_h: int, new_w: int, interp: str):
+    def __init__(
+        self, h: int, w: int, new_h: int, new_w: int, interp: str = None
+    ):
         """
         Args:
             h, w (int): original image size.
@@ -408,6 +406,15 @@ class ScaleTransform(Transform):
         Returns:
             ndarray: resized image(s).
         """
+        if len(img.shape) == 4:
+            h, w = img.shape[1:3]
+        elif len(img.shape) in (2, 3):
+            h, w = img.shape[:2]
+        else:
+            raise ("Unsupported input with shape of {}".format(img.shape))
+        assert (
+            self.h == h and self.w == w
+        ), "Input size mismatch h w {}:{} -> {}:{}".format(self.h, self.w, h, w)
         interp_method = interp if interp is not None else self.interp
         # Option of align_corners is only supported for linear, bilinear,
         # and bicubic.
@@ -420,7 +427,7 @@ class ScaleTransform(Transform):
         # support it https://github.com/pytorch/pytorch/issues/5580
         float_tensor = torch.nn.functional.interpolate(
             to_float_tensor(img),
-            size=(self.new_w, self.new_h),
+            size=(self.new_h, self.new_w),
             mode=interp_method,
             align_corners=align_corners,
         )
@@ -513,6 +520,7 @@ class GridSampleTransform(Transform):
 
 class CropTransform(Transform):
     def __init__(self, x0: int, y0: int, w: int, h: int):
+        # TODO: flip the order of w and h.
         """
         Args:
             x0, y0, w, h (int): crop the image(s) by img[y0:y0+h, x0:x0+w].

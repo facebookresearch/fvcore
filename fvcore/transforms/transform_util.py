@@ -25,7 +25,7 @@ def to_float_tensor(numpy_array: np.ndarray) -> torch.Tensor:
     # does not support negative strides, perform ascontiguousarray to
     # resolve the issue.
     float_tensor = torch.from_numpy(np.ascontiguousarray(numpy_array))
-    if numpy_array.dtype == np.uint8:
+    if numpy_array.dtype in (np.uint8, np.int32, np.int64):
         float_tensor = float_tensor.float()
 
     if len(numpy_array.shape) == 2:
