@@ -60,7 +60,6 @@ class Transform(metaclass=ABCMeta):
         Returns:
             ndarray: image after apply the transformation.
         """
-        pass
 
     @abstractmethod
     def apply_coords(self, coords: np.ndarray):
@@ -77,8 +76,6 @@ class Transform(metaclass=ABCMeta):
             The coordinates are not pixel indices. Coordinates on an image of
             shape (H, W) are in range [0, W] or [0, H].
         """
-
-        pass
 
     def apply_segmentation(self, segmentation: np.ndarray) -> np.ndarray:
         """
@@ -259,6 +256,13 @@ class TransformList:
             other.transforms if isinstance(other, TransformList) else [other]
         )
         return TransformList(others + self.transforms)
+
+    def __len__(self) -> int:
+        """
+        Returns:
+            Number of transforms contained in the TransformList.
+        """
+        return len(self.transforms)
 
 
 class HFlipTransform(Transform):

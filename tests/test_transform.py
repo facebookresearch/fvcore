@@ -41,8 +41,17 @@ class TestTransforms(unittest.TestCase):
         )
         self.assertEqual(transforms.apply_int(3), 2)
 
+        # Testing __add__, __iadd__, __radd__, __len__.
+        transforms = transforms + transforms
+        transforms += transforms
+        transforms = T.NoOpTransform() + transforms
+        self.assertEqual(len(transforms), 13)
+
         with self.assertRaises(AssertionError):
             T.HFlipTransform.register_type(dtype, lambda x: 1)
+
+        with self.assertRaises(AttributeError):
+            transforms.no_existing
 
     @staticmethod
     def BlendTransform_img_gt(img, *args) -> Tuple[np.ndarray, list]:
@@ -536,3 +545,481 @@ class TestTransforms(unittest.TestCase):
         g = geometry.Polygon(polygon)
         coords = np.asarray(g.exterior.coords)
         self.assertEqual(coords[0].tolist(), coords[-1].tolist())
+
+    @staticmethod
+    def _coords_provider(
+        num_coords: int = 5,
+        n: int = 50,
+        h_max: int = 10,
+        h_min: int = 0,
+        w_max: int = 10,
+        w_min: int = 0,
+    ) -> Tuple[np.ndarray, type, str]:
+        """
+        Provide different coordinate inputs as test cases.
+        Args:
+            num_coords (int): number of coordinates to provide.
+            n (int): size of the batch.
+            h_max, h_min (int): max, min coordinate value on height dimension.
+            w_max, w_min (int): max, min coordinate value on width dimension.
+        Returns:
+            (np.ndarray): coordinates array of shape Nx2 to test on.
+        """
+        for _ in range(num_coords):
+            yield np.concatenate(
+                [
+                    np.random.randint(low=h_min, high=h_max, size=(n, 1)),
+                    np.random.randint(low=w_min, high=w_max, size=(n, 1)),
+                ],
+                axis=1,
+            )
+
+    @staticmethod
+    def BlendTransform_coords_gt(coords, *args) -> Tuple[np.ndarray, list]:
+        """
+        Given the input array, return the expected output array and shape after
+        applying the blend transformation.
+        Args:
+            coords (array): coordinates before the transform.
+            args (list): list of arguments. Details can be found in test case.
+        Returns:
+            coords (array): expected output coordinates after apply the
+                transformation.
+            (list): expected shape of the output array.
+        """
+        return coords, coords.shape
+
+    def test_blend_coords_transforms(self):
+        """
+        Test BlendTransform.
+        """
+        _trans_name = "BlendTransform"
+        for coords in TestTransforms._coords_provider(w_max=10, h_max=20):
+            params = (
+                (coords, 0.0, 1.0),
+                (coords, 0.3, 0.7),
+                (coords, 0.5, 0.5),
+                (coords, 0.7, 0.3),
+                (coords, 1.0, 0.0),
+            )
+            for param in params:
+                gt_transformer = getattr(
+                    self, "{}_coords_gt".format(_trans_name)
+                )
+                transformer = getattr(T, _trans_name)(*param)
+
+                result = transformer.apply_coords(coords)
+                coords_gt, shape_gt = gt_transformer(coords, *param)
+
+                self.assertEqual(
+                    shape_gt,
+                    result.shape,
+                    "transform {} failed to pass the shape check with"
+                    "params {} given input with shape {}".format(
+                        _trans_name, param, result.shape
+                    ),
+                )
+                self.assertTrue(
+                    np.allclose(result, coords_gt),
+                    "transform {} failed to pass the value check with"
+                    "params {} given input with shape {}".format(
+                        _trans_name, param, result.shape
+                    ),
+                )
+
+    @staticmethod
+    def VFlipTransform_coords_gt(coords, *args) -> Tuple[np.ndarray, list]:
+        """
+        Given the input array, return the expected output array and shape after
+        applying the vflip transformation.
+        Args:
+            coords (array): coordinates before the transform.
+            args (list): list of arguments. Details can be found in test case.
+        Returns:
+            coords (array): expected output coordinates after apply the
+                transformation.
+            (list): expected shape of the output array.
+        """
+        height = args
+        coords[:, 1] = height - coords[:, 1]
+        return coords, coords.shape
+
+    def test_vflip_coords_transforms(self):
+        """
+        Test VFlipTransform.
+        """
+        _trans_name = "VFlipTransform"
+
+        params = ((20,), (30,))
+        for coords, param in itertools.product(
+            TestTransforms._coords_provider(), params
+        ):
+            gt_transformer = getattr(self, "{}_coords_gt".format(_trans_name))
+            transformer = getattr(T, _trans_name)(*param)
+
+            result = transformer.apply_coords(coords)
+            coords_gt, shape_gt = gt_transformer(coords, *param)
+
+            self.assertEqual(
+                shape_gt,
+                result.shape,
+                "transform {} failed to pass the shape check with"
+                "params {} given input with shape {}".format(
+                    _trans_name, param, result.shape
+                ),
+            )
+            self.assertTrue(
+                np.allclose(result, coords_gt),
+                "transform {} failed to pass the value check with"
+                "params {} given input with shape {}".format(
+                    _trans_name, param, result.shape
+                ),
+            )
+
+    @staticmethod
+    def HFlipTransform_coords_gt(coords, *args) -> Tuple[np.ndarray, list]:
+        """
+        Given the input array, return the expected output array and shape after
+        applying the hflip transformation.
+        Args:
+            coords (array): coordinates before the transform.
+            args (list): list of arguments. Details can be found in test case.
+        Returns:
+            coords (array): expected output coordinates after apply the
+                transformation.
+            (list): expected shape of the output array.
+        """
+        width = args
+        coords[:, 0] = width - coords[:, 0]
+        return coords, coords.shape
+
+    def test_hflip_coords_transforms(self):
+        """
+        Test HFlipTransform.
+        """
+        _trans_name = "HFlipTransform"
+
+        params = ((20,), (30,))
+        for coords, param in itertools.product(
+            TestTransforms._coords_provider(), params
+        ):
+            gt_transformer = getattr(self, "{}_coords_gt".format(_trans_name))
+            transformer = getattr(T, _trans_name)(*param)
+
+            result = transformer.apply_coords(coords)
+            coords_gt, shape_gt = gt_transformer(coords, *param)
+
+            self.assertEqual(
+                shape_gt,
+                result.shape,
+                "transform {} failed to pass the shape check with"
+                "params {} given input with shape {}".format(
+                    _trans_name, param, result.shape
+                ),
+            )
+            self.assertTrue(
+                np.allclose(result, coords_gt),
+                "transform {} failed to pass the value check with"
+                "params {} given input with shape {}".format(
+                    _trans_name, param, result.shape
+                ),
+            )
+
+    @staticmethod
+    def CropTransform_coords_gt(coords, *args) -> Tuple[np.ndarray, list]:
+        """
+        Given the input array, return the expected output array and shape after
+        applying the crop transformation.
+        Args:
+            coords (array): coordinates before the transform.
+            args (list): list of arguments. Details can be found in test case.
+        Returns:
+            coords (array): expected output coordinates after apply the
+                transformation.
+            (list): expected shape of the output array.
+        """
+        x0, y0, w, h = args
+        coords[:, 0] -= x0
+        coords[:, 1] -= y0
+        return coords, coords.shape
+
+    def test_crop_coords_transforms(self):
+        """
+        Test CropTransform.
+        """
+        _trans_name = "CropTransform"
+        params = (
+            (0, 0, 0, 0),
+            (0, 0, 1, 1),
+            (0, 0, 6, 1),
+            (0, 0, 1, 6),
+            (0, 0, 6, 6),
+            (1, 3, 6, 6),
+            (3, 1, 6, 6),
+            (3, 3, 6, 6),
+            (6, 6, 6, 6),
+        )
+        for coords, param in itertools.product(
+            TestTransforms._coords_provider(), params
+        ):
+            gt_transformer = getattr(self, "{}_coords_gt".format(_trans_name))
+            transformer = getattr(T, _trans_name)(*param)
+
+            result = transformer.apply_coords(coords)
+            coords_gt, shape_gt = gt_transformer(coords, *param)
+
+            self.assertEqual(
+                shape_gt,
+                result.shape,
+                "transform {} failed to pass the shape check with"
+                "params {} given input with shape {}".format(
+                    _trans_name, param, result.shape
+                ),
+            )
+            self.assertTrue(
+                np.allclose(result, coords_gt),
+                "transform {} failed to pass the value check with"
+                "params {} given input with shape {}".format(
+                    _trans_name, param, result.shape
+                ),
+            )
+
+    @staticmethod
+    def ScaleTransform_coords_gt(coords, *args) -> Tuple[np.ndarray, list]:
+        """
+        Given the input array, return the expected output array and shape after
+        applying the crop transformation.
+        Args:
+            coords (array): coordinates before the transform.
+            args (list): list of arguments. Details can be found in test case.
+        Returns:
+            coords (array): expected output coordinates after apply the
+                transformation.
+            (list): expected shape of the output array.
+        """
+        h, w, new_h, new_w = args
+
+        coords[:, 0] = coords[:, 0] * (new_w * 1.0 / w)
+        coords[:, 1] = coords[:, 1] * (new_h * 1.0 / h)
+        return coords, coords.shape
+
+    def test_scale_coords_transforms(self):
+        """
+        Test ScaleTransform.
+        """
+        _trans_name = "ScaleTransform"
+        params = (
+            (10, 20, 20, 20),
+            (10, 20, 10, 20),
+            (10, 20, 20, 10),
+            (10, 20, 1, 1),
+            (10, 20, 3, 3),
+            (10, 20, 5, 10),
+            (10, 20, 10, 5),
+        )
+
+        for coords, param in itertools.product(
+            TestTransforms._coords_provider(), params
+        ):
+            gt_transformer = getattr(self, "{}_coords_gt".format(_trans_name))
+            transformer = getattr(T, _trans_name)(*param)
+
+            result = transformer.apply_coords(coords)
+            coords_gt, shape_gt = gt_transformer(coords, *param)
+
+            self.assertEqual(
+                shape_gt,
+                result.shape,
+                "transform {} failed to pass the shape check with"
+                "params {} given input with shape {}".format(
+                    _trans_name, param, result.shape
+                ),
+            )
+            self.assertTrue(
+                np.allclose(result, coords_gt),
+                "transform {} failed to pass the value check with"
+                "params {} given input with shape {}".format(
+                    _trans_name, param, result.shape
+                ),
+            )
+
+    @staticmethod
+    def BlendTransform_seg_gt(seg, *args) -> Tuple[np.ndarray, list]:
+        """
+        Given the input segmentation, return the expected output array and shape
+        after applying the blend transformation.
+        Args:
+            seg (array): segmentation before the transform.
+            args (list): list of arguments. Details can be found in test case.
+        Returns:
+            seg (array): expected output segmentation after apply the
+                transformation.
+            (list): expected shape of the output array.
+        """
+        return seg, seg.shape
+
+    def test_blend_seg_transforms(self):
+        """
+        Test BlendTransform.
+        """
+        _trans_name = "BlendTransform"
+        for seg in TestTransforms._seg_provider(w=10, h=20):
+            params = (
+                (seg, 0.0, 1.0),
+                (seg, 0.3, 0.7),
+                (seg, 0.5, 0.5),
+                (seg, 0.7, 0.3),
+                (seg, 1.0, 0.0),
+            )
+            for param in params:
+                gt_transformer = getattr(self, "{}_seg_gt".format(_trans_name))
+                transformer = getattr(T, _trans_name)(*param)
+
+                result = transformer.apply_segmentation(seg)
+                seg_gt, shape_gt = gt_transformer(seg, *param)
+
+                self.assertEqual(
+                    shape_gt,
+                    result.shape,
+                    "transform {} failed to pass the shape check with"
+                    "params {} given input with shape {}".format(
+                        _trans_name, param, result.shape
+                    ),
+                )
+                self.assertTrue(
+                    np.allclose(result, seg_gt),
+                    "transform {} failed to pass the value check with"
+                    "params {} given input with shape {}".format(
+                        _trans_name, param, result.shape
+                    ),
+                )
+
+    @staticmethod
+    def ScaleTransform_seg_gt(seg, *args) -> Tuple[np.ndarray, list]:
+        """
+        Given the input segmentation, return the expected output array and shape
+        after applying the blend transformation.
+        Args:
+            seg (array): segmentation before the transform.
+            args (list): list of arguments. Details can be found in test case.
+        Returns:
+            seg (array): expected output segmentation after apply the
+                transformation.
+            (list): expected shape of the output array.
+        """
+        h, w, new_h, new_w = args
+        float_tensor = torch.nn.functional.interpolate(
+            to_float_tensor(seg),
+            size=(new_h, new_w),
+            mode="nearest",
+            align_corners=None,
+        )
+        numpy_tensor = to_numpy(float_tensor, seg.shape, seg.dtype)
+        return numpy_tensor, numpy_tensor.shape
+
+    def test_scale_seg_transforms(self):
+        """
+        Test ScaleTransform.
+        """
+        _trans_name = "ScaleTransform"
+        params = (
+            (10, 20, 20, 20),
+            (10, 20, 10, 20),
+            (10, 20, 20, 10),
+            (10, 20, 1, 1),
+            (10, 20, 3, 3),
+            (10, 20, 5, 10),
+            (10, 20, 10, 5),
+        )
+
+        for seg, param in itertools.product(
+            TestTransforms._seg_provider(h=10, w=20), params
+        ):
+            gt_transformer = getattr(self, "{}_seg_gt".format(_trans_name))
+            transformer = getattr(T, _trans_name)(*param)
+
+            result = transformer.apply_segmentation(seg)
+            seg_gt, shape_gt = gt_transformer(seg, *param)
+
+            if shape_gt is not None:
+                self.assertEqual(
+                    shape_gt,
+                    result.shape,
+                    "transform {} failed to pass the shape check with"
+                    "params {} given input with shape {}".format(
+                        _trans_name, param, result.shape
+                    ),
+                )
+            if seg_gt is not None:
+                self.assertTrue(
+                    np.allclose(result, seg_gt),
+                    "transform {} failed to pass the value check with"
+                    "params {} given input with shape {}".format(
+                        _trans_name, param, result.shape
+                    ),
+                )
+
+        # Testing failure cases.
+        params = (
+            (0, 0, 20, 20),
+            (0, 0, 0, 0),
+            (-1, 0, 0, 0),
+            (0, -1, 0, 0),
+            (0, 0, -1, 0),
+            (0, 0, 0, -1),
+            (20, 10, 0, -1),
+        )
+        for seg, param in itertools.product(
+            TestTransforms._seg_provider(w=10, h=20), params
+        ):
+            gt_transformer = getattr(self, "{}_seg_gt".format(_trans_name))
+            transformer = getattr(T, _trans_name)(*param)
+            with self.assertRaises((RuntimeError, AssertionError)):
+                result = transformer.apply_image(seg)
+
+    @staticmethod
+    def NoOpTransform_coords_gt(coords, *args) -> Tuple[np.ndarray, list]:
+        """
+        Given the input array, return the expected output array and shape after
+        applying no transformation.
+        Args:
+            coords (array): coordinates before the transform.
+            args (list): list of arguments. Details can be found in test case.
+        Returns:
+            coords (array): expected output coordinates after apply the
+                transformation.
+            (list): expected shape of the output array.
+        """
+        return coords, coords.shape
+
+    def test_no_op_coords_transforms(self):
+        """
+        Test NoOpTransform..
+        """
+        _trans_name = "NoOpTransform"
+        params = ()
+
+        for coords, param in itertools.product(
+            TestTransforms._coords_provider(), params
+        ):
+            gt_transformer = getattr(self, "{}_coords_gt".format(_trans_name))
+            transformer = getattr(T, _trans_name)(*param)
+
+            result = transformer.apply_coords(coords)
+            coords_gt, shape_gt = gt_transformer(coords, *param)
+
+            self.assertEqual(
+                shape_gt,
+                result.shape,
+                "transform {} failed to pass the shape check with"
+                "params {} given input with shape {}".format(
+                    _trans_name, param, result.shape
+                ),
+            )
+            self.assertTrue(
+                np.allclose(result, coords_gt),
+                "transform {} failed to pass the value check with"
+                "params {} given input with shape {}".format(
+                    _trans_name, param, result.shape
+                ),
+            )
