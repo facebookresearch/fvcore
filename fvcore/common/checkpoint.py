@@ -6,13 +6,15 @@ import logging
 import numpy as np
 import os
 from collections import defaultdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 import torch
 import torch.nn as nn
 from termcolor import colored
 from torch.nn.parallel import DataParallel, DistributedDataParallel
 
 from fvcore.common.file_io import PathManager
+
+__all__ = ["Checkpointer", "PeriodicCheckpointer"]
 
 
 class Checkpointer(object):
@@ -219,9 +221,11 @@ class Checkpointer(object):
             checkpoint_state_dict, strict=False
         )
         if incompatible.missing_keys:
-            self.logger.info(
-                get_missing_parameters_message(incompatible.missing_keys)
+            missing_keys = _filter_reused_missing_keys(
+                self.model, incompatible.missing_keys
             )
+            if missing_keys:
+                self.logger.info(get_missing_parameters_message(missing_keys))
         if incompatible.unexpected_keys:
             self.logger.info(
                 get_unexpected_parameters_message(incompatible.unexpected_keys)
@@ -324,6 +328,28 @@ class PeriodicCheckpointer:
                 :meth:`Checkpointer.save`.
         """
         self.checkpointer.save(name, **kwargs)
+
+
+def _filter_reused_missing_keys(model: nn.Module, keys: List[str]) -> List[str]:
+    """
+    Filter "missing keys" to not include keys that have been loaded with another name.
+    """
+    keyset = set(keys)
+    param_to_names = defaultdict(set)  # param -> names that points to it
+    for module_prefix, module in _named_modules_with_dup(model):
+        for name, param in list(module.named_parameters(recurse=False)) + list(
+            module.named_buffers(recurse=False)  # pyre-ignore
+        ):
+            full_name = (module_prefix + "." if module_prefix else "") + name
+            param_to_names[param].add(full_name)
+    for names in param_to_names.values():
+        # if one name appears missing but its alias exists, then this
+        # name is not considered missing
+        if any(n in keyset for n in names) and not all(
+            n in keyset for n in names
+        ):
+            [keyset.remove(n) for n in names if n in keyset]
+    return list(keyset)
 
 
 def get_missing_parameters_message(keys: List[str]) -> str:
@@ -430,3 +456,18 @@ def _group_to_str(group: List[str]) -> str:
         return "." + group[0]
 
     return ".{" + ", ".join(group) + "}"
+
+
+def _named_modules_with_dup(
+    model: nn.Module, prefix: str = ""
+) -> Iterable[Tuple[str, nn.Module]]:
+    """
+    The same as `model.named_modules()`, except that it includes
+    duplicated modules that have more than one name.
+    """
+    yield prefix, model
+    for name, module in model._modules.items():  # pyre-ignore
+        if module is None:
+            continue
+        submodule_prefix = prefix + ("." if prefix else "") + name
+        yield from _named_modules_with_dup(module, submodule_prefix)

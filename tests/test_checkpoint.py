@@ -9,6 +9,7 @@ import typing
 import unittest
 from collections import OrderedDict
 from tempfile import TemporaryDirectory
+from unittest.mock import MagicMock
 import torch
 from torch import nn
 
@@ -193,6 +194,28 @@ class TestCheckpointer(unittest.TestCase):
                 self.assertTrue(
                     checkpoint["checkpointables"][key] == state_dict[key]
                 )
+
+    def test_load_reused_params(self) -> None:
+        class Model(nn.Module):
+            def __init__(self, has_y: bool) -> None:
+                super().__init__()
+                self.x = nn.Linear(10, 10)
+                if has_y:
+                    self.y = self.x
+
+        model = Model(has_y=False)
+        model.x.bias.data.fill_(5.0)  # pyre-ignore
+        data = {"model": model.state_dict()}
+        new_model = Model(has_y=True)
+        chkpt = Checkpointer(new_model)
+        chkpt.logger = logger = MagicMock()
+        chkpt._load_model(data)
+        self.assertTrue(
+            torch.allclose(
+                new_model.y.bias - 5.0, torch.zeros_like(new_model.y.bias)
+            )
+        )
+        logger.info.assert_not_called()
 
 
 class TestPeriodicCheckpointer(unittest.TestCase):
