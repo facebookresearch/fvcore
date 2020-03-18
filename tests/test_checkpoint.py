@@ -189,7 +189,8 @@ class TestCheckpointer(unittest.TestCase):
             for key, _ in state_dict.items():
                 self.assertTrue(
                     # pyre-ignore
-                    checkpoint["checkpointables"].get(key) is not None
+                    checkpoint["checkpointables"].get(key)
+                    is not None
                 )
                 self.assertTrue(
                     checkpoint["checkpointables"][key] == state_dict[key]

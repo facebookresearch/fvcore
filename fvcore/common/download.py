@@ -4,7 +4,7 @@
 import logging
 import os
 import shutil
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 from urllib import request
 
 
@@ -43,7 +43,7 @@ def download(
             import tqdm
 
             def hook(t: tqdm.tqdm) -> Callable[[int, int, Optional[int]], None]:
-                last_b: list[int] = [0]
+                last_b: List[int] = [0]
 
                 def inner(
                     b: int, bsize: int, tsize: Optional[int] = None
