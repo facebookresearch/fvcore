@@ -614,6 +614,7 @@ class PathManager:
         Returns:
             local_path (str): a file path which exists on the local file system
         """
+        path = os.fspath(path)
         return PathManager.__get_path_handler(  # type: ignore
             path
         )._get_local_path(path, **kwargs)
