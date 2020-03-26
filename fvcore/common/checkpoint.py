@@ -75,7 +75,9 @@ class Checkpointer(object):
             torch.save(data, f)
         self.tag_last_checkpoint(basename)
 
-    def load(self, path: str) -> object:
+    def load(
+        self, path: str, checkpointables: Optional[List[str]] = None
+    ) -> object:
         """
         Load from the given checkpoint. When path points to network file, this
         function has to be called on all ranks.
@@ -83,6 +85,8 @@ class Checkpointer(object):
         Args:
             path (str): path or url to the checkpoint. If empty, will not load
                 anything.
+            checkpointables (list): List of checkpointable names to load. If not
+                specified (None), will load all the possible checkpointables.
         Returns:
             dict:
                 extra data loaded from the checkpoint that has not been
@@ -102,9 +106,10 @@ class Checkpointer(object):
 
         checkpoint = self._load_file(path)
         self._load_model(checkpoint)
-        for key, obj in self.checkpointables.items():
+        for key in self.checkpointables if checkpointables is None else checkpointables:
             if key in checkpoint:  # pyre-ignore
                 self.logger.info("Loading {} from {}".format(key, path))
+                obj = self.checkpointables[key]
                 obj.load_state_dict(checkpoint.pop(key))  # pyre-ignore
 
         # return any further checkpoint data
@@ -155,14 +160,18 @@ class Checkpointer(object):
 
         Args:
             path (str): path to the checkpoint.
-            resume (bool): if True, resume from the last checkpoint if it exists.
+            resume (bool): if True, resume from the last checkpoint if it exists
+                and load the model together with all the checkpointables. Otherwise
+                only load the model without loading any checkpointables.
 
         Returns:
             same as :meth:`load`.
         """
         if resume and self.has_checkpoint():
             path = self.get_checkpoint_file()
-        return self.load(path)
+            return self.load(path)
+        else:
+            return self.load(path, checkpointables=[])
 
     def tag_last_checkpoint(self, last_filename_basename: str) -> None:
         """
