@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 import copy
@@ -106,7 +105,9 @@ class Checkpointer(object):
 
         checkpoint = self._load_file(path)
         self._load_model(checkpoint)
-        for key in self.checkpointables if checkpointables is None else checkpointables:
+        for key in (
+            self.checkpointables if checkpointables is None else checkpointables
+        ):
             if key in checkpoint:  # pyre-ignore
                 self.logger.info("Loading {} from {}".format(key, path))
                 obj = self.checkpointables[key]
