@@ -287,6 +287,16 @@ class PathHandler:
         """
         raise NotImplementedError()
 
+    def _symlink(self, src_path: str, dst_path: str, **kwargs: Any) -> bool:
+        """
+        Symlink the src_path to the dst_path
+
+        Args:
+            src_path (str): A URI supported by this PathHandler to symlink from
+            dst_path (str): A URI supported by this PathHandler to symlink to
+        """
+        raise NotImplementedError()
+
 
 class NativePathHandler(PathHandler):
     """
@@ -396,6 +406,32 @@ class NativePathHandler(PathHandler):
         except Exception as e:
             logger = logging.getLogger(__name__)
             logger.error("Error in file copy - {}".format(str(e)))
+            return False
+
+    def _symlink(self, src_path: str, dst_path: str, **kwargs: Any) -> bool:
+        """
+        Creates a symlink to the src_path at the dst_path
+
+        Args:
+            src_path (str): A URI supported by this PathHandler
+            dst_path (str): A URI supported by this PathHandler
+
+        Returns:
+            status (bool): True on success
+        """
+        self._check_kwargs(kwargs)
+        logger = logging.getLogger(__name__)
+        if not os.path.exists(src_path):
+            logger.error("Source path {} does not exist".format(src_path))
+            return False
+        if os.path.exists(dst_path):
+            logger.error("Destination path {} already exists.".format(dst_path))
+            return False
+        try:
+            os.symlink(src_path, dst_path)
+            return True
+        except Exception as e:
+            logger.error("Error in symlink - {}".format(str(e)))
             return False
 
     def _exists(self, path: str, **kwargs: Any) -> bool:
@@ -689,6 +725,22 @@ class PathManager:
         """
         return PathManager.__get_path_handler(path)._rm(  # type: ignore
             path, **kwargs
+        )
+
+    @staticmethod
+    def symlink(src_path: str, dst_path: str, **kwargs: Any) -> bool:
+        """Symlink the src_path to the dst_path
+
+        Args:
+            src_path (str): A URI supported by this PathHandler to symlink from
+            dst_path (str): A URI supported by this PathHandler to symlink to
+        """
+        # Copying across handlers is not supported.
+        assert PathManager.__get_path_handler(  # type: ignore
+            src_path
+        ) == PathManager.__get_path_handler(dst_path)
+        return PathManager.__get_path_handler(src_path)._symlink(
+            src_path, dst_path, **kwargs
         )
 
     @staticmethod

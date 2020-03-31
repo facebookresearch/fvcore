@@ -115,6 +115,14 @@ class TestNativeIO(unittest.TestCase):
         with PathManager.open(_tmpfile_2, "r") as f:
             self.assertEqual(f.read(), self._tmpfile_contents)
 
+    def test_symlink(self) -> None:
+        _symlink = self._tmpfile + "_symlink"  # pyre-ignore
+        assert PathManager.symlink(self._tmpfile, _symlink)  # pyre-ignore
+        with PathManager.open(_symlink) as f:
+            self.assertEqual(f.read(), self._tmpfile_contents)
+        assert os.readlink(_symlink) == self._tmpfile
+        os.remove(_symlink)
+
     def test_rm(self) -> None:
         # pyre-ignore
         with open(os.path.join(self._tmpdir, "test_rm.txt"), "w") as f:
