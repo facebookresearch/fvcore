@@ -1,12 +1,14 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 import inspect
-import numpy as np
 from abc import ABCMeta, abstractmethod
 from typing import Callable, TypeVar
+
+import numpy as np
 import torch
 
 from .transform_util import to_float_tensor, to_numpy
+
 
 __all__ = [
     "BlendTransform",
@@ -167,9 +169,7 @@ class Transform(metaclass=ABCMeta):
         argspec = inspect.getfullargspec(func)
         assert len(argspec.args) == 2, (
             "You can only register a function that takes two positional "
-            "arguments to a Transform! Got a function with spec {}".format(
-                str(argspec)
-            )
+            "arguments to a Transform! Got a function with spec {}".format(str(argspec))
         )
         setattr(cls, "apply_" + data_type, func)
 
@@ -215,9 +215,7 @@ class TransformList:
         """
         if name.startswith("apply_"):
             return lambda x: self._apply(x, name)
-        raise AttributeError(
-            "TransformList object has no attribute {}".format(name)
-        )
+        raise AttributeError("TransformList object has no attribute {}".format(name))
 
     def __add__(self, other: "TransformList") -> "TransformList":
         """
@@ -226,9 +224,7 @@ class TransformList:
         Returns:
             TransformList: list of transforms.
         """
-        others = (
-            other.transforms if isinstance(other, TransformList) else [other]
-        )
+        others = other.transforms if isinstance(other, TransformList) else [other]
         return TransformList(self.transforms + others)
 
     def __iadd__(self, other: "TransformList") -> "TransformList":
@@ -238,9 +234,7 @@ class TransformList:
         Returns:
             TransformList: list of transforms.
         """
-        others = (
-            other.transforms if isinstance(other, TransformList) else [other]
-        )
+        others = other.transforms if isinstance(other, TransformList) else [other]
         self.transforms.extend(others)
         return self
 
@@ -251,9 +245,7 @@ class TransformList:
         Returns:
             TransformList: list of transforms.
         """
-        others = (
-            other.transforms if isinstance(other, TransformList) else [other]
-        )
+        others = other.transforms if isinstance(other, TransformList) else [other]
         return TransformList(others + self.transforms)
 
     def __len__(self) -> int:
@@ -378,9 +370,7 @@ class ScaleTransform(Transform):
     Resize the image to a target size.
     """
 
-    def __init__(
-        self, h: int, w: int, new_h: int, new_w: int, interp: str = None
-    ):
+    def __init__(self, h: int, w: int, new_h: int, new_w: int, interp: str = None):
         """
         Args:
             h, w (int): original image size.
@@ -545,9 +535,7 @@ class CropTransform(Transform):
         if len(img.shape) <= 3:
             return img[self.y0 : self.y0 + self.h, self.x0 : self.x0 + self.w]
         else:
-            return img[
-                ..., self.y0 : self.y0 + self.h, self.x0 : self.x0 + self.w, :
-            ]
+            return img[..., self.y0 : self.y0 + self.h, self.x0 : self.x0 + self.w, :]
 
     def apply_coords(self, coords: np.ndarray) -> np.ndarray:
         """
@@ -591,9 +579,7 @@ class CropTransform(Transform):
             cropped = polygon.intersection(crop_box)
             if cropped.is_empty:
                 continue
-            if not isinstance(
-                cropped, geometry.collection.BaseMultipartGeometry
-            ):
+            if not isinstance(cropped, geometry.collection.BaseMultipartGeometry):
                 cropped = [cropped]
             # one polygon may be cropped to multiple ones
             for poly in cropped:
@@ -614,9 +600,7 @@ class BlendTransform(Transform):
     Transforms pixel colors with PIL enhance functions.
     """
 
-    def __init__(
-        self, src_image: np.ndarray, src_weight: float, dst_weight: float
-    ):
+    def __init__(self, src_image: np.ndarray, src_weight: float, dst_weight: float):
         """
         Blends the input image (dst_image) with the src_image using formula:
         ``src_weight * src_image + dst_weight * dst_image``

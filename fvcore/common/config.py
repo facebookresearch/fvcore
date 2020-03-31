@@ -3,10 +3,11 @@
 import logging
 import os
 from typing import Any, Callable, Dict, List
+
 import yaml
+from fvcore.common.file_io import PathManager
 from yacs.config import CfgNode as _CfgNode
 
-from fvcore.common.file_io import PathManager
 
 BASE_KEY = "_BASE_"
 
@@ -78,13 +79,9 @@ class CfgNode(_CfgNode):
             base_cfg_file = cfg[BASE_KEY]
             if base_cfg_file.startswith("~"):
                 base_cfg_file = os.path.expanduser(base_cfg_file)
-            if not any(
-                map(base_cfg_file.startswith, ["/", "https://", "http://"])
-            ):
+            if not any(map(base_cfg_file.startswith, ["/", "https://", "http://"])):
                 # the path to base cfg is relative to the config file itself.
-                base_cfg_file = os.path.join(
-                    os.path.dirname(filename), base_cfg_file
-                )
+                base_cfg_file = os.path.join(os.path.dirname(filename), base_cfg_file)
             base_cfg = CfgNode.load_yaml_with_base(
                 base_cfg_file, allow_unsafe=allow_unsafe
             )
@@ -94,9 +91,7 @@ class CfgNode(_CfgNode):
             return base_cfg
         return cfg
 
-    def merge_from_file(
-        self, cfg_filename: str, allow_unsafe: bool = False
-    ) -> None:
+    def merge_from_file(self, cfg_filename: str, allow_unsafe: bool = False) -> None:
         """
         Merge configs from a given yaml file.
 
@@ -141,9 +136,7 @@ class CfgNode(_CfgNode):
                     return
                 raise KeyError(
                     "Computed attributed '{}' already exists "
-                    "with a different value! old={}, new={}.".format(
-                        name, old_val, val
-                    )
+                    "with a different value! old={}, new={}.".format(name, old_val, val)
                 )
             self[name] = val
         else:

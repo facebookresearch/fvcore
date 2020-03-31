@@ -3,9 +3,11 @@
 import logging
 import typing
 from collections import defaultdict
+
 import torch.nn as nn
 
 from .jit_handles import generic_activation_jit, get_jit_model_analysis
+
 
 # A dictionary that maps supported operations to their activation count handles.
 _SUPPORTED_OPS: typing.Dict[str, typing.Callable] = {

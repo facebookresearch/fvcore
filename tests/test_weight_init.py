@@ -3,9 +3,9 @@
 import itertools
 import math
 import unittest
+
 import torch
 import torch.nn as nn
-
 from fvcore.nn.weight_init import c2_msra_fill, c2_xavier_fill
 
 
@@ -75,9 +75,7 @@ class TestWeightInit(unittest.TestCase):
                 c2_msra_fill(model)
                 self.assertTrue(
                     TestWeightInit.weight_and_bias_dist_match(
-                        model.weight,
-                        model.bias,
-                        TestWeightInit.msra_fill_std(fan_out),
+                        model.weight, model.bias, TestWeightInit.msra_fill_std(fan_out)
                     )
                 )
 
@@ -85,9 +83,7 @@ class TestWeightInit(unittest.TestCase):
                 c2_xavier_fill(model)
                 self.assertTrue(
                     TestWeightInit.weight_and_bias_dist_match(
-                        model.weight,
-                        model.bias,
-                        TestWeightInit.xavier_fill_std(fan_in),
+                        model.weight, model.bias, TestWeightInit.xavier_fill_std(fan_in)
                     )
                 )
 
@@ -111,9 +107,7 @@ class TestWeightInit(unittest.TestCase):
                 c2_msra_fill(model)
                 self.assertTrue(
                     TestWeightInit.weight_and_bias_dist_match(
-                        model.weight,
-                        model.bias,
-                        TestWeightInit.msra_fill_std(fan_out),
+                        model.weight, model.bias, TestWeightInit.msra_fill_std(fan_out)
                     )
                 )
 
@@ -121,8 +115,6 @@ class TestWeightInit(unittest.TestCase):
                 c2_xavier_fill(model)
                 self.assertTrue(
                     TestWeightInit.weight_and_bias_dist_match(
-                        model.weight,
-                        model.bias,
-                        TestWeightInit.xavier_fill_std(fan_in),
+                        model.weight, model.bias, TestWeightInit.xavier_fill_std(fan_in)
                     )
                 )

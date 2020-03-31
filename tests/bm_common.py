@@ -1,7 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 from fvcore.common.benchmark import benchmark
-
 from test_common import TestHistoryBuffer
 
 

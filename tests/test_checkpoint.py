@@ -9,10 +9,10 @@ import unittest
 from collections import OrderedDict
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock
-import torch
-from torch import nn
 
+import torch
 from fvcore.common.checkpoint import Checkpointer, PeriodicCheckpointer
+from torch import nn
 
 
 class TestCheckpointer(unittest.TestCase):
@@ -70,9 +70,7 @@ class TestCheckpointer(unittest.TestCase):
                     fresh_checkpointer.get_checkpoint_file(),
                     os.path.join(f, "checkpoint_file.pth"),
                 )
-                fresh_checkpointer.load(
-                    fresh_checkpointer.get_checkpoint_file()
-                )
+                fresh_checkpointer.load(fresh_checkpointer.get_checkpoint_file())
 
             for trained_p, loaded_p in zip(
                 trained_model.parameters(), fresh_model.parameters()
@@ -105,12 +103,8 @@ class TestCheckpointer(unittest.TestCase):
                 with TemporaryDirectory() as g:
                     fresh_checkpointer = Checkpointer(fresh_model, save_dir=g)
                     self.assertFalse(fresh_checkpointer.has_checkpoint())
-                    self.assertEqual(
-                        fresh_checkpointer.get_checkpoint_file(), ""
-                    )
-                    fresh_checkpointer.load(
-                        os.path.join(f, "checkpoint_file.pth")
-                    )
+                    self.assertEqual(fresh_checkpointer.get_checkpoint_file(), "")
+                    fresh_checkpointer.load(os.path.join(f, "checkpoint_file.pth"))
 
             for trained_p, loaded_p in zip(
                 trained_model.parameters(), fresh_model.parameters()
@@ -133,8 +127,7 @@ class TestCheckpointer(unittest.TestCase):
 
             def __init__(self):
                 self.state = {
-                    self.random_handle(): self.random_handle()
-                    for i in range(10)
+                    self.random_handle(): self.random_handle() for i in range(10)
                 }
 
             def random_handle(self, str_len=100) -> str:
@@ -191,9 +184,7 @@ class TestCheckpointer(unittest.TestCase):
                     checkpoint["checkpointables"].get(key)
                     is not None
                 )
-                self.assertTrue(
-                    checkpoint["checkpointables"][key] == state_dict[key]
-                )
+                self.assertTrue(checkpoint["checkpointables"][key] == state_dict[key])
 
     def test_load_reused_params(self) -> None:
         class Model(nn.Module):
@@ -211,9 +202,7 @@ class TestCheckpointer(unittest.TestCase):
         chkpt.logger = logger = MagicMock()
         chkpt._load_model(data)
         self.assertTrue(
-            torch.allclose(
-                new_model.y.bias - 5.0, torch.zeros_like(new_model.y.bias)
-            )
+            torch.allclose(new_model.y.bias - 5.0, torch.zeros_like(new_model.y.bias))
         )
         logger.info.assert_not_called()
 
@@ -239,9 +228,7 @@ class TestPeriodicCheckpointer(unittest.TestCase):
                 checkpointer = Checkpointer(
                     trained_model, save_dir=f, save_to_disk=True
                 )
-                periodic_checkpointer = PeriodicCheckpointer(
-                    checkpointer, _period, 99
-                )
+                periodic_checkpointer = PeriodicCheckpointer(checkpointer, _period, 99)
                 for iteration in range(_max_iter):
                     periodic_checkpointer.step(iteration)
                     path = os.path.join(f, "model_{:07d}.pth".format(iteration))
@@ -274,9 +261,7 @@ class TestPeriodicCheckpointer(unittest.TestCase):
                     for iteration in range(_max_iter):
                         periodic_checkpointer.step(iteration)
                         if (iteration + 1) % _period == 0:
-                            path = os.path.join(
-                                f, "model_{:07d}.pth".format(iteration)
-                            )
+                            path = os.path.join(f, "model_{:07d}.pth".format(iteration))
                             checkpoint_paths.append(path)
 
                     for path in checkpoint_paths[:-_max_to_keep]:

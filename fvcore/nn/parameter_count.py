@@ -2,6 +2,7 @@
 
 import typing
 from collections import defaultdict
+
 import tabulate
 from torch import nn
 
@@ -63,9 +64,7 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
             if name.count(".") == lvl and name.startswith(prefix):
                 indent = " " * (lvl + 1)
                 if name in param_shape:
-                    table.append(
-                        (indent + name, indent + str(param_shape[name]))
-                    )
+                    table.append((indent + name, indent + str(param_shape[name])))
                 else:
                     table.append((indent + name, indent + format_size(v)))
                     fill(lvl + 1, name + ".")

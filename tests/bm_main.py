@@ -5,12 +5,11 @@ import glob
 import importlib
 from os.path import basename, dirname, isfile, join, sys
 
+
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         # Parse from flags.
-        module_names = [  # pyre-ignore
-            n for n in sys.argv if n.startswith("bm_")
-        ]
+        module_names = [n for n in sys.argv if n.startswith("bm_")]  # pyre-ignore
     else:
         # Get all the benchmark files (starting with "bm_").
         bm_files = glob.glob(join(dirname(__file__), "bm_*.py"))  # pyre-ignore
@@ -25,7 +24,5 @@ if __name__ == "__main__":
         for attr in dir(module):
             # Run all the functions with names "bm_*" in the module.
             if attr.startswith("bm_"):
-                print(
-                    "Running benchmarks for " + module_name + "/" + attr + "..."
-                )
+                print("Running benchmarks for " + module_name + "/" + attr + "...")
                 getattr(module, attr)()

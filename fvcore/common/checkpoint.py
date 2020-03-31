@@ -2,16 +2,17 @@
 
 import copy
 import logging
-import numpy as np
 import os
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+import numpy as np
 import torch
 import torch.nn as nn
+from fvcore.common.file_io import PathManager
 from termcolor import colored
 from torch.nn.parallel import DataParallel, DistributedDataParallel
 
-from fvcore.common.file_io import PathManager
 
 __all__ = ["Checkpointer", "PeriodicCheckpointer"]
 
@@ -74,9 +75,7 @@ class Checkpointer(object):
             torch.save(data, f)
         self.tag_last_checkpoint(basename)
 
-    def load(
-        self, path: str, checkpointables: Optional[List[str]] = None
-    ) -> object:
+    def load(self, path: str, checkpointables: Optional[List[str]] = None) -> object:
         """
         Load from the given checkpoint. When path points to network file, this
         function has to be called on all ranks.
@@ -94,9 +93,7 @@ class Checkpointer(object):
         """
         if not path:
             # no checkpoint provided
-            self.logger.info(
-                "No checkpoint found. Initializing model from scratch"
-            )
+            self.logger.info("No checkpoint found. Initializing model from scratch")
             return {}
         self.logger.info("Loading checkpoint from {}".format(path))
         if not os.path.isfile(path):
@@ -105,9 +102,7 @@ class Checkpointer(object):
 
         checkpoint = self._load_file(path)
         self._load_model(checkpoint)
-        for key in (
-            self.checkpointables if checkpointables is None else checkpointables
-        ):
+        for key in self.checkpointables if checkpointables is None else checkpointables:
             if key in checkpoint:  # pyre-ignore
                 self.logger.info("Loading {} from {}".format(key, path))
                 obj = self.checkpointables[key]
@@ -221,15 +216,11 @@ class Checkpointer(object):
                 if shape_model != shape_checkpoint:
                     self.logger.warning(
                         "'{}' has shape {} in the checkpoint but {} in the "
-                        "model! Skipped.".format(
-                            k, shape_checkpoint, shape_model
-                        )
+                        "model! Skipped.".format(k, shape_checkpoint, shape_model)
                     )
                     checkpoint_state_dict.pop(k)
         # pyre-ignore
-        incompatible = self.model.load_state_dict(
-            checkpoint_state_dict, strict=False
-        )
+        incompatible = self.model.load_state_dict(checkpoint_state_dict, strict=False)
         if incompatible.missing_keys:
             missing_keys = _filter_reused_missing_keys(
                 self.model, incompatible.missing_keys
@@ -252,13 +243,9 @@ class Checkpointer(object):
         # properties.
         for k in list(state_dict.keys()):
             v = state_dict[k]
-            if not isinstance(v, np.ndarray) and not isinstance(
-                v, torch.Tensor
-            ):
+            if not isinstance(v, np.ndarray) and not isinstance(v, torch.Tensor):
                 raise ValueError(
-                    "Unsupported type found in checkpoint! {}: {}".format(
-                        k, type(v)
-                    )
+                    "Unsupported type found in checkpoint! {}: {}".format(k, type(v))
                 )
             if not isinstance(v, torch.Tensor):
                 state_dict[k] = torch.from_numpy(v)
@@ -309,14 +296,10 @@ class PeriodicCheckpointer:
         additional_state = {"iteration": iteration}
         additional_state.update(kwargs)
         if (iteration + 1) % self.period == 0:
-            self.checkpointer.save(
-                "model_{:07d}".format(iteration), **additional_state
-            )
+            self.checkpointer.save("model_{:07d}".format(iteration), **additional_state)
 
             if self.max_to_keep is not None:
-                self.recent_checkpoints.append(
-                    self.checkpointer.get_checkpoint_file()
-                )
+                self.recent_checkpoints.append(self.checkpointer.get_checkpoint_file())
                 if len(self.recent_checkpoints) > self.max_to_keep:
                     file_to_delete = self.recent_checkpoints.pop(0)
                     if PathManager.exists(
@@ -355,9 +338,7 @@ def _filter_reused_missing_keys(model: nn.Module, keys: List[str]) -> List[str]:
     for names in param_to_names.values():
         # if one name appears missing but its alias exists, then this
         # name is not considered missing
-        if any(n in keyset for n in names) and not all(
-            n in keyset for n in names
-        ):
+        if any(n in keyset for n in names) and not all(n in keyset for n in names):
             [keyset.remove(n) for n in names if n in keyset]
     return list(keyset)
 
@@ -391,8 +372,7 @@ def get_unexpected_parameters_message(keys: List[str]) -> str:
     groups = _group_checkpoint_keys(keys)
     msg = "The checkpoint contains parameters not used by the model:\n"
     msg += "\n".join(
-        "  " + colored(k + _group_to_str(v), "magenta")
-        for k, v in groups.items()
+        "  " + colored(k + _group_to_str(v), "magenta") for k, v in groups.items()
     )
     return msg
 

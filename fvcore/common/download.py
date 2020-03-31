@@ -44,9 +44,7 @@ def download(
             def hook(t: tqdm.tqdm) -> Callable[[int, int, Optional[int]], None]:
                 last_b: List[int] = [0]
 
-                def inner(
-                    b: int, bsize: int, tsize: Optional[int] = None
-                ) -> None:
+                def inner(b: int, bsize: int, tsize: Optional[int] = None) -> None:
                     if tsize is not None:
                         t.total = tsize
                     t.update((b - last_b[0]) * bsize)  # type: ignore
@@ -57,9 +55,7 @@ def download(
             with tqdm.tqdm(  # type: ignore
                 unit="B", unit_scale=True, miniters=1, desc=filename, leave=True
             ) as t:
-                tmp, _ = request.urlretrieve(
-                    url, filename=tmp, reporthook=hook(t)
-                )
+                tmp, _ = request.urlretrieve(url, filename=tmp, reporthook=hook(t))
 
         else:
             tmp, _ = request.urlretrieve(url, filename=tmp)
@@ -79,7 +75,5 @@ def download(
         except IOError:
             pass
 
-    logger.info(
-        "Successfully downloaded " + fpath + ". " + str(size) + " bytes."
-    )
+    logger.info("Successfully downloaded " + fpath + ". " + str(size) + " bytes.")
     return fpath

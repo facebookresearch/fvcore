@@ -2,9 +2,11 @@
 
 import typing
 from collections import Counter, OrderedDict
-from numpy import prod
+
 import torch
 import torch.nn as nn
+from numpy import prod
+
 
 # A list that contains ignored operations.
 _IGNORED_OPS: typing.List[str] = [
@@ -75,8 +77,7 @@ def get_jit_model_analysis(
     """
     # Torch script does not support parallel torch models.
     if isinstance(
-        model,
-        (nn.parallel.distributed.DistributedDataParallel, nn.DataParallel),
+        model, (nn.parallel.distributed.DistributedDataParallel, nn.DataParallel)
     ):
         model = model.module  # pyre-ignore
 
@@ -111,9 +112,7 @@ def get_jit_model_analysis(
 
 def generic_activation_jit(
     op_name: str
-) -> typing.Callable[
-    [typing.List[object], typing.List[object]], typing.Counter[str]
-]:
+) -> typing.Callable[[typing.List[object], typing.List[object]], typing.Counter[str]]:
     """
     This method return a handle that counts the number of activation from the
     output shape for the specified operation.
@@ -141,9 +140,7 @@ def generic_activation_jit(
         ac_count = prod(out_shape)
         return ac_count
 
-    return lambda inputs, outputs: Counter(
-        {op_name: _generic_activation_jit(outputs)}
-    )
+    return lambda inputs, outputs: Counter({op_name: _generic_activation_jit(outputs)})
 
 
 def get_shape(val: object) -> typing.List[int]:
@@ -193,9 +190,7 @@ def addmm_flop_jit(
 
 
 def conv_flop_count(
-    x_shape: typing.List[int],
-    w_shape: typing.List[int],
-    out_shape: typing.List[int],
+    x_shape: typing.List[int], w_shape: typing.List[int], out_shape: typing.List[int]
 ) -> typing.Counter[str]:
     """
     This method counts the flops for convolution. Note only multiplication is
@@ -239,11 +234,7 @@ def conv_flop_jit(
     # 10) deterministic_cudnn and 11) user_enabled_cudnn.
     assert len(inputs) == 12
     x, w = inputs[:2]
-    x_shape, w_shape, out_shape = (
-        get_shape(x),
-        get_shape(w),
-        get_shape(outputs[0]),
-    )
+    x_shape, w_shape, out_shape = (get_shape(x), get_shape(w), get_shape(outputs[0]))
     return conv_flop_count(x_shape, w_shape, out_shape)
 
 

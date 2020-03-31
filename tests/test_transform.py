@@ -1,11 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 import itertools
-import numpy as np
 import unittest
 from typing import Any, Tuple
-import torch
 
+import numpy as np
+import torch
 from fvcore.transforms import transform as T
 from fvcore.transforms.transform_util import to_float_tensor, to_numpy
 
@@ -263,9 +263,7 @@ class TestTransforms(unittest.TestCase):
         blend_src_nhwc = np.ones((8, 10, 10, 3))
 
         for img, array_type, shape_str in TestTransforms._img_provider():
-            blend_src = locals()["blend_src_{}".format(shape_str)].astype(
-                array_type
-            )
+            blend_src = locals()["blend_src_{}".format(shape_str)].astype(array_type)
             params = (
                 (blend_src, 0.0, 1.0),
                 (blend_src, 0.3, 0.7),
@@ -511,8 +509,7 @@ class TestTransforms(unittest.TestCase):
         # TODO: add more complex test case for grid sample.
         for interp in ["nearest"]:
             grid_2d = np.stack(
-                np.meshgrid(np.linspace(-1, 1, 10), np.linspace(-1, 1, 10)),
-                axis=2,
+                np.meshgrid(np.linspace(-1, 1, 10), np.linspace(-1, 1, 10)), axis=2
             ).astype(np.float)
             grid = np.tile(grid_2d[None, :, :, :], [8, 1, 1, 1])
             transformer = T.GridSampleTransform(grid, interp)
@@ -538,9 +535,7 @@ class TestTransforms(unittest.TestCase):
         except ImportError:
             return
 
-        polygon = np.asarray([3, 3.5, 11, 10.0, 38, 98, 15.0, 100.0]).reshape(
-            -1, 2
-        )
+        polygon = np.asarray([3, 3.5, 11, 10.0, 38, 98, 15.0, 100.0]).reshape(-1, 2)
         g = geometry.Polygon(polygon)
         coords = np.asarray(g.exterior.coords)
         self.assertEqual(coords[0].tolist(), coords[-1].tolist())
@@ -602,9 +597,7 @@ class TestTransforms(unittest.TestCase):
                 (coords, 1.0, 0.0),
             )
             for param in params:
-                gt_transformer = getattr(
-                    self, "{}_coords_gt".format(_trans_name)
-                )
+                gt_transformer = getattr(self, "{}_coords_gt".format(_trans_name))
                 transformer = getattr(T, _trans_name)(*param)
 
                 result = transformer.apply_coords(coords)

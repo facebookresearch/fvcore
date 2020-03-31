@@ -1,7 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
-import numpy as np
 from typing import List, Optional, Tuple
+
+import numpy as np
 
 
 class HistoryBuffer:

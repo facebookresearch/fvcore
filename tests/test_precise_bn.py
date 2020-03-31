@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import itertools
-import numpy as np
 import unittest
 from typing import List, Tuple
-import torch
-from torch import nn
 
+import numpy as np
+import torch
 from fvcore.nn import update_bn_stats
+from torch import nn
 
 
 class TestPreciseBN(unittest.TestCase):
@@ -47,9 +47,7 @@ class TestPreciseBN(unittest.TestCase):
         _input_dims = [(16, 8, 24), (16, 8, 24, 8), (16, 8, 4, 12, 6)]
         assert len({len(_bn_types), len(_stats_dims), len(_input_dims)}) == 1
 
-        for bn, stats_dim, input_dim in zip(
-            _bn_types, _stats_dims, _input_dims
-        ):
+        for bn, stats_dim, input_dim in zip(_bn_types, _stats_dims, _input_dims):
             model = bn(input_dim[1])
             model.train()
             tensors = [torch.randn(input_dim) for _ in range(NB)]
@@ -60,9 +58,7 @@ class TestPreciseBN(unittest.TestCase):
 
             self.assertTrue(np.allclose(model.running_mean.numpy(), mean))
             self.assertTrue(np.allclose(model.running_var.numpy(), var))
-            self.assertTrue(
-                np.allclose(model.weight.detach().numpy(), old_weight)
-            )
+            self.assertTrue(np.allclose(model.weight.detach().numpy(), old_weight))
 
     def test_precise_bn_insufficient_data(self) -> None:
         input_dim = (16, 32, 24, 24)

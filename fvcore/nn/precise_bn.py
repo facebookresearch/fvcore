@@ -2,8 +2,10 @@
 
 import itertools
 from typing import Any, Iterable, List, Tuple, Type
+
 import torch
 from torch import nn
+
 
 BN_MODULE_TYPES: Tuple[Type[nn.Module]] = (
     torch.nn.BatchNorm1d,
@@ -15,9 +17,7 @@ BN_MODULE_TYPES: Tuple[Type[nn.Module]] = (
 
 @torch.no_grad()
 def update_bn_stats(
-    model: nn.Module,
-    data_loader: Iterable[Any],  # pyre-ignore
-    num_iters: int = 200,
+    model: nn.Module, data_loader: Iterable[Any], num_iters: int = 200  # pyre-ignore
 ) -> None:
     """
     Recompute and update the batch norm stats to make them more precise. During
@@ -62,9 +62,7 @@ def update_bn_stats(
     running_mean = [
         torch.zeros_like(bn.running_mean) for bn in bn_layers  # pyre-ignore
     ]
-    running_var = [
-        torch.zeros_like(bn.running_var) for bn in bn_layers  # pyre-ignore
-    ]
+    running_var = [torch.zeros_like(bn.running_var) for bn in bn_layers]  # pyre-ignore
 
     ind = -1
     for ind, inputs in enumerate(itertools.islice(data_loader, num_iters)):
@@ -102,8 +100,6 @@ def get_bn_modules(model: nn.Module) -> List[nn.Module]:
     """
     # Finds all the bn layers.
     bn_layers = [
-        m
-        for m in model.modules()
-        if m.training and isinstance(m, BN_MODULE_TYPES)
+        m for m in model.modules() if m.training and isinstance(m, BN_MODULE_TYPES)
     ]
     return bn_layers

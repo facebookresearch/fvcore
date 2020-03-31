@@ -1,9 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
-import numpy as np
 import sys
 import time
 from typing import Any, Callable, Dict, List
+
+import numpy as np
 
 
 def timeit(
@@ -109,9 +110,7 @@ def benchmark(
     for kwargs in kwargs_list:
         func_bm = func(**kwargs)
         # pyre-ignore
-        time_func = timeit(num_iters=num_iters, warmup_iters=warmup_iters)(
-            func_bm
-        )
+        time_func = timeit(num_iters=num_iters, warmup_iters=warmup_iters)(func_bm)
 
         ret = time_func()
         name = bm_name
@@ -134,25 +133,14 @@ def benchmark(
     dash = "-" * 80
     print(
         "{:{}s} {:>{}s} {:>{}s} {:>{}s}".format(
-            "Benchmark",
-            c1,
-            "Avg Time(μs)",
-            c2,
-            "Peak Time(μs)",
-            c3,
-            "Iterations",
-            c4,
+            "Benchmark", c1, "Avg Time(μs)", c2, "Peak Time(μs)", c3, "Iterations", c4
         )
     )
     print(dash)
     for output in outputs:
         print(
             "{:{}s} {:15.0f} {:15.0f} {:14d}".format(
-                output[0],
-                c1,
-                float(output[1]),
-                float(output[2]),
-                int(output[3]),
+                output[0], c1, float(output[1]), float(output[2]), int(output[3])
             )
         )
     print(dash)

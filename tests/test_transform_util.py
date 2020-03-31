@@ -1,8 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
-import numpy as np
 import unittest
 
+import numpy as np
 from fvcore.transforms.transform_util import to_float_tensor, to_numpy
 
 
@@ -24,7 +24,5 @@ class TestTransformUtil(unittest.TestCase):
 
         for array in arrays:
             converted_tensor = to_float_tensor(array)
-            converted_array = to_numpy(
-                converted_tensor, array.shape, array.dtype
-            )
+            converted_array = to_numpy(converted_tensor, array.shape, array.dtype)
             self.assertTrue(np.allclose(array, converted_array))

@@ -3,11 +3,11 @@
 import typing
 import unittest
 from collections import Counter, defaultdict
-from numpy import prod
+
 import torch
 import torch.nn as nn
-
 from fvcore.nn.activation_count import activation_count
+from numpy import prod
 
 
 class SmallConvNet(nn.Module):
@@ -81,9 +81,7 @@ class TestActivationCount(unittest.TestCase):
         gt_dict = defaultdict(float)
         gt_dict["addmm"] = gt_count / 1e6
         self.assertEquals(
-            gt_dict,
-            ac_dict,
-            "FC layer failed to pass the activation count test.",
+            gt_dict, ac_dict, "FC layer failed to pass the activation count test."
         )
 
     def test_supported_ops(self) -> None:

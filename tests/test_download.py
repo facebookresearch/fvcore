@@ -11,10 +11,7 @@ class TestDownload(unittest.TestCase):
 
     def test_download(self) -> None:
         download(
-            "https://www.facebook.com",
-            ".",
-            filename=self._filename,
-            progress=False,
+            "https://www.facebook.com", ".", filename=self._filename, progress=False
         )
         self.assertTrue(os.path.isfile(self._filename))
 

@@ -1,11 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 import math
-import numpy as np
 import time
 import typing
 import unittest
 
+import numpy as np
 from fvcore.common.config import CfgNode
 from fvcore.common.history_buffer import HistoryBuffer
 from fvcore.common.registry import Registry
@@ -113,9 +113,7 @@ class TestTimer(unittest.TestCase):
                 time.sleep(t)
                 timer.pause()
                 self.assertTrue(
-                    math.isclose(
-                        pause_second, timer.avg_seconds(), rel_tol=5e-2
-                    ),
+                    math.isclose(pause_second, timer.avg_seconds(), rel_tol=5e-2),
                     msg="{}: {}".format(pause_second, timer.avg_seconds()),
                 )
 
@@ -136,12 +134,8 @@ class TestCfgNode(unittest.TestCase):
         """
         import pkg_resources
 
-        base_yaml = pkg_resources.resource_filename(
-            __name__, "configs/base.yaml"
-        )
-        config_yaml = pkg_resources.resource_filename(
-            __name__, "configs/config.yaml"
-        )
+        base_yaml = pkg_resources.resource_filename(__name__, "configs/base.yaml")
+        config_yaml = pkg_resources.resource_filename(__name__, "configs/config.yaml")
 
         cfg = TestCfgNode.gen_default_cfg()
         cfg.merge_from_file(base_yaml)
@@ -195,8 +189,7 @@ class TestCfgNode(unittest.TestCase):
         with self.assertRaises(KeyError) as err:
             cfg.COMPUTED_1 = "update_computed1"
         self.assertTrue(
-            "Computed attributed 'COMPUTED_1' already exists"
-            in str(err.exception)
+            "Computed attributed 'COMPUTED_1' already exists" in str(err.exception)
         )
 
         # Resetting the same value should be safe:

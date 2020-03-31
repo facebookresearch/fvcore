@@ -3,6 +3,7 @@
 import logging
 import typing
 from collections import defaultdict
+
 import torch.nn as nn
 
 from .jit_handles import (
@@ -12,6 +13,7 @@ from .jit_handles import (
     get_jit_model_analysis,
     matmul_flop_jit,
 )
+
 
 # A dictionary that maps supported operations to their flop count jit handles.
 _SUPPORTED_OPS: typing.Dict[str, typing.Callable] = {

@@ -5,20 +5,12 @@ import logging
 import os
 import shutil
 from collections import OrderedDict
-from typing import (
-    IO,
-    Any,
-    Callable,
-    Dict,
-    List,
-    MutableMapping,
-    Optional,
-    Union,
-)
+from typing import IO, Any, Callable, Dict, List, MutableMapping, Optional, Union
 from urllib.parse import urlparse
-import portalocker  # type: ignore
 
+import portalocker  # type: ignore
 from fvcore.common.download import download
+
 
 __all__ = ["LazyPath", "PathManager", "get_cache_dir", "file_lock"]
 
@@ -106,9 +98,7 @@ class LazyPath(os.PathLike):
     # behave more like a str after evaluated
     def __getattr__(self, name: str):  # type: ignore
         if self._value is None:
-            raise AttributeError(
-                f"Uninitialized LazyPath has no attribute: {name}."
-            )
+            raise AttributeError(f"Uninitialized LazyPath has no attribute: {name}.")
         return getattr(self._value, name)
 
     def __getitem__(self, key):  # type: ignore
@@ -147,9 +137,7 @@ class PathHandler:
         else:
             logger = logging.getLogger(__name__)
             for k, v in kwargs.items():
-                logger.warning(
-                    "[PathManager] {}={} argument ignored".format(k, v)
-                )
+                logger.warning("[PathManager] {}={} argument ignored".format(k, v))
 
     def _get_supported_prefixes(self) -> List[str]:
         """
@@ -176,11 +164,7 @@ class PathHandler:
         raise NotImplementedError()
 
     def _copy_from_local(
-        self,
-        local_path: str,
-        dst_path: str,
-        overwrite: bool = False,
-        **kwargs: Any,
+        self, local_path: str, dst_path: str, overwrite: bool = False, **kwargs: Any
     ) -> None:
         """
         Copies a local file to the specified URI.
@@ -220,11 +204,7 @@ class PathHandler:
         raise NotImplementedError()
 
     def _copy(
-        self,
-        src_path: str,
-        dst_path: str,
-        overwrite: bool = False,
-        **kwargs: Any,
+        self, src_path: str, dst_path: str, overwrite: bool = False, **kwargs: Any
     ) -> bool:
         """
         Copies a source path to a destination path.
@@ -319,18 +299,11 @@ class NativePathHandler(PathHandler):
         return os.fspath(path)
 
     def _copy_from_local(
-        self,
-        local_path: str,
-        dst_path: str,
-        overwrite: bool = False,
-        **kwargs: Any,
+        self, local_path: str, dst_path: str, overwrite: bool = False, **kwargs: Any
     ) -> None:
         self._check_kwargs(kwargs)
         assert self._copy(
-            src_path=local_path,
-            dst_path=dst_path,
-            overwrite=overwrite,
-            **kwargs,
+            src_path=local_path, dst_path=dst_path, overwrite=overwrite, **kwargs
         )
 
     def _open(
@@ -397,11 +370,7 @@ class NativePathHandler(PathHandler):
         )
 
     def _copy(
-        self,
-        src_path: str,
-        dst_path: str,
-        overwrite: bool = False,
-        **kwargs: Any,
+        self, src_path: str, dst_path: str, overwrite: bool = False, **kwargs: Any
     ) -> bool:
         """
         Copies a source path to a destination path.
@@ -476,9 +445,7 @@ class HTTPURLHandler(PathHandler):
         The resource will only be downloaded if not previously requested.
         """
         self._check_kwargs(kwargs)
-        if path not in self.cache_map or not os.path.exists(
-            self.cache_map[path]
-        ):
+        if path not in self.cache_map or not os.path.exists(self.cache_map[path]):
             logger = logging.getLogger(__name__)
             parsed_url = urlparse(path)
             dirname = os.path.join(
@@ -511,10 +478,7 @@ class HTTPURLHandler(PathHandler):
             file: a file-like object.
         """
         self._check_kwargs(kwargs)
-        assert mode in (
-            "r",
-            "rb",
-        ), "{} does not support open with {} mode".format(
+        assert mode in ("r", "rb"), "{} does not support open with {} mode".format(
             self.__class__.__name__, mode
         )
         assert (
@@ -616,7 +580,9 @@ class PathManager:
         path = os.fspath(path)
         return PathManager.__get_path_handler(  # type: ignore
             path
-        )._get_local_path(path, **kwargs)
+        )._get_local_path(
+            path, **kwargs
+        )
 
     @staticmethod
     def copy_from_local(
@@ -638,10 +604,7 @@ class PathManager:
         """
         assert os.path.exists(local_path)
         return PathManager.__get_path_handler(dst_path)._copy_from_local(
-            local_path=local_path,
-            dst_path=dst_path,
-            overwrite=overwrite,
-            **kwargs,
+            local_path=local_path, dst_path=dst_path, overwrite=overwrite, **kwargs
         )
 
     @staticmethod
@@ -729,9 +692,7 @@ class PathManager:
         )
 
     @staticmethod
-    def register_handler(
-        handler: PathHandler, allow_override: bool = False
-    ) -> None:
+    def register_handler(handler: PathHandler, allow_override: bool = False) -> None:
         """
         Register a path handler associated with `handler._get_supported_prefixes`
         URI prefixes.
@@ -749,11 +710,7 @@ class PathManager:
         # Sort path handlers in reverse order so longer prefixes take priority,
         # eg: http://foo/bar before http://foo
         PathManager._PATH_HANDLERS = OrderedDict(
-            sorted(
-                PathManager._PATH_HANDLERS.items(),
-                key=lambda t: t[0],
-                reverse=True,
-            )
+            sorted(PathManager._PATH_HANDLERS.items(), key=lambda t: t[0], reverse=True)
         )
 
     @staticmethod
