@@ -14,7 +14,7 @@ echo "Running isort..."
 isort -y -sp .
 
 echo "Running black..."
-black -l 80 .
+black .
 
 echo "Running flake8..."
 if [ -x "$(command -v flake8-3)" ]; then
