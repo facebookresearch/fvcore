@@ -23,6 +23,9 @@ jobs:
           flake8 --version
       - name: Lint
         run: |
+          echo "Running isort"
           isort -c -sp .
-          black --check -l 80 .
+          echo "Running black"
+          black --check .
+          echo "Running flake8"
           flake8 .
