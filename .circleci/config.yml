@@ -90,7 +90,7 @@ jobs:
       - run:
           name: black
           command: |
-            black --check -l 80 .
+            black --check .
       - run:
           name: flake8
           command: |
