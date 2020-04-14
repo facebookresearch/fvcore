@@ -7,6 +7,7 @@ from .focal_loss import (
     sigmoid_focal_loss_star,
     sigmoid_focal_loss_star_jit,
 )
+from .giou_loss import giou_loss
 from .parameter_count import parameter_count, parameter_count_table
 from .precise_bn import get_bn_modules, update_bn_stats
 from .smooth_l1_loss import smooth_l1_loss
