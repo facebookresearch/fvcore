@@ -200,7 +200,8 @@ class TestCheckpointer(unittest.TestCase):
         new_model = Model(has_y=True)
         chkpt = Checkpointer(new_model)
         chkpt.logger = logger = MagicMock()
-        chkpt._load_model(data)
+        incompatible = chkpt._load_model(data)
+        chkpt._log_incompatible_keys(incompatible)
         self.assertTrue(
             torch.allclose(new_model.y.bias - 5.0, torch.zeros_like(new_model.y.bias))
         )

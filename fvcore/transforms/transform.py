@@ -74,8 +74,9 @@ class Transform(metaclass=ABCMeta):
             ndarray: coordinates after apply the transformation.
 
         Note:
-            The coordinates are not pixel indices. Coordinates on an image of
+            The coordinates are not pixel indices. Coordinates inside an image of
             shape (H, W) are in range [0, W] or [0, H].
+            This function should correctly transform coordinates outside the image as well.
         """
 
     def apply_segmentation(self, segmentation: np.ndarray) -> np.ndarray:
@@ -107,8 +108,11 @@ class Transform(metaclass=ABCMeta):
             ndarray: box after apply the transformation.
 
         Note:
-            The coordinates are not pixel indices. Coordinates on an image of
+            The coordinates are not pixel indices. Coordinates inside an image of
             shape (H, W) are in range [0, W] or [0, H].
+
+            This function does not clip boxes to force them inside the image.
+            It is up to the application that uses the boxes to decide.
         """
         # Indexes of converting (x0, y0, x1, y1) box into 4 coordinates of
         # ([x0, y0], [x1, y0], [x0, y1], [x1, y1]).

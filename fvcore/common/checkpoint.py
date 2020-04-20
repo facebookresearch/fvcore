@@ -4,7 +4,7 @@ import copy
 import logging
 import os
 from collections import defaultdict
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Tuple
 
 import numpy as np
 import torch
@@ -15,6 +15,19 @@ from torch.nn.parallel import DataParallel, DistributedDataParallel
 
 
 __all__ = ["Checkpointer", "PeriodicCheckpointer"]
+
+
+class _IncompatibleKeys(
+    NamedTuple(
+        "IncompatibleKeys",
+        [
+            ("missing_keys", List[str]),
+            ("unexpected_keys", List[str]),
+            ("incorrect_shapes", List[Tuple]),
+        ],
+    )
+):
+    pass
 
 
 class Checkpointer(object):
@@ -101,7 +114,12 @@ class Checkpointer(object):
             assert os.path.isfile(path), "Checkpoint {} not found!".format(path)
 
         checkpoint = self._load_file(path)
-        self._load_model(checkpoint)
+        incompatible = self._load_model(checkpoint)
+        if (
+            incompatible is not None
+        ):  # handle some existing subclasses that returns None
+            self._log_incompatible_keys(incompatible)
+
         for key in self.checkpointables if checkpointables is None else checkpointables:
             if key in checkpoint:  # pyre-ignore
                 self.logger.info("Loading {} from {}".format(key, path))
@@ -193,11 +211,23 @@ class Checkpointer(object):
         """
         return torch.load(f, map_location=torch.device("cpu"))
 
-    def _load_model(self, checkpoint: Any) -> None:  # pyre-ignore
+    def _load_model(self, checkpoint: Any) -> _IncompatibleKeys:  # pyre-ignore
         """
         Load weights from a checkpoint.
+
         Args:
             checkpoint (Any): checkpoint contains the weights.
+
+        Returns:
+            ``NamedTuple`` with ``missing_keys``, ``unexpected_keys``,
+                and ``incorrect_shapes`` fields:
+                * **missing_keys** is a list of str containing the missing keys
+                * **unexpected_keys** is a list of str containing the unexpected keys
+                * **incorrect_shapes** is a list of (key, shape in checkpoint, shape in model)
+
+            This is just like the return value of
+            :func:`torch.nn.Module.load_state_dict`, but with extra support
+            for ``incorrect_shapes``.
         """
         checkpoint_state_dict = checkpoint.pop("model")
         self._convert_ndarray_to_tensor(checkpoint_state_dict)
@@ -209,18 +239,31 @@ class Checkpointer(object):
 
         # work around https://github.com/pytorch/pytorch/issues/24139
         model_state_dict = self.model.state_dict()
+        incorrect_shapes = []
         for k in list(checkpoint_state_dict.keys()):
             if k in model_state_dict:
                 shape_model = tuple(model_state_dict[k].shape)
                 shape_checkpoint = tuple(checkpoint_state_dict[k].shape)
                 if shape_model != shape_checkpoint:
-                    self.logger.warning(
-                        "'{}' has shape {} in the checkpoint but {} in the "
-                        "model! Skipped.".format(k, shape_checkpoint, shape_model)
-                    )
+                    incorrect_shapes.append((k, shape_checkpoint, shape_model))
                     checkpoint_state_dict.pop(k)
         # pyre-ignore
         incompatible = self.model.load_state_dict(checkpoint_state_dict, strict=False)
+        return _IncompatibleKeys(
+            missing_keys=incompatible.missing_keys,
+            unexpected_keys=incompatible.unexpected_keys,
+            incorrect_shapes=incorrect_shapes,
+        )
+
+    def _log_incompatible_keys(self, incompatible: _IncompatibleKeys) -> None:
+        """
+        Log information about the incompatible keys returned by ``_load_model``.
+        """
+        for k, shape_checkpoint, shape_model in incompatible.incorrect_shapes:
+            self.logger.warning(
+                "'{}' has shape {} in the checkpoint but {} in the "
+                "model! Skipped.".format(k, shape_checkpoint, shape_model)
+            )
         if incompatible.missing_keys:
             missing_keys = _filter_reused_missing_keys(
                 self.model, incompatible.missing_keys
@@ -237,6 +280,7 @@ class Checkpointer(object):
         In-place convert all numpy arrays in the state_dict to torch tensor.
         Args:
             state_dict (dict): a state-dict to be loaded to the model.
+                Will be modified.
         """
         # model could be an OrderedDict with _metadata attribute
         # (as returned by Pytorch's state_dict()). We should preserve these
@@ -353,7 +397,7 @@ def get_missing_parameters_message(keys: List[str]) -> str:
         str: message.
     """
     groups = _group_checkpoint_keys(keys)
-    msg = "Some model parameters are not in the checkpoint:\n"
+    msg = "Some model parameters or buffers are not in the checkpoint:\n"
     msg += "\n".join(
         "  " + colored(k + _group_to_str(v), "blue") for k, v in groups.items()
     )
@@ -370,7 +414,7 @@ def get_unexpected_parameters_message(keys: List[str]) -> str:
         str: message.
     """
     groups = _group_checkpoint_keys(keys)
-    msg = "The checkpoint contains parameters not used by the model:\n"
+    msg = "The checkpoint state_dict contains keys that are not used by the model:\n"
     msg += "\n".join(
         "  " + colored(k + _group_to_str(v), "magenta") for k, v in groups.items()
     )
