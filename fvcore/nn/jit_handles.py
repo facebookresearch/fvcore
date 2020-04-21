@@ -21,9 +21,15 @@ _IGNORED_OPS: typing.List[str] = [
     "aten::detach",
     "aten::empty",
     "aten::eq",
+    "aten::floor_divide",
+    "aten::ScalarImplicit",
     "aten::expand",
     "aten::flatten",
     "aten::floor",
+    "aten::ge",
+    "aten::chunk",
+    "aten::split",
+    "aten::stack",
     "aten::full",
     "aten::gt",
     "aten::index",
@@ -42,6 +48,8 @@ _IGNORED_OPS: typing.List[str] = [
     "aten::to",
     "aten::transpose",
     "aten::unsqueeze",
+    "aten::unsqueeze_",
+    "aten::constant_pad_nd",
     "aten::view",
     "aten::zeros",
     "aten::zeros_like",
@@ -51,6 +59,7 @@ _IGNORED_OPS: typing.List[str] = [
     "prim::ListUnpack",
     "prim::NumToTensor",
     "prim::TupleConstruct",
+    "prim::ImplicitTensorToNum",
 ]
 
 

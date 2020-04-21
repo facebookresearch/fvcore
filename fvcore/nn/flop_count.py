@@ -16,7 +16,7 @@ from .jit_handles import (
 
 
 # A dictionary that maps supported operations to their flop count jit handles.
-_SUPPORTED_OPS: typing.Dict[str, typing.Callable] = {
+_DEFAULT_SUPPORTED_OPS: typing.Dict[str, typing.Callable] = {
     "aten::addmm": addmm_flop_jit,
     "aten::_convolution": conv_flop_jit,
     "aten::einsum": einsum_flop_jit,
@@ -31,17 +31,17 @@ def flop_count(
 ) -> typing.Tuple[typing.DefaultDict[str, float], typing.Counter[str]]:
     """
     Given a model and an input to the model, compute the Gflops of the given
-    model. Note the input should have a batch size of 1.
+    model.
 
     Args:
         model (nn.Module): The model to compute flop counts.
         inputs (tuple): Inputs that are passed to `model` to count flops.
             Inputs need to be in a tuple.
-        supported_ops (dict(str,Callable) or None) : By default, we count flops
-            for convolution layers, fully connected layers, torch.matmul and
-            torch.einsum operations. We define a FLOP as a single atomic
-            Multiply-Add. Users can provide customized supported_ops for
-            counting flops if desired.
+        supported_ops (dict(str,Callable) or None) : provide additional
+            handlers for extra ops, or overwrite the existing handlers for
+            convolution and matmul and einsum. The key is operator name and the value
+            is a function that takes (inputs, outputs) of the op. We count
+            one Multiply-Add as one FLOP.
 
     Returns:
         tuple[defaultdict, Counter]: A dictionary that records the number of
@@ -49,8 +49,7 @@ def flop_count(
             skipped operations.
     """
     assert isinstance(inputs, tuple), "Inputs need to be in a tuple."
-    if not supported_ops:
-        supported_ops = _SUPPORTED_OPS.copy()
+    supported_ops = {**_DEFAULT_SUPPORTED_OPS, **(supported_ops or {})}
 
     # Run flop count.
     total_flop_counter, skipped_ops = get_jit_model_analysis(
@@ -58,9 +57,10 @@ def flop_count(
     )
 
     # Log for skipped operations.
+    logger = logging.getLogger(__name__)
     if len(skipped_ops) > 0:
         for op, freq in skipped_ops.items():
-            logging.warning("Skipped operation {} {} time(s)".format(op, freq))
+            logger.warning("Skipped operation {} {} time(s)".format(op, freq))
 
     # Convert flop count to gigaflops.
     final_count = defaultdict(float)

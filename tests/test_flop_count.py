@@ -161,11 +161,9 @@ class TestFlopCount(unittest.TestCase):
         x = torch.rand(batch_size, input_dim)
         flop_dict1, _ = flop_count(customNet, (x,), supported_ops=custom_ops)
         flop_sigmoid = 10000 / 1e9
-        gt_dict1 = defaultdict(float)
-        gt_dict1["sigmoid"] = flop_sigmoid
-        self.assertDictEqual(
-            flop_dict1,
-            gt_dict1,
+        self.assertEqual(
+            flop_dict1["sigmoid"],
+            flop_sigmoid,
             "Customized operation handle failed to pass the flop count test.",
         )
 
@@ -186,11 +184,9 @@ class TestFlopCount(unittest.TestCase):
         custom_ops2 = {"aten::addmm": addmm_dummy_flop_jit}
         flop_dict2, _ = flop_count(customNet, (x,), supported_ops=custom_ops2)
         flop = 400000 / 1e9
-        gt_dict2 = defaultdict(float)
-        gt_dict2["addmm"] = flop
-        self.assertDictEqual(
-            flop_dict2,
-            gt_dict2,
+        self.assertEqual(
+            flop_dict2["addmm"],
+            flop,
             "Customized operation handle failed to pass the flop count test.",
         )
 
