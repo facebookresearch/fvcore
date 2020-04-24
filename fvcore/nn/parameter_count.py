@@ -51,8 +51,12 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
     table: typing.List[typing.Tuple] = []
 
     def format_size(x: int) -> str:
+        # pyre-fixme[6]: Expected `int` for 1st param but got `float`.
+        # pyre-fixme[6]: Expected `int` for 1st param but got `float`.
         if x > 1e5:
             return "{:.1f}M".format(x / 1e6)
+        # pyre-fixme[6]: Expected `int` for 1st param but got `float`.
+        # pyre-fixme[6]: Expected `int` for 1st param but got `float`.
         if x > 1e2:
             return "{:.1f}K".format(x / 1e3)
         return str(x)

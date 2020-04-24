@@ -87,7 +87,7 @@ class CfgNode(_CfgNode):
             )
             del cfg[BASE_KEY]
 
-            merge_a_into_b(cfg, base_cfg)  # pyre-ignore
+            merge_a_into_b(cfg, base_cfg)
             return base_cfg
         return cfg
 
