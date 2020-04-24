@@ -152,8 +152,9 @@ class PathHandler:
         and `os.path`.
 
         If URI points to a remote resource, this function may download and cache
-        the resource to local disk. In this case, this function is meant to be
-        used with read-only resources.
+        the resource to local disk. In this case, the cache stays on filesystem
+        (under `file_io.get_cache_dir()`) and will be used by a different run.
+        Therefore this function is meant to be used with read-only resources.
 
         Args:
             path (str): A URI supported by this PathHandler
