@@ -120,7 +120,7 @@ def get_jit_model_analysis(
 
 
 def generic_activation_jit(
-    op_name: str
+    op_name: str,
 ) -> typing.Callable[[typing.List[object], typing.List[object]], typing.Counter[str]]:
     """
     This method return a handle that counts the number of activation from the

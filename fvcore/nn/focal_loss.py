@@ -78,7 +78,7 @@ def sigmoid_focal_loss_star(
         Loss tensor with the reduction option applied.
     """
     shifted_inputs = gamma * (inputs * (2 * targets - 1))
-    loss = -F.logsigmoid(shifted_inputs) / gamma
+    loss = -(F.logsigmoid(shifted_inputs)) / gamma
 
     if alpha >= 0:
         alpha_t = alpha * targets + (1 - alpha) * (1 - targets)

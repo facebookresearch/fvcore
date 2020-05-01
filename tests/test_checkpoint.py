@@ -23,7 +23,7 @@ class TestCheckpointer(unittest.TestCase):
         return nn.Sequential(nn.Linear(2, 3), nn.Linear(3, 1))
 
     def _create_complex_model(
-        self
+        self,
     ) -> typing.Tuple[nn.Module, typing.Dict[str, torch.Tensor]]:
         """
         Create a complex model.
