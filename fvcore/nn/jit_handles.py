@@ -189,8 +189,8 @@ def addmm_flop_jit(
     input_shapes = [get_shape(v) for v in inputs[1:3]]
     # input_shapes[0]: [batch size, input feature dimension]
     # input_shapes[1]: [batch size, output feature dimension]
-    assert len(input_shapes[0]) == 2
-    assert len(input_shapes[1]) == 2
+    assert len(input_shapes[0]) == 2, input_shapes[0]
+    assert len(input_shapes[1]) == 2, input_shapes[1]
     batch_size, input_dim = input_shapes[0]
     output_dim = input_shapes[1][1]
     flop = batch_size * input_dim * output_dim
@@ -241,7 +241,7 @@ def conv_flop_jit(
     # 0) input tensor, 1) convolution filter, 2) bias, 3) stride, 4) padding,
     # 5) dilation, 6) transposed, 7) out_pad, 8) groups, 9) benchmark_cudnn,
     # 10) deterministic_cudnn and 11) user_enabled_cudnn.
-    assert len(inputs) == 12
+    assert len(inputs) == 12, len(inputs)
     x, w = inputs[:2]
     x_shape, w_shape, out_shape = (get_shape(x), get_shape(w), get_shape(outputs[0]))
     return conv_flop_count(x_shape, w_shape, out_shape)
@@ -267,7 +267,7 @@ def einsum_flop_jit(
     # Inputs of einsum should be a list of length 2.
     # Inputs[0] stores the equation used for einsum.
     # Inputs[1] stores the list of input shapes.
-    assert len(inputs) == 2
+    assert len(inputs) == 2, len(inputs)
     equation = inputs[0].toIValue()  # pyre-ignore
     # Get rid of white space in the equation string.
     equation = equation.replace(" ", "")
@@ -316,9 +316,9 @@ def matmul_flop_jit(
     # Inputs should be a list of length 2.
     # Inputs contains the shapes of two matrices.
     input_shapes = [get_shape(v) for v in inputs]
-    assert len(input_shapes) == 2
-    assert len(input_shapes[1]) == 2
-    assert input_shapes[0][-1] == input_shapes[1][0]
+    assert len(input_shapes) == 2, input_shapes
+    assert len(input_shapes[1]) == 2, input_shapes
+    assert input_shapes[0][-1] == input_shapes[1][0], input_shapes
     batch_dim = input_shapes[0][0]
     m1_dim, m2_dim = input_shapes[1]
     flop = m1_dim * m2_dim * batch_dim
@@ -344,7 +344,7 @@ def batchnorm_flop_jit(
     """
     # Inputs[0] contains the shape of the input.
     input_shape = get_shape(inputs[0])
-    assert 2 <= len(input_shape) <= 5
+    assert 2 <= len(input_shape) <= 5, input_shape
     flop = prod(input_shape) * 4
     flop_counter = Counter({"batchnorm": flop})
     return flop_counter

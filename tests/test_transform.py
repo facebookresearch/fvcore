@@ -566,7 +566,7 @@ class TestTransforms(unittest.TestCase):
                     np.random.randint(low=w_min, high=w_max, size=(n, 1)),
                 ],
                 axis=1,
-            )
+            ).astype("float32")
 
     @staticmethod
     def BlendTransform_coords_gt(coords, *args) -> Tuple[np.ndarray, list]:
@@ -600,8 +600,8 @@ class TestTransforms(unittest.TestCase):
                 gt_transformer = getattr(self, "{}_coords_gt".format(_trans_name))
                 transformer = getattr(T, _trans_name)(*param)
 
-                result = transformer.apply_coords(coords)
-                coords_gt, shape_gt = gt_transformer(coords, *param)
+                result = transformer.apply_coords(np.copy(coords))
+                coords_gt, shape_gt = gt_transformer(np.copy(coords), *param)
 
                 self.assertEqual(
                     shape_gt,
@@ -649,8 +649,8 @@ class TestTransforms(unittest.TestCase):
             gt_transformer = getattr(self, "{}_coords_gt".format(_trans_name))
             transformer = getattr(T, _trans_name)(*param)
 
-            result = transformer.apply_coords(coords)
-            coords_gt, shape_gt = gt_transformer(coords, *param)
+            result = transformer.apply_coords(np.copy(coords))
+            coords_gt, shape_gt = gt_transformer(np.copy(coords), *param)
 
             self.assertEqual(
                 shape_gt,
@@ -698,8 +698,8 @@ class TestTransforms(unittest.TestCase):
             gt_transformer = getattr(self, "{}_coords_gt".format(_trans_name))
             transformer = getattr(T, _trans_name)(*param)
 
-            result = transformer.apply_coords(coords)
-            coords_gt, shape_gt = gt_transformer(coords, *param)
+            result = transformer.apply_coords(np.copy(coords))
+            coords_gt, shape_gt = gt_transformer(np.copy(coords), *param)
 
             self.assertEqual(
                 shape_gt,
@@ -715,6 +715,12 @@ class TestTransforms(unittest.TestCase):
                 "params {} given input with shape {}".format(
                     _trans_name, param, result.shape
                 ),
+            )
+
+            coords_inversed = transformer.inverse().apply_coords(result)
+            self.assertTrue(
+                np.allclose(coords_inversed, coords),
+                f"Transform {_trans_name}'s inverse fails to produce the original coordinates.",
             )
 
     @staticmethod
@@ -757,8 +763,8 @@ class TestTransforms(unittest.TestCase):
             gt_transformer = getattr(self, "{}_coords_gt".format(_trans_name))
             transformer = getattr(T, _trans_name)(*param)
 
-            result = transformer.apply_coords(coords)
-            coords_gt, shape_gt = gt_transformer(coords, *param)
+            result = transformer.apply_coords(np.copy(coords))
+            coords_gt, shape_gt = gt_transformer(np.copy(coords), *param)
 
             self.assertEqual(
                 shape_gt,
@@ -816,8 +822,8 @@ class TestTransforms(unittest.TestCase):
             gt_transformer = getattr(self, "{}_coords_gt".format(_trans_name))
             transformer = getattr(T, _trans_name)(*param)
 
-            result = transformer.apply_coords(coords)
-            coords_gt, shape_gt = gt_transformer(coords, *param)
+            result = transformer.apply_coords(np.copy(coords))
+            coords_gt, shape_gt = gt_transformer(np.copy(coords), *param)
 
             self.assertEqual(
                 shape_gt,
@@ -833,6 +839,12 @@ class TestTransforms(unittest.TestCase):
                 "params {} given input with shape {}".format(
                     _trans_name, param, result.shape
                 ),
+            )
+
+            coords_inversed = transformer.inverse().apply_coords(result)
+            self.assertTrue(
+                np.allclose(coords_inversed, coords),
+                f"Transform {_trans_name}'s inverse fails to produce the original coordinates.",
             )
 
     @staticmethod
@@ -997,8 +1009,8 @@ class TestTransforms(unittest.TestCase):
             gt_transformer = getattr(self, "{}_coords_gt".format(_trans_name))
             transformer = getattr(T, _trans_name)(*param)
 
-            result = transformer.apply_coords(coords)
-            coords_gt, shape_gt = gt_transformer(coords, *param)
+            result = transformer.apply_coords(np.copy(coords))
+            coords_gt, shape_gt = gt_transformer(np.copy(coords), *param)
 
             self.assertEqual(
                 shape_gt,
