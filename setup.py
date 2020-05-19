@@ -22,7 +22,9 @@ def get_version():
         from datetime import datetime
 
         date_str = datetime.today().strftime("%y%m%d")
-        version = version + ".dev" + date_str
+        # pip can perform proper comparison for ".post" suffix,
+        # i.e., "1.1.post1234" >= "1.1"
+        version = version + ".post" + date_str
 
         new_init_py = [l for l in init_py if not l.startswith("__version__")]
         new_init_py.append('__version__ = "{}"\n'.format(version))

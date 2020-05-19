@@ -261,8 +261,9 @@ class Checkpointer(object):
         """
         for k, shape_checkpoint, shape_model in incompatible.incorrect_shapes:
             self.logger.warning(
-                "'{}' has shape {} in the checkpoint but {} in the "
-                "model! Skipped.".format(k, shape_checkpoint, shape_model)
+                "Unable to load '{}' to the model due to incompatible "
+                "shapes: {} in the checkpoint but {} in the "
+                "model!".format(k, shape_checkpoint, shape_model)
             )
         if incompatible.missing_keys:
             missing_keys = _filter_reused_missing_keys(
@@ -399,7 +400,7 @@ def get_missing_parameters_message(keys: List[str]) -> str:
         str: message.
     """
     groups = _group_checkpoint_keys(keys)
-    msg = "Some model parameters or buffers are not in the checkpoint:\n"
+    msg = "Some model parameters or buffers are not found in the checkpoint:\n"
     msg += "\n".join(
         "  " + colored(k + _group_to_str(v), "blue") for k, v in groups.items()
     )

@@ -152,11 +152,17 @@ jobs:
   upload_wheel:
     docker:
       - image: circleci/python:3.7
+    working_directory: ~/fvcore
     steps:
+      - checkout
       - attach_workspace:
           at: ~/workspace
       - run:
           command: |
+            # no commits in the last 25 hours
+            if [[ -z $(git log --since="25 hours ago") ]]; then
+              circleci-agent step halt
+            fi
             pip install --progress-bar off --user twine
             for pkg in ~/workspace/*.tar.gz; do
               twine upload $pkg
