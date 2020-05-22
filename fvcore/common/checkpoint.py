@@ -19,6 +19,7 @@ __all__ = ["Checkpointer", "PeriodicCheckpointer"]
 
 class _IncompatibleKeys(
     NamedTuple(
+        # pyre-fixme[10]: Name `IncompatibleKeys` is used but not defined.
         "IncompatibleKeys",
         [
             ("missing_keys", List[str]),

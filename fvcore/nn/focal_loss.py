@@ -85,9 +85,9 @@ def sigmoid_focal_loss_star(
         loss *= alpha_t
 
     if reduction == "mean":
-        loss = loss.mean()  # pyre-ignore
+        loss = loss.mean()
     elif reduction == "sum":
-        loss = loss.sum()  # pyre-ignore
+        loss = loss.sum()
 
     return loss
 

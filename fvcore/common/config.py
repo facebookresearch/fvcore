@@ -87,6 +87,8 @@ class CfgNode(_CfgNode):
             )
             del cfg[BASE_KEY]
 
+            # pyre-fixme[6]: Expected `Dict[typing.Any, typing.Any]` for 2nd param
+            #  but got `None`.
             merge_a_into_b(cfg, base_cfg)
             return base_cfg
         return cfg
