@@ -103,7 +103,7 @@ class LazyPath(os.PathLike):
 
     def __getitem__(self, key):  # type: ignore
         if self._value is None:
-            raise TypeError(f"Uninitialized LazyPath is not subscriptable.")
+            raise TypeError("Uninitialized LazyPath is not subscriptable.")
         return self._value[key]  # type: ignore
 
     def __str__(self) -> str:
