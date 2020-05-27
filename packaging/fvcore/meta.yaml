@@ -1,0 +1,32 @@
+package:
+  name: fvcore
+  version: "{{ environ.get('BUILD_VERSION') }}"
+
+source:
+ path: ../..
+
+requirements:
+
+  host:
+    - python
+    - setuptools
+
+  run:
+    - python
+    - yacs
+    - pyyaml
+    - tqdm
+    - portalocker
+    - termcolor
+    - pillow
+    - tabulate
+
+build:
+  string: py{{py}}
+  script: BUILD_NIGHTLY=1 python setup.py install --single-version-externally-managed --record=record.txt # [not win]
+
+about:
+  home: https://github.com/facebookresearch/fvcore
+  license: Apache 2.0
+  license_file: LICENSE
+  summary: "Collection of common code that's shared among different research projects in FAIR computer vision team."

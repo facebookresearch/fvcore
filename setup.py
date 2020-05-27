@@ -21,7 +21,7 @@ def get_version():
     if os.getenv("BUILD_NIGHTLY", "0") == "1":
         from datetime import datetime
 
-        date_str = datetime.today().strftime("%y%m%d")
+        date_str = datetime.today().strftime("%Y%m%d")
         # pip can perform proper comparison for ".post" suffix,
         # i.e., "1.1.post1234" >= "1.1"
         version = version + ".post" + date_str

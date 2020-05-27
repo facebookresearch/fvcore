@@ -168,6 +168,16 @@ jobs:
               twine upload $pkg
             done
 
+  build_conda:
+    docker:
+      - image: continuumio/miniconda3
+    steps:
+      - checkout
+      - run: conda install conda-build
+      - run: bash packaging/build_all_conda.sh
+      - store_artifacts:
+          path: packaging/output_files
+
 workflows:
   version: 2
   regular_test:
@@ -179,6 +189,7 @@ workflows:
     jobs:
       - cpu_tests
       - gpu_tests
+      - build_conda
       - upload_wheel:
           requires:
             - cpu_tests
