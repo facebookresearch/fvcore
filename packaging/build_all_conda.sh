@@ -11,8 +11,8 @@ ls -Rl packaging
 
 for version in 36 37 38
 do
-    (cd packaging/out && conda convert -p win-64 linux-64/fvcore-DEV-py$version.tar.bz2)
-    (cd packaging/out && conda convert -p osx-64 linux-64/fvcore-DEV-py$version.tar.bz2)
+    (cd packaging/out && conda convert -p win-64 linux-64/fvcore-*-py$version.tar.bz2)
+    (cd packaging/out && conda convert -p osx-64 linux-64/fvcore-*-py$version.tar.bz2)
 done
 
 ls -Rl packaging
