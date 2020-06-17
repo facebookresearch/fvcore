@@ -11,20 +11,21 @@ The computer vision team in FAIR is responsible for maintaining this library.
 
 fvcore requires python >= 3.6.
 
-Run one of the following commands to install:
+Use one of the following ways to install:
 
-### 1. Install from Anaconda Cloud
+### 1. Install from PyPI (updated nightly)
+```
+pip install -U fvcore
+```
+
+### 2. Install from Anaconda Cloud (updated nightly)
 
 ```
+conda install -c conda-forge yacs
 conda install -c fvcore fvcore
 ```
 
-### 2. Install from PyPI
-```
-pip install fvcore
-```
-
-### 3. Install from GitHub
+### 3. Install latest from GitHub
 ```
 pip install -U 'git+https://github.com/facebookresearch/fvcore'
 ```
@@ -32,7 +33,7 @@ pip install -U 'git+https://github.com/facebookresearch/fvcore'
 ### 4. Install from a local clone
 ```
 git clone https://github.com/facebookresearch/fvcore
-cd fvcore && pip install -e .
+pip install -e fvcore
 ```
 
 ## License
