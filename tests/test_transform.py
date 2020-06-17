@@ -52,6 +52,13 @@ class TestTransforms(unittest.TestCase):
         with self.assertRaises(AttributeError):
             transforms.no_existing
 
+    def test_noop_transform_no_register(self):
+        """
+        NoOpTransform does not need register - it's by default no-op.
+        """
+        t = T.NoOpTransform()
+        self.assertEqual(t.apply_anything(1), 1)
+
     @staticmethod
     def BlendTransform_img_gt(img, *args) -> Tuple[np.ndarray, list]:
         """

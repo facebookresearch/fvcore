@@ -227,10 +227,6 @@ class TransformList:
         return x
 
     def __getattr__(self, name: str):
-        """
-        Args:
-            name (str): name of the attribute.
-        """
         if name.startswith("apply_"):
             return lambda x: self._apply(x, name)
         raise AttributeError("TransformList object has no attribute {}".format(name))
@@ -402,6 +398,11 @@ class NoOpTransform(Transform):
 
     def inverse(self) -> Transform:
         return self
+
+    def __getattr__(self, name: str):
+        if name.startswith("apply_"):
+            return lambda x: x
+        raise AttributeError("NoOpTransform object has no attribute {}".format(name))
 
 
 class ScaleTransform(Transform):
