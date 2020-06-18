@@ -143,7 +143,7 @@ class Transform(metaclass=ABCMeta):
         return [self.apply_coords(p) for p in polygons]
 
     @classmethod
-    def register_type(cls, data_type: str, func: Callable):
+    def register_type(cls, data_type: str, func: Optional[Callable] = None):
         """
         Register the given function as a handler that this transform will use
         for a specific data type.
@@ -157,14 +157,29 @@ class Transform(metaclass=ABCMeta):
 
         .. code-block:: python
 
+            # call it directly
             def func(flip_transform, voxel_data):
                 return transformed_voxel_data
             HFlipTransform.register_type("voxel", func)
+
+            # or, use it as a decorator
+            @HFlipTransform.register_type("voxel")
+            def func(flip_transform, voxel_data):
+                return transformed_voxel_data
 
             # ...
             transform = HFlipTransform(...)
             transform.apply_voxel(voxel_data)  # func will be called
         """
+        if func is None:  # the decorator style
+
+            def wrapper(decorated_func):
+                assert decorated_func is not None
+                cls.register_type(data_type, decorated_func)
+                return decorated_func
+
+            return wrapper
+
         assert callable(
             func
         ), "You can only register a callable to a Transform. Got {} instead.".format(
@@ -226,10 +241,11 @@ class TransformList:
             x = getattr(t, meth)(x)
         return x
 
-    def __getattr__(self, name: str):
+    def __getattribute__(self, name: str):
+        # use __getattribute__ to win priority over any registered dtypes
         if name.startswith("apply_"):
             return lambda x: self._apply(x, name)
-        raise AttributeError("TransformList object has no attribute {}".format(name))
+        return super().__getattribute__(name)
 
     def __add__(self, other: "TransformList") -> "TransformList":
         """

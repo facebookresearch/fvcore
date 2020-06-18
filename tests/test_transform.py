@@ -52,6 +52,19 @@ class TestTransforms(unittest.TestCase):
         with self.assertRaises(AttributeError):
             transforms.no_existing
 
+    def test_register_with_decorator(self):
+        """
+        Test register using decorator.
+        """
+        dtype = "float"
+
+        @T.HFlipTransform.register_type(dtype)
+        def add1(t, x):
+            return x + 1
+
+        transforms = T.TransformList([T.HFlipTransform(3)])
+        self.assertEqual(transforms.apply_float(3), 4)
+
     def test_noop_transform_no_register(self):
         """
         NoOpTransform does not need register - it's by default no-op.
