@@ -161,7 +161,8 @@ jobs:
           command: |
             # no commits in the last 25 hours
             if [[ -z $(git log --since="25 hours ago") ]]; then
-              circleci-agent step halt
+              echo "No commits in the last day."
+              exit 0
             fi
             pip install --progress-bar off --user twine
             for pkg in ~/workspace/*.tar.gz; do
@@ -173,8 +174,16 @@ jobs:
       - image: continuumio/miniconda3
     steps:
       - checkout
-      - run: conda install conda-build
-      - run: bash packaging/build_all_conda.sh
+      - run:
+          name: Build Conda Package
+          command: |
+            # no commits in the last 25 hours
+            if [[ -z $(git log --since="25 hours ago") ]]; then
+              echo "No commits in the last day."
+              exit 0
+            fi
+            conda install conda-build
+            bash packaging/build_all_conda.sh
       - store_artifacts:
           path: packaging/output_files
 
@@ -189,7 +198,10 @@ workflows:
     jobs:
       - cpu_tests
       - gpu_tests
-      - build_conda
+      - build_conda:
+          requires:
+            - cpu_tests
+            - gpu_tests
       - upload_wheel:
           requires:
             - cpu_tests
