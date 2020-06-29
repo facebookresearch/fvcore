@@ -25,15 +25,22 @@ __all__ = [
 
 class Transform(metaclass=ABCMeta):
     """
-    Base class for implementations of __deterministic__ transformations for
-    image and other data structures. "Deterministic" requires that the output of
-    all methods of this class are deterministic w.r.t their input arguments. In
-    training, there should be a higher-level policy that generates (likely with
-    random variations) these transform ops. Each transform op may handle several
-    data types, e.g.: image, coordinates, segmentation, bounding boxes. Some of
+    Base class for implementations of **deterministic** transformations for
+    image and other data structures. "Deterministic" requires that the output
+    of all methods of this class are deterministic w.r.t their input arguments.
+    Note that this is different from (random) data augmentations. To perform
+    data augmentations in training, there should be a higher-level policy that
+    generates these transform ops.
+
+    Each transform op may handle several data types, e.g.: image, coordinates,
+    segmentation, bounding boxes, with its ``apply_*`` methods. Some of
     them have a default implementation, but can be overwritten if the default
-    isn't appropriate. The implementation of each method may choose to modify
-    its input data in-place for efficient transformation.
+    isn't appropriate. See documentation of each pre-defined ``apply_*`` methods
+    for details. Note that The implementation of these method may choose to
+    modify its input data in-place for efficient transformation.
+
+    The class can be extended to support arbitrary new data types with its
+    :meth:`register_type` method.
     """
 
     def _set_attributes(self, params: Optional[List[Any]] = None) -> None:
@@ -95,11 +102,10 @@ class Transform(metaclass=ABCMeta):
 
     def apply_box(self, box: np.ndarray) -> np.ndarray:
         """
-        Apply the transform on an axis-aligned box.
-        By default will transform the corner points and use their
-        minimum/maximum to create a new axis-aligned box.
-        Note that this default may change the size of your box, e.g. in
-        rotations.
+        Apply the transform on an axis-aligned box. By default will transform
+        the corner points and use their minimum/maximum to create a new
+        axis-aligned box. Note that this default may change the size of your
+        box, e.g. after rotations.
 
         Args:
             box (ndarray): Nx4 floating point array of XYXY format in absolute
@@ -127,8 +133,7 @@ class Transform(metaclass=ABCMeta):
     def apply_polygons(self, polygons: list) -> list:
         """
         Apply the transform on a list of polygons, each represented by a Nx2
-        array.
-        By default will just transform all the points.
+        array. By default will just transform all the points.
 
         Args:
             polygon (list[ndarray]): each is a Nx2 floating point array of
@@ -284,6 +289,9 @@ class TransformList:
             Number of transforms contained in the TransformList.
         """
         return len(self.transforms)
+
+    def __getitem__(self, idx) -> Transform:
+        return self.transforms[idx]
 
     def inverse(self) -> "TransformList":
         """
