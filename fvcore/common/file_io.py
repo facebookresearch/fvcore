@@ -4,6 +4,7 @@ import errno
 import logging
 import os
 import shutil
+import traceback
 from collections import OrderedDict
 from typing import IO, Any, Callable, Dict, List, MutableMapping, Optional, Union
 from urllib.parse import urlparse
@@ -525,16 +526,28 @@ class HTTPURLHandler(PathHandler):
         return open(local_path, mode)
 
 
-class PathManager:
+# NOTE: this class should be renamed back to PathManager when it is moved to a new library
+class PathManagerBase:
     """
     A class for users to open generic paths or translate generic paths to file names.
+
+    path_manager.method(path) will do the following:
+    1. Find a handler by checking the prefixes in `self._path_handlers`.
+    2. Call handler.method(path) on the handler that's found
     """
 
-    _PATH_HANDLERS: MutableMapping[str, PathHandler] = OrderedDict()
-    _NATIVE_PATH_HANDLER = NativePathHandler()
+    def __init__(self) -> None:
+        self._path_handlers: MutableMapping[str, PathHandler] = OrderedDict()
+        """
+        Dict from path prefix to handler.
+        """
 
-    @staticmethod
-    def __get_path_handler(path: Union[str, os.PathLike]) -> PathHandler:
+        self._native_path_handler: PathHandler = NativePathHandler()
+        """
+        A NativePathHandler that works on posix paths. This is used as the fallback.
+        """
+
+    def __get_path_handler(self, path: Union[str, os.PathLike]) -> PathHandler:
         """
         Finds a PathHandler that supports the given path. Falls back to the native
         PathHandler if no other handler is found.
@@ -546,14 +559,13 @@ class PathManager:
             handler (PathHandler)
         """
         path = os.fspath(path)  # pyre-ignore
-        for p in PathManager._PATH_HANDLERS.keys():
+        for p in self._path_handlers.keys():
             if path.startswith(p):
-                return PathManager._PATH_HANDLERS[p]
-        return PathManager._NATIVE_PATH_HANDLER
+                return self._path_handlers[p]
+        return self._native_path_handler
 
-    @staticmethod
     def open(
-        path: str, mode: str = "r", buffering: int = -1, **kwargs: Any
+        self, path: str, mode: str = "r", buffering: int = -1, **kwargs: Any
     ) -> Union[IO[str], IO[bytes]]:
         """
         Open a stream to a URI, similar to the built-in `open`.
@@ -571,13 +583,12 @@ class PathManager:
         Returns:
             file: a file-like object.
         """
-        return PathManager.__get_path_handler(path)._open(  # type: ignore
+        return self.__get_path_handler(path)._open(  # type: ignore
             path, mode, buffering=buffering, **kwargs
         )
 
-    @staticmethod
     def copy(
-        src_path: str, dst_path: str, overwrite: bool = False, **kwargs: Any
+        self, src_path: str, dst_path: str, overwrite: bool = False, **kwargs: Any
     ) -> bool:
         """
         Copies a source path to a destination path.
@@ -592,15 +603,14 @@ class PathManager:
         """
 
         # Copying across handlers is not supported.
-        assert PathManager.__get_path_handler(  # type: ignore
+        assert self.__get_path_handler(  # type: ignore
             src_path
-        ) == PathManager.__get_path_handler(dst_path)
-        return PathManager.__get_path_handler(src_path)._copy(
+        ) == self.__get_path_handler(dst_path)
+        return self.__get_path_handler(src_path)._copy(
             src_path, dst_path, overwrite, **kwargs
         )
 
-    @staticmethod
-    def get_local_path(path: str, **kwargs: Any) -> str:
+    def get_local_path(self, path: str, **kwargs: Any) -> str:
         """
         Get a filepath which is compatible with native Python I/O such as `open`
         and `os.path`.
@@ -615,15 +625,14 @@ class PathManager:
             local_path (str): a file path which exists on the local file system
         """
         path = os.fspath(path)
-        return PathManager.__get_path_handler(  # type: ignore
+        return self.__get_path_handler(  # type: ignore
             path
         )._get_local_path(
             path, **kwargs
         )
 
-    @staticmethod
     def copy_from_local(
-        local_path: str, dst_path: str, overwrite: bool = False, **kwargs: Any
+        self, local_path: str, dst_path: str, overwrite: bool = False, **kwargs: Any
     ) -> None:
         """
         Copies a local file to the specified URI.
@@ -640,12 +649,11 @@ class PathManager:
             status (bool): True on success
         """
         assert os.path.exists(local_path)
-        return PathManager.__get_path_handler(dst_path)._copy_from_local(
+        return self.__get_path_handler(dst_path)._copy_from_local(
             local_path=local_path, dst_path=dst_path, overwrite=overwrite, **kwargs
         )
 
-    @staticmethod
-    def exists(path: str, **kwargs: Any) -> bool:
+    def exists(self, path: str, **kwargs: Any) -> bool:
         """
         Checks if there is a resource at the given URI.
 
@@ -655,12 +663,11 @@ class PathManager:
         Returns:
             bool: true if the path exists
         """
-        return PathManager.__get_path_handler(path)._exists(  # type: ignore
+        return self.__get_path_handler(path)._exists(  # type: ignore
             path, **kwargs
         )
 
-    @staticmethod
-    def isfile(path: str, **kwargs: Any) -> bool:
+    def isfile(self, path: str, **kwargs: Any) -> bool:
         """
         Checks if there the resource at the given URI is a file.
 
@@ -670,12 +677,11 @@ class PathManager:
         Returns:
             bool: true if the path is a file
         """
-        return PathManager.__get_path_handler(path)._isfile(  # type: ignore
+        return self.__get_path_handler(path)._isfile(  # type: ignore
             path, **kwargs
         )
 
-    @staticmethod
-    def isdir(path: str, **kwargs: Any) -> bool:
+    def isdir(self, path: str, **kwargs: Any) -> bool:
         """
         Checks if the resource at the given URI is a directory.
 
@@ -685,12 +691,11 @@ class PathManager:
         Returns:
             bool: true if the path is a directory
         """
-        return PathManager.__get_path_handler(path)._isdir(  # type: ignore
+        return self.__get_path_handler(path)._isdir(  # type: ignore
             path, **kwargs
         )
 
-    @staticmethod
-    def ls(path: str, **kwargs: Any) -> List[str]:
+    def ls(self, path: str, **kwargs: Any) -> List[str]:
         """
         List the contents of the directory at the provided URI.
 
@@ -700,10 +705,9 @@ class PathManager:
         Returns:
             List[str]: list of contents in given path
         """
-        return PathManager.__get_path_handler(path)._ls(path, **kwargs)
+        return self.__get_path_handler(path)._ls(path, **kwargs)
 
-    @staticmethod
-    def mkdirs(path: str, **kwargs: Any) -> None:
+    def mkdirs(self, path: str, **kwargs: Any) -> None:
         """
         Recursive directory creation function. Like mkdir(), but makes all
         intermediate-level directories needed to contain the leaf directory.
@@ -712,24 +716,22 @@ class PathManager:
         Args:
             path (str): A URI supported by this PathHandler
         """
-        return PathManager.__get_path_handler(path)._mkdirs(  # type: ignore
+        return self.__get_path_handler(path)._mkdirs(  # type: ignore
             path, **kwargs
         )
 
-    @staticmethod
-    def rm(path: str, **kwargs: Any) -> None:
+    def rm(self, path: str, **kwargs: Any) -> None:
         """
         Remove the file (not directory) at the provided URI.
 
         Args:
             path (str): A URI supported by this PathHandler
         """
-        return PathManager.__get_path_handler(path)._rm(  # type: ignore
+        return self.__get_path_handler(path)._rm(  # type: ignore
             path, **kwargs
         )
 
-    @staticmethod
-    def symlink(src_path: str, dst_path: str, **kwargs: Any) -> bool:
+    def symlink(self, src_path: str, dst_path: str, **kwargs: Any) -> bool:
         """Symlink the src_path to the dst_path
 
         Args:
@@ -737,15 +739,14 @@ class PathManager:
             dst_path (str): A URI supported by this PathHandler to symlink to
         """
         # Copying across handlers is not supported.
-        assert PathManager.__get_path_handler(  # type: ignore
+        assert self.__get_path_handler(  # type: ignore
             src_path
-        ) == PathManager.__get_path_handler(dst_path)
-        return PathManager.__get_path_handler(src_path)._symlink(
-            src_path, dst_path, **kwargs
-        )
+        ) == self.__get_path_handler(dst_path)
+        return self.__get_path_handler(src_path)._symlink(src_path, dst_path, **kwargs)
 
-    @staticmethod
-    def register_handler(handler: PathHandler, allow_override: bool = False) -> None:
+    def register_handler(
+        self, handler: PathHandler, allow_override: bool = False
+    ) -> None:
         """
         Register a path handler associated with `handler._get_supported_prefixes`
         URI prefixes.
@@ -754,20 +755,38 @@ class PathManager:
             handler (PathHandler)
             allow_override (bool): allow overriding existing handler for prefix
         """
+        logger = logging.getLogger(__name__)
         assert isinstance(handler, PathHandler), handler
         for prefix in handler._get_supported_prefixes():
-            if not allow_override:
-                assert prefix not in PathManager._PATH_HANDLERS
-            PathManager._PATH_HANDLERS[prefix] = handler
+            if prefix not in self._path_handlers:
+                self._path_handlers[prefix] = handler
+                continue
+
+            old_handler_type = type(self._path_handlers[prefix])
+            if allow_override:
+                logger.warning(
+                    f"[PathManager] Attempting to register prefix '{prefix}' from "
+                    "the following call stack:\n" + "".join(traceback.format_stack())
+                )
+                logger.warning(
+                    f"[PathManager] Prefix '{prefix}' is already registered "
+                    f"by {old_handler_type}. We will override the old handler. "
+                    "To avoid such conflicts, create a project-specific PathManager "
+                    "instead."
+                )
+                self._path_handlers[prefix] = handler
+            else:
+                raise KeyError(
+                    f"[PathManager] Prefix '{prefix}' already registered by {old_handler_type}!"
+                )
 
         # Sort path handlers in reverse order so longer prefixes take priority,
         # eg: http://foo/bar before http://foo
-        PathManager._PATH_HANDLERS = OrderedDict(
-            sorted(PathManager._PATH_HANDLERS.items(), key=lambda t: t[0], reverse=True)
+        self._path_handlers = OrderedDict(
+            sorted(self._path_handlers.items(), key=lambda t: t[0], reverse=True)
         )
 
-    @staticmethod
-    def set_strict_kwargs_checking(enable: bool) -> None:
+    def set_strict_kwargs_checking(self, enable: bool) -> None:
         """
         Toggles strict kwargs checking. If enabled, a ValueError is thrown if any
         unused parameters are passed to a PathHandler function. If disabled, only
@@ -789,9 +808,25 @@ class PathManager:
         Args:
             enable (bool)
         """
-        PathManager._NATIVE_PATH_HANDLER._strict_kwargs_check = enable
-        for handler in PathManager._PATH_HANDLERS.values():
+        self._native_path_handler._strict_kwargs_check = enable
+        for handler in self._path_handlers.values():
             handler._strict_kwargs_check = enable
 
+
+PathManager = PathManagerBase()
+"""
+A global PathManager.
+
+Any sufficiently complicated/important project should create their own
+PathManager instead of using the global PathManager, to avoid conflicts
+when multiple projects have conflicting PathHandlers.
+
+History: at first, PathManager is part of detectron2 *only*, and therefore
+does not consider cross-projects conflict issues. It is later used by more
+projects and moved to fvcore to faciliate more use across projects and lead
+to some conflicts.
+Now the class `PathManagerBase` is added to help create per-project path manager,
+and this global is still named "PathManager" to keep backward compatibility.
+"""
 
 PathManager.register_handler(HTTPURLHandler())

@@ -10,7 +10,13 @@ from typing import Generator, Optional
 from unittest.mock import MagicMock, patch
 
 from fvcore.common import file_io
-from fvcore.common.file_io import LazyPath, PathManager, get_cache_dir
+from fvcore.common.file_io import (
+    HTTPURLHandler,
+    LazyPath,
+    PathManager,
+    PathManagerBase,
+    get_cache_dir,
+)
 
 
 class TestNativeIO(unittest.TestCase):
@@ -222,6 +228,17 @@ class TestHTTPIO(unittest.TestCase):
         with self.assertRaises(AssertionError):
             with PathManager.open(self._remote_uri, "w") as f:
                 f.write("foobar")  # pyre-ignore
+
+    def test_open_new_path_manager(self) -> None:
+        with self._patch_download():
+            path_manager = PathManagerBase()
+            with self.assertRaises(OSError):  # no handler registered
+                f = path_manager.open(self._remote_uri, "rb")
+
+            path_manager.register_handler(HTTPURLHandler())
+            with path_manager.open(self._remote_uri, "rb") as f:
+                self.assertTrue(os.path.isfile(f.name))
+                self.assertTrue(f.read() != "")
 
     def test_bad_args(self) -> None:
         with self.assertRaises(NotImplementedError):
