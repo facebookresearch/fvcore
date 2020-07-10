@@ -313,3 +313,17 @@ class TestLazyPath(unittest.TestCase):
             x[0]
         _ = os.fspath(x)
         self.assertEqual(x[0], "a")
+
+
+class TestOneDrive(unittest.TestCase):
+    _url = "https://1drv.ms/u/s!Aus8VCZ_C_33gQbJsUPTIj3rQu99"
+
+    def test_one_drive_download(self) -> None:
+        from fvcore.common.file_io import OneDrivePathHandler
+
+        _direct_url = OneDrivePathHandler().create_one_drive_direct_download(self._url)
+        _gt_url = (
+            "https://api.onedrive.com/v1.0/shares/u!aHR0cHM6Ly8xZHJ2Lm1zL3UvcyFBd"
+            + "XM4VkNaX0NfMzNnUWJKc1VQVElqM3JRdTk5/root/content"
+        )
+        self.assertEquals(_direct_url, _gt_url)

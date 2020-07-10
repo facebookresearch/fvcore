@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
+import base64
 import errno
 import logging
 import os
@@ -526,6 +527,66 @@ class HTTPURLHandler(PathHandler):
         return open(local_path, mode)
 
 
+class OneDrivePathHandler(PathHandler):
+    """
+    Map OneDrive (short) URLs to direct download links
+    """
+
+    ONE_DRIVE_PREFIX = "https://1drv.ms/u/s!"
+
+    def create_one_drive_direct_download(self, one_drive_url: str) -> str:
+        """
+        Converts a short OneDrive URI into a download link that can be used with wget
+
+        Args:
+            one_drive_url (str): A OneDrive URI supported by this PathHandler
+
+        Returns:
+            result_url (str): A direct download URI for the file
+        """
+        data_b64 = base64.b64encode(bytes(one_drive_url, "utf-8"))
+        data_b64_string = (
+            data_b64.decode("utf-8").replace("/", "_").replace("+", "-").rstrip("=")
+        )
+        result_url = (
+            f"https://api.onedrive.com/v1.0/shares/u!{data_b64_string}/root/content"
+        )
+        return result_url
+
+    def _get_supported_prefixes(self) -> List[str]:
+        return [self.ONE_DRIVE_PREFIX]
+
+    def _open(
+        self, path: str, mode: str = "r", buffering: int = -1, **kwargs: Any
+    ) -> Union[IO[str], IO[bytes]]:
+        """
+        Open a remote OneDrive path. The resource is first downloaded and cached
+        locally.
+
+        Args:
+            path (str): A OneDrive URI supported by this PathHandler
+            mode (str): Specifies the mode in which the file is opened. It defaults
+                to 'r'.
+            buffering (int): Not used for this PathHandler.
+
+        Returns:
+            file: a file-like object.
+        """
+        return PathManager.open(self._get_local_path(path), mode, **kwargs)
+
+    def _get_local_path(self, path: str, **kwargs: Any) -> str:
+        """
+        This implementation downloads the remote resource and caches it locally.
+        The resource will only be downloaded if not previously requested.
+        """
+        logger = logging.getLogger(__name__)
+        direct_url = self.create_one_drive_direct_download(path)
+
+        logger.info(f"URL {path} mapped to direct download link {direct_url}")
+
+        return PathManager.get_local_path(os.fspath(direct_url), **kwargs)
+
+
 # NOTE: this class should be renamed back to PathManager when it is moved to a new library
 class PathManagerBase:
     """
@@ -830,3 +891,4 @@ and this global is still named "PathManager" to keep backward compatibility.
 """
 
 PathManager.register_handler(HTTPURLHandler())
+PathManager.register_handler(OneDrivePathHandler())
