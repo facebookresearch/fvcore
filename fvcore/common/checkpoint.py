@@ -262,9 +262,11 @@ class Checkpointer(object):
         """
         for k, shape_checkpoint, shape_model in incompatible.incorrect_shapes:
             self.logger.warning(
-                "Unable to load '{}' to the model due to incompatible "
+                "Skip loading parameter '{}' to the model due to incompatible "
                 "shapes: {} in the checkpoint but {} in the "
-                "model!".format(k, shape_checkpoint, shape_model)
+                "model! You might want to double check if this is expected.".format(
+                    k, shape_checkpoint, shape_model
+                )
             )
         if incompatible.missing_keys:
             missing_keys = _filter_reused_missing_keys(
