@@ -827,7 +827,8 @@ class PathManagerBase:
             if allow_override:
                 logger.warning(
                     f"[PathManager] Attempting to register prefix '{prefix}' from "
-                    "the following call stack:\n" + "".join(traceback.format_stack())
+                    "the following call stack:\n"
+                    + "".join(traceback.format_stack(limit=-5))
                 )
                 logger.warning(
                     f"[PathManager] Prefix '{prefix}' is already registered "
