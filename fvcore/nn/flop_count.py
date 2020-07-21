@@ -16,6 +16,7 @@ from .jit_handles import (
 
 
 # A dictionary that maps supported operations to their flop count jit handles.
+# pyre-fixme[5]: Global annotation cannot contain `Any`.
 _DEFAULT_SUPPORTED_OPS: typing.Dict[str, typing.Callable] = {
     "aten::addmm": addmm_flop_jit,
     "aten::_convolution": conv_flop_jit,
@@ -27,6 +28,7 @@ _DEFAULT_SUPPORTED_OPS: typing.Dict[str, typing.Callable] = {
 def flop_count(
     model: nn.Module,
     inputs: typing.Tuple[object, ...],
+    # pyre-fixme[2]: Parameter annotation cannot contain `Any`.
     supported_ops: typing.Union[typing.Dict[str, typing.Callable], None] = None,
 ) -> typing.Tuple[typing.DefaultDict[str, float], typing.Counter[str]]:
     """

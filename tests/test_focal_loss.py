@@ -190,6 +190,8 @@ class TestFocalLoss(unittest.TestCase):
         ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="mean")
         self.assertEqual(ce_loss, focal_loss)
 
+    # pyre-fixme[56]: Argument `not torch.cuda.is_available()` to decorator factory
+    #  `unittest.skipIf` could not be resolved in a global scope.
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA unavailable")
     def test_focal_loss_equals_ce_loss_jit(self) -> None:
         """
@@ -411,6 +413,8 @@ class TestFocalLossStar(unittest.TestCase):
         ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="mean")
         self.assertEqual(ce_loss, focal_loss_star)
 
+    # pyre-fixme[56]: Argument `not torch.cuda.is_available()` to decorator factory
+    #  `unittest.skipIf` could not be resolved in a global scope.
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA unavailable")
     def test_focal_loss_star_equals_ce_loss_jit(self) -> None:
         """

@@ -66,6 +66,7 @@ _IGNORED_OPS: typing.List[str] = [
 def get_jit_model_analysis(
     model: nn.Module,
     inputs: typing.Tuple[object, ...],
+    # pyre-fixme[2]: Parameter annotation cannot contain `Any`.
     ops_handles: typing.Dict[str, typing.Callable],
 ) -> typing.Tuple[typing.Counter[str], typing.Counter[str]]:
     """

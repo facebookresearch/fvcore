@@ -10,6 +10,7 @@ from .jit_handles import generic_activation_jit, get_jit_model_analysis
 
 
 # A dictionary that maps supported operations to their activation count handles.
+# pyre-fixme[5]: Global annotation cannot contain `Any`.
 _DEFAULT_SUPPORTED_OPS: typing.Dict[str, typing.Callable] = {
     "aten::_convolution": generic_activation_jit("conv"),
     "aten::addmm": generic_activation_jit("addmm"),
@@ -19,6 +20,7 @@ _DEFAULT_SUPPORTED_OPS: typing.Dict[str, typing.Callable] = {
 def activation_count(
     model: nn.Module,
     inputs: typing.Tuple[object, ...],
+    # pyre-fixme[2]: Parameter annotation cannot contain `Any`.
     supported_ops: typing.Union[typing.Dict[str, typing.Callable], None] = None,
 ) -> typing.Tuple[typing.DefaultDict[str, float], typing.Counter[str]]:
     """

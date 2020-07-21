@@ -15,6 +15,8 @@ BN_MODULE_TYPES: Tuple[Type[nn.Module]] = (
 )
 
 
+# pyre-fixme[56]: Decorator `torch.no_grad(...)` could not be called, because its
+#  type `no_grad` is not callable.
 @torch.no_grad()
 def update_bn_stats(
     model: nn.Module, data_loader: Iterable[Any], num_iters: int = 200  # pyre-ignore

@@ -44,19 +44,17 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
         str: the table to be printed
     """
     count: typing.DefaultDict[str, int] = parameter_count(model)
+    # pyre-fixme[33]: Given annotation cannot contain `Any`.
     param_shape: typing.Dict[str, typing.Tuple] = {
         k: tuple(v.shape) for k, v in model.named_parameters()
     }
 
+    # pyre-fixme[33]: Given annotation cannot contain `Any`.
     table: typing.List[typing.Tuple] = []
 
     def format_size(x: int) -> str:
-        # pyre-fixme[6]: Expected `int` for 1st param but got `float`.
-        # pyre-fixme[6]: Expected `int` for 1st param but got `float`.
         if x > 1e5:
             return "{:.1f}M".format(x / 1e6)
-        # pyre-fixme[6]: Expected `int` for 1st param but got `float`.
-        # pyre-fixme[6]: Expected `int` for 1st param but got `float`.
         if x > 1e2:
             return "{:.1f}K".format(x / 1e3)
         return str(x)

@@ -70,14 +70,12 @@ class TestHistoryBuffer(unittest.TestCase):
             self.assertAlmostEqual(
                 buf.median(w),
                 np.median(gt[-effective_w:]),
-                # pyre-fixme[6]: Expected `int` for 3rd param but got `None`.
                 None,
                 " ".join(str(x) for x in gt[-effective_w:]),
             )
             self.assertAlmostEqual(
                 buf.avg(w),
                 np.mean(gt[-effective_w:]),
-                # pyre-fixme[6]: Expected `int` for 3rd param but got `None`.
                 None,
                 " ".join(str(x) for x in gt[-effective_w:]),
             )
