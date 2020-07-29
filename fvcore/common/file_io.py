@@ -826,17 +826,19 @@ class PathManagerBase:
 
             old_handler_type = type(self._path_handlers[prefix])
             if allow_override:
-                logger.warning(
-                    f"[PathManager] Attempting to register prefix '{prefix}' from "
-                    "the following call stack:\n"
-                    + "".join(traceback.format_stack(limit=-5))
-                )
-                logger.warning(
-                    f"[PathManager] Prefix '{prefix}' is already registered "
-                    f"by {old_handler_type}. We will override the old handler. "
-                    "To avoid such conflicts, create a project-specific PathManager "
-                    "instead."
-                )
+                # if using the global PathManager, show the warnings
+                if self == PathManager:
+                    logger.warning(
+                        f"[PathManager] Attempting to register prefix '{prefix}' from "
+                        "the following call stack:\n"
+                        + "".join(traceback.format_stack(limit=-5))
+                    )
+                    logger.warning(
+                        f"[PathManager] Prefix '{prefix}' is already registered "
+                        f"by {old_handler_type}. We will override the old handler. "
+                        "To avoid such conflicts, create a project-specific PathManager "
+                        "instead."
+                    )
                 self._path_handlers[prefix] = handler
             else:
                 raise KeyError(
