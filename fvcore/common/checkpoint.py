@@ -17,8 +17,6 @@ from torch.nn.parallel import DataParallel, DistributedDataParallel
 __all__ = ["Checkpointer", "PeriodicCheckpointer"]
 
 
-# pyre-fixme[4]: Attribute annotation cannot contain `Any`.
-# pyre-fixme[2]: Parameter annotation cannot contain `Any`.
 class _IncompatibleKeys(
     NamedTuple(
         # pyre-fixme[10]: Name `IncompatibleKeys` is used but not defined.
@@ -26,6 +24,9 @@ class _IncompatibleKeys(
         [
             ("missing_keys", List[str]),
             ("unexpected_keys", List[str]),
+            # pyre-fixme[24]: Generic type `tuple` expects at least 1 type parameter.
+            # pyre-fixme[24]: Generic type `tuple` expects at least 1 type parameter.
+            # pyre-fixme[24]: Generic type `tuple` expects at least 1 type parameter.
             ("incorrect_shapes", List[Tuple]),
         ],
     )

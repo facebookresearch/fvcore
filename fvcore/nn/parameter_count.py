@@ -44,12 +44,14 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
         str: the table to be printed
     """
     count: typing.DefaultDict[str, int] = parameter_count(model)
-    # pyre-fixme[33]: Given annotation cannot contain `Any`.
+    # pyre-fixme[24]: Generic type `tuple` expects at least 1 type parameter.
+    # pyre-fixme[24]: Generic type `tuple` expects at least 1 type parameter.
     param_shape: typing.Dict[str, typing.Tuple] = {
         k: tuple(v.shape) for k, v in model.named_parameters()
     }
 
-    # pyre-fixme[33]: Given annotation cannot contain `Any`.
+    # pyre-fixme[24]: Generic type `tuple` expects at least 1 type parameter.
+    # pyre-fixme[24]: Generic type `tuple` expects at least 1 type parameter.
     table: typing.List[typing.Tuple] = []
 
     def format_size(x: int) -> str:

@@ -328,7 +328,7 @@ class NativePathHandler(PathHandler):
         errors: Optional[str] = None,
         newline: Optional[str] = None,
         closefd: bool = True,
-        # pyre-fixme[2]: Parameter annotation cannot contain `Any`.
+        # pyre-fixme[24]: Generic type `Callable` expects 2 type parameters.
         opener: Optional[Callable] = None,
         **kwargs: Any,
     ) -> Union[IO[str], IO[bytes]]:
