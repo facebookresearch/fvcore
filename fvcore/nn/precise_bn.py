@@ -60,7 +60,10 @@ def update_bn_stats(
     for bn in bn_layers:
         bn.momentum = 1.0
 
-    # Note that running_var actually means "running average of variance"
+    # Note that running_var here actually means "running average of batch variance"
+    # It behaves close to population variance as long as batch size is not too
+    # small, and total #samples is large enough.
+    # TODO implement the version that computes actual population variance
     running_mean = [
         torch.zeros_like(bn.running_mean) for bn in bn_layers  # pyre-ignore
     ]
