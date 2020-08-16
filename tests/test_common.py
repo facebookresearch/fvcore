@@ -114,7 +114,7 @@ class TestTimer(unittest.TestCase):
                 time.sleep(t)
                 timer.pause()
                 self.assertTrue(
-                    math.isclose(pause_second, timer.avg_seconds(), rel_tol=5e-2),
+                    math.isclose(pause_second, timer.avg_seconds(), rel_tol=1e-1),
                     msg="{}: {}".format(pause_second, timer.avg_seconds()),
                 )
 

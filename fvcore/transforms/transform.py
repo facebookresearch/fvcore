@@ -216,7 +216,7 @@ _T = TypeVar("_T")
 
 
 # pyre-ignore-all-errors
-class TransformList:
+class TransformList(Transform):
     """
     Maintain a list of transform operations which will be applied in sequence.
     Attributes:
@@ -298,6 +298,14 @@ class TransformList:
         Invert each transform in reversed order.
         """
         return TransformList([x.inverse() for x in self.transforms[::-1]])
+
+    # The actual implementations are provided in __getattribute__.
+    # But abstract methods need to be declared here.
+    def apply_coords(self, x):
+        raise NotImplementedError
+
+    def apply_image(self, x):
+        raise NotImplementedError
 
 
 class HFlipTransform(Transform):
