@@ -16,9 +16,9 @@ def parameter_count(model: nn.Module) -> typing.DefaultDict[str, int]:
 
     Returns:
         dict (str-> int): the key is either a parameter name or a module name.
-            The value is the number of elements in the parameter, or in all
-            parameters of the module. The key "" corresponds to the total
-            number of parameters of the model.
+        The value is the number of elements in the parameter, or in all
+        parameters of the module. The key "" corresponds to the total
+        number of parameters of the model.
     """
     r = defaultdict(int)
     for name, prm in model.named_parameters():
@@ -36,6 +36,7 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
     in a nice table. It looks like this:
 
     ::
+
         | name                            | #elements or shape   |
         |:--------------------------------|:---------------------|
         | model                           | 37.9M                |

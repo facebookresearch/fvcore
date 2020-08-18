@@ -1047,3 +1047,15 @@ class TestTransforms(unittest.TestCase):
                     _trans_name, param, result.shape
                 ),
             )
+
+    def test_print_transform(self):
+        t0 = T.HFlipTransform(width=100)
+        self.assertEqual(str(t0), "HFlipTransform(width=100)")
+
+        t = T.TransformList([T.NoOpTransform(), t0])
+        self.assertEqual(str(t), f"TransformList[NoOpTransform(), {t0}]")
+
+        t = T.BlendTransform(np.zeros((100, 100, 100)), 1.0, 1.0)
+        self.assertEqual(
+            str(t), "BlendTransform(src_image=..., src_weight=1.0, dst_weight=1.0)"
+        )

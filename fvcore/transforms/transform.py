@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 import inspect
+import pprint
 from abc import ABCMeta, abstractmethod
 from typing import Any, Callable, List, Optional, TypeVar
 
@@ -211,6 +212,39 @@ class Transform(metaclass=ABCMeta):
         """
         raise NotImplementedError
 
+    def __repr__(self):
+        """
+        Produce something like:
+        "MyTransform(field1={self.field1}, field2={self.field2})"
+        """
+        try:
+            sig = inspect.signature(self.__init__)
+            classname = type(self).__name__
+            argstr = []
+            for name, param in sig.parameters.items():
+                assert (
+                    param.kind != param.VAR_POSITIONAL
+                    and param.kind != param.VAR_KEYWORD
+                ), "The default __repr__ doesn't support *args or **kwargs"
+                assert hasattr(self, name), (
+                    "Attribute {} not found! "
+                    "Default __repr__ only works if attributes match the constructor.".format(
+                        name
+                    )
+                )
+                attr = getattr(self, name)
+                default = param.default
+                if default is attr:
+                    continue
+                attr_str = pprint.pformat(attr)
+                if "\n" in attr_str:
+                    # don't show it if pformat decides to use >1 lines
+                    attr_str = "..."
+                argstr.append("{}={}".format(name, attr_str))
+            return "{}({})".format(classname, ", ".join(argstr))
+        except AssertionError:
+            return super().__repr__()
+
 
 _T = TypeVar("_T")
 
@@ -298,6 +332,12 @@ class TransformList(Transform):
         Invert each transform in reversed order.
         """
         return TransformList([x.inverse() for x in self.transforms[::-1]])
+
+    def __repr__(self) -> str:
+        msgs = [str(t) for t in self.transforms]
+        return "TransformList[{}]".format(", ".join(msgs))
+
+    __str__ = __repr__
 
     # The actual implementations are provided in __getattribute__.
     # But abstract methods need to be declared here.
