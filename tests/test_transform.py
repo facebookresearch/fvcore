@@ -1048,6 +1048,13 @@ class TestTransforms(unittest.TestCase):
                 ),
             )
 
+    def test_transformlist_flatten(self):
+        t0 = T.HFlipTransform(width=100)
+        t1 = T.ScaleTransform(3, 4, 5, 6)
+        t2 = T.CropTransform(4, 5, 6, 7)
+        t = T.TransformList([T.TransformList([t0, t1]), t2])
+        self.assertEqual(len(t.transforms), 3)
+
     def test_print_transform(self):
         t0 = T.HFlipTransform(width=100)
         self.assertEqual(str(t0), "HFlipTransform(width=100)")

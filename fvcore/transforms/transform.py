@@ -257,15 +257,25 @@ class TransformList(Transform):
         transforms (list[Transform])
     """
 
-    def __init__(self, transforms: list):
+    def __init__(self, transforms: List[Transform]):
         """
         Args:
             transforms (list[Transform]): list of transforms to perform.
         """
         super().__init__()
+        # "Flatten" the list so that TransformList do not recursively contain TransfomList.
+        # The additional hierarchy does not change semantic of the class, but cause extra
+        # complexities in e.g, telling whether a TransformList contains certain Transform
+        tfms_flatten = []
         for t in transforms:
-            assert isinstance(t, Transform), t
-        self.transforms = transforms
+            assert isinstance(
+                t, Transform
+            ), f"TransformList requires a list of Transform. Got type {type(t)}!"
+            if isinstance(t, TransformList):
+                tfms_flatten.extend(t.transforms)
+            else:
+                tfms_flatten.append(t)
+        self.transforms = tfms_flatten
 
     def _apply(self, x: _T, meth: str) -> _T:
         """
