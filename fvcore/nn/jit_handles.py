@@ -238,11 +238,12 @@ def conv_flop_jit(
         Counter: A Counter dictionary that records the number of flops for each
             operation.
     """
-    # Inputs of Convolution should be a list of length 12. They represent:
+    # Inputs of Convolution should be a list of length 12 or 13. They represent:
     # 0) input tensor, 1) convolution filter, 2) bias, 3) stride, 4) padding,
     # 5) dilation, 6) transposed, 7) out_pad, 8) groups, 9) benchmark_cudnn,
     # 10) deterministic_cudnn and 11) user_enabled_cudnn.
-    assert len(inputs) == 12, len(inputs)
+    # starting with #40737 it will be 12) user_enabled_tf32
+    assert len(inputs) == 12 or len(inputs) == 13, len(inputs)
     x, w = inputs[:2]
     x_shape, w_shape, out_shape = (get_shape(x), get_shape(w), get_shape(outputs[0]))
     return conv_flop_count(x_shape, w_shape, out_shape)
