@@ -6,7 +6,7 @@ import shutil
 import unittest
 from typing import IO, Union
 
-from fvcore.common.file_io import close_and_upload, GoogleCloudHandler
+from fvcore.common.file_io import GoogleCloudHandler, close_and_upload
 from google.cloud import storage
 
 
