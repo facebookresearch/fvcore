@@ -336,8 +336,10 @@ class TestOneDrive(unittest.TestCase):
 
 class TestCloudUtils(unittest.TestCase):
     gc_auth = False
-    skip_gc_auth_required_tests_message = ("Provide a GC project and bucket you are" +
-        "authorised against, then set the fc_auth flag to True")
+    skip_gc_auth_required_tests_message = (
+        "Provide a GC project and bucket you are"
+        + "authorised against, then set the fc_auth flag to True"
+    )
 
     @classmethod
     def setUpClass(cls):

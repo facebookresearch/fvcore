@@ -51,6 +51,7 @@ setup(
         "termcolor>=1.1",
         "Pillow",
         "tabulate",
+        "google-cloud"
     ],
     extras_require={"all": ["shapely"]},
     packages=find_packages(exclude=("tests",)),
