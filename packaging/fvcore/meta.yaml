@@ -20,7 +20,7 @@ requirements:
     - termcolor
     - pillow
     - tabulate
-    - google-cloud
+    - google-cloud-storage
 
 build:
   string: py{{py}}
