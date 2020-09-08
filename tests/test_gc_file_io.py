@@ -1,12 +1,11 @@
-import inspect
 import io
+import inspect
 import os
 import shutil
 import unittest
-
-from google.cloud import storage
 from typing import IO, Union
 
+from google.cloud import storage
 from fvcore.common.file_io import (
     close_and_upload,
     GoogleCloudHandler
