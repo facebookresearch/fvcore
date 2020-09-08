@@ -5,12 +5,9 @@ import shutil
 import unittest
 
 from google.cloud import storage
+from fvcore.common.file_io import close_and_upload, GoogleCloudHandler
 from typing import IO, Union
 
-from fvcore.common.file_io import (
-    close_and_upload,
-    GoogleCloudHandler
-)
 
 class TestCloudUtils(unittest.TestCase):
     gc_auth = False
