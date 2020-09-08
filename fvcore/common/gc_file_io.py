@@ -2,10 +2,9 @@ import io
 import os
 import threading
 import types
-from typing import *
-from typing import IO
 
 from google.cloud import storage
+from typing import *
 
 from fvcore.common.file_io import PathHandler, PathManager
 
