@@ -3,9 +3,10 @@ import inspect
 import os
 import shutil
 import unittest
-from typing import IO, Union
 
 from google.cloud import storage
+from typing import IO, Union
+
 from fvcore.common.file_io import (
     close_and_upload,
     GoogleCloudHandler
