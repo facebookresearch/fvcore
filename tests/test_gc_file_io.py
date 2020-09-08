@@ -1,8 +1,15 @@
 import inspect
+import io
+import os
 import shutil
 import unittest
+from typing import IO, Union
 
-from fvcore.common.gc_file_io import *
+from google.cloud import storage
+from fvcore.common.file_io import (
+    close_and_upload,
+    GoogleCloudHandler
+)
 
 class TestCloudUtils(unittest.TestCase):
     gc_auth = False
@@ -29,38 +36,38 @@ class TestCloudUtils(unittest.TestCase):
         self.assertEqual(supported_prefixes, ["gs://"])
     
     def test_remove_file_system_from_remote_path(self):
-        path = remove_file_system('/'.join([self.gc_default_path, 'path/file.txt']))
+        path = self.gc_pathhandler._remove_file_system('/'.join([self.gc_default_path, 'path/file.txt']))
         self.assertEqual(path, '/'.join([self.gc_bucket_name, 'test/path/file.txt']))
     def test_remove_bucket_name_from_remote_path(self):
-        path = remove_bucket_name('/'.join([self.gc_default_path, 'path/file.txt']))
+        path = self.gc_pathhandler._remove_bucket_name('/'.join([self.gc_default_path, 'path/file.txt']))
         self.assertEqual(path, "gs://test/path/file.txt")
     def test_extract_namespace_from_remote_path(self):
-        namespace = extract_gc_namespace('/'.join([self.gc_default_path, 'path/file.txt']))
+        namespace = self.gc_pathhandler._extract_gc_namespace('/'.join([self.gc_default_path, 'path/file.txt']))
         self.assertEqual(namespace, self.gc_project_name)
     def test_extract_bucket_from_remote_path(self):
-        bucket_name = extract_gc_bucket_name('/'.join([self.gc_default_path, 'path/file.txt']))
+        bucket_name = self.gc_pathhandler._extract_gc_bucket_name('/'.join([self.gc_default_path, 'path/file.txt']))
         self.assertEqual(bucket_name, self.gc_bucket_name)
     def test_extract_blob_path(self):
-        blob_path = extract_blob_path('/'.join([self.gc_default_path, 'path/file.txt']))
+        blob_path = self.gc_pathhandler._extract_blob_path('/'.join([self.gc_default_path, 'path/file.txt']))
         self.assertEqual(blob_path, "test/path/file.txt")
     def test_get_local_cache_path(self):
-        tmp_path = get_local_cache_path('/'.join([self.gc_default_path, 'path/file.txt']))
+        tmp_path = self.gc_pathhandler._get_local_cache_path('/'.join([self.gc_default_path, 'path/file.txt']))
         self.assertEqual(tmp_path, "./tmp/test/path/file.txt")
     def test_get_local_cache_directory(self):
-        tmp_path = get_local_cache_directory('/'.join([self.gc_default_path, 'path/file.txt']))
+        tmp_path = self.gc_pathhandler._get_local_cache_directory('/'.join([self.gc_default_path, 'path/file.txt']))
         self.assertEqual(tmp_path, "./tmp/test/path/")
     
     def _add_gc_methods_to_file(self, file: Union[IO[str], IO[bytes]]):
         gc_blob = storage.Blob('test', storage.Bucket('test'))
-        decorate_file_with_gc_methods(file, gc_blob)
+        self.gc_pathhandler._decorate_file_with_gc_methods(file, gc_blob)
         self.assertTrue(isinstance(file._gc_blob, storage.Blob))
         self.assertEqual(inspect.getsource(file.close), inspect.getsource(close_and_upload))
         file._close()
         self.assertRaises(ValueError, file.readline)
     def test_maybe_make_directory_doesnt_exist(self):
-        self.assertTrue(maybe_make_directory("./tmp/test/path/test.txt"))
+        self.assertTrue(self.gc_pathhandler._maybe_make_directory("./tmp/test/path/test.txt"))
     def test_maybe_make_directory_exists(self):
-        self.assertFalse(maybe_make_directory("./tmp/test/path/test.txt"))
+        self.assertFalse(self.gc_pathhandler._maybe_make_directory("./tmp/test/path/test.txt"))
     def test_add_gc_methods_to_text_file(self):
         file = open('/tmp/test.txt', 'w')
         self._add_gc_methods_to_file(file)
@@ -112,7 +119,7 @@ class TestCloudUtils(unittest.TestCase):
     @unittest.skipIf(not gc_auth, skip_gc_auth_required_tests_message)
     def _gc_local_file_write_and_upload(self, file: Union[IO[str], IO[bytes]], message: str):
         gc_blob = self.gc_pathhandler._get_blob('/'.join([self.gc_default_path, 'path/test.txt']))
-        decorate_file_with_gc_methods(file, gc_blob)
+        self.gc_pathhandler._decorate_file_with_gc_methods(file, gc_blob)
         file.write(message)
         file.close()
         self.assertTrue(gc_blob.exists())
@@ -157,7 +164,7 @@ class TestCloudUtils(unittest.TestCase):
 
     @unittest.skipIf(not gc_auth, skip_gc_auth_required_tests_message)
     def test_copy_from_local_file_exists(self):
-        maybe_make_directory('./tmp/')
+        self.gc_pathhandler._maybe_make_directory('./tmp/')
         remote_path = '/'.join([self.gc_default_path, 'path/uploaded.txt'])
         local_path = './tmp/test_upload.txt'
         with open(local_path, 'w') as file:
@@ -201,7 +208,7 @@ class TestCloudUtils(unittest.TestCase):
         remote_path = '/'.join([self.gc_default_path, 'will/exist.txt'])
         cache_path = self.gc_pathhandler._get_local_path(remote_path)
         self.assertEqual(cache_path, './tmp/test/will/exist.txt')
-        self.assertTrue(os.path.exists(get_local_cache_directory(remote_path)))
+        self.assertTrue(os.path.exists(self.gc_pathhandler._get_local_cache_directory(remote_path)))
     @unittest.skipIf(not gc_auth, skip_gc_auth_required_tests_message)
     def test_rm_when_remote_file_exists(self):
         remote_path = '/'.join([self.gc_default_path, 'path/uploaded-copy.txt'])
