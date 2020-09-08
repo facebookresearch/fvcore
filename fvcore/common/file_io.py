@@ -589,13 +589,15 @@ class OneDrivePathHandler(PathHandler):
 
         return PathManager.get_local_path(os.fspath(direct_url), **kwargs)
 
+
 # Override for close() on files to write to google cloud
 def close_and_upload(self):
     mode = self.mode
     name = self.name
     self._close()
-    with open(name, mode.replace('w', 'r')) as file_to_upload:
+    with open(name, mode.replace("w", "r")) as file_to_upload:
         self._gc_blob.upload_from_file(file_to_upload)
+
 
 class GoogleCloudHandler(PathHandler):
     """
@@ -639,11 +641,7 @@ class GoogleCloudHandler(PathHandler):
         Returns:
             status (bool): True on success
         """
-        try:
-            self._upload_file(dst_path, local_path)
-            return True
-        except:
-            return False
+        return self._upload_file(dst_path, local_path)
 
     def _open(
         self, path: str, mode: str = "r", buffering: int = -1, **kwargs: Any
@@ -663,7 +661,7 @@ class GoogleCloudHandler(PathHandler):
             file: a file-like object.
         """
         self._cache_remote_file(path)
-        return self._open_local_copy(path, mode) 
+        return self._open_local_copy(path, mode)
 
     def _copy(
         self, src_path: str, dst_path: str, overwrite: bool = False, **kwargs: Any
@@ -677,8 +675,9 @@ class GoogleCloudHandler(PathHandler):
         Returns:
             status (bool): True on success
         """
-        try: self._cache_remote_file(src_path)
-        except: return False
+
+        if not self._cache_remote_file(src_path):
+            return False
         local_path = self._get_local_cache_path(src_path)
         return self._copy_from_local(local_path, dst_path)
 
@@ -691,7 +690,6 @@ class GoogleCloudHandler(PathHandler):
             bool: true if the path exists
         """
         return self._get_blob(path).exists()
-        
 
     def _isfile(self, path: str, **kwargs: Any) -> bool:
         """
@@ -701,8 +699,8 @@ class GoogleCloudHandler(PathHandler):
         Returns:
             bool: true if the path is a file
         """
-        
-        return '.' in path.split('/')[-1]
+
+        return "." in path.split("/")[-1]
 
     def _isdir(self, path: str, **kwargs: Any) -> bool:
         """
@@ -712,7 +710,7 @@ class GoogleCloudHandler(PathHandler):
         Returns:
             bool: true if the path is a directory
         """
-        return '/' == path[-1]
+        return "/" == path[-1]
 
     def _ls(self, path: str, **kwargs: Any) -> List[str]:
         """
@@ -741,63 +739,68 @@ class GoogleCloudHandler(PathHandler):
         Args:
             path (str): A URI supported by this PathHandler
         """
-        if not self._exists(path): return
-        if self._isdir(path): return
-        self._delete_remote_resource(path)    
-   
-    def _get_gc_bucket(self, path:str) -> storage.Bucket:
-        if not hasattr(self, '_gc_client'):
+        if not self._exists(path):
+            return
+        if self._isdir(path):
+            return
+        self._delete_remote_resource(path)
+
+    def _get_gc_bucket(self, path: str) -> storage.Bucket:
+        if not hasattr(self, "_gc_client"):
             self._create_gc_client(path)
         gc_bucket_name = self._extract_gc_bucket_name(path)
         return self._gc_client.get_bucket(gc_bucket_name)
 
-    def _create_gc_client(self, path:str):
+    def _create_gc_client(self, path: str):
         namespace = self._extract_gc_namespace(path)
         gc_client = storage.Client(project=namespace)
-        setattr(self, '_gc_client', gc_client)
-    
-    def _get_blob(self, path:str) -> storage.Blob:
+        setattr(self, "_gc_client", gc_client)
+
+    def _get_blob(self, path: str) -> storage.Blob:
         gc_bucket = self._get_gc_bucket(path)
         return gc_bucket.blob(self._extract_blob_path(path))
-    
-    def _cache_blob(self, local_path:str, gc_blob:storage.Blob):
-        if not gc_blob.exists(): return
-        with open(local_path, 'wb') as file:
+
+    def _cache_blob(self, local_path: str, gc_blob: storage.Blob) -> bool:
+        if not gc_blob.exists():
+            return False
+        with open(local_path, "wb") as file:
             gc_blob.download_to_file(file)
+        return True
 
-    def _upload_file(self, destination_path:str, local_path:str):
+    def _upload_file(self, destination_path: str, local_path: str):
         gc_blob = self._get_blob(destination_path)
-        with open(local_path, 'r') as file:
+        if not gc_blob._exists():
+            return False
+        with open(local_path, "r") as file:
             gc_blob.upload_from_file(file)
+        return True
 
-    def _cache_remote_file(self, remote_path:str):
+    def _cache_remote_file(self, remote_path: str):
         local_path = self._get_local_cache_path(remote_path)
         local_directory = self._get_local_cache_directory(remote_path)
         self._maybe_make_directory(local_directory)
         gc_blob = self._get_blob(remote_path)
-        self._cache_blob(local_path, gc_blob)
-        
+        return self._cache_blob(local_path, gc_blob)
+
     def _open_local_copy(self, path: str, mode: str) -> Union[IO[str], IO[bytes]]:
         local_path = self._get_local_cache_path(path)
         gc_blob = self._get_blob(path)
         file = open(local_path, mode)
-        if 'w' in mode:
+        if "w" in mode:
             self._decorate_file_with_gc_methods(file, gc_blob)
         return file
-    
+
     def _delete_remote_resource(self, path):
         self._get_blob(path).delete()
 
     def _decorate_file_with_gc_methods(
-        self,
-        file: Union[IO[str], IO[bytes]],
-        gc_blob: storage.Blob
-    ):    
-        setattr(file, '_gc_blob', gc_blob)
-        setattr(file, '_close', file.close)
+        self, file: Union[IO[str], IO[bytes]], gc_blob: storage.Blob
+    ):
+        setattr(file, "_gc_blob", gc_blob)
+        setattr(file, "_close", file.close)
         file.close = types.MethodType(close_and_upload, file)
 
-    def _maybe_make_directory(self, path:str) -> bool:
+    def _maybe_make_directory(self, path: str) -> bool:
         is_made = False
         with file_lock(path):
             if not os.path.exists(path):
@@ -805,25 +808,28 @@ class GoogleCloudHandler(PathHandler):
                 is_made = True
         return is_made
 
-    def _extract_gc_namespace(self, path:str) -> str:
+    def _extract_gc_namespace(self, path: str) -> str:
         return self._extract_gc_bucket_name(path).replace("-data", "")
-    def _extract_gc_bucket_name(self, path:str) -> str:
+
+    def _extract_gc_bucket_name(self, path: str) -> str:
         return self._remove_file_system(path).split("/")[0]
-    def _remove_file_system(self, path:str) -> str:
+
+    def _remove_file_system(self, path: str) -> str:
         return path.replace("gs://", "")
-    def _remove_bucket_name(self, path:str) -> str:
-        return path.replace(self._extract_gc_bucket_name(path)+"/", "")
 
-    def _extract_blob_path(self, path:str) -> str:
-        return self._remove_file_system(self._remove_bucket_name(path))    
+    def _remove_bucket_name(self, path: str) -> str:
+        return path.replace(self._extract_gc_bucket_name(path) + "/", "")
 
-    def _get_local_cache_path(self, path:str) -> str:
+    def _extract_blob_path(self, path: str) -> str:
+        return self._remove_file_system(self._remove_bucket_name(path))
+
+    def _get_local_cache_path(self, path: str) -> str:
         path = self._extract_blob_path(path)
-        return '/'.join(['.','tmp', path])
+        return "/".join([".", "tmp", path])
 
-    def _get_local_cache_directory(self, path:str) -> str:
+    def _get_local_cache_directory(self, path: str) -> str:
         path = self._get_local_cache_path(path)
-        return path.replace(path.split('/')[-1], '')
+        return path.replace(path.split("/")[-1], "")
 
 
 # NOTE: this class should be renamed back to PathManager when it is moved to a new library
