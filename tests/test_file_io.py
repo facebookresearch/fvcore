@@ -336,24 +336,25 @@ class TestOneDrive(unittest.TestCase):
 
 class TestCloudUtils(unittest.TestCase):
     gc_auth = False
-    skip_gc_auth_required_tests_message = "Provide a GC project and bucket you are authorised against, then set the fc_auth flag to True"
+    skip_gc_auth_required_tests_message = ("Provide a GC project and bucket you are" +
+        "authorised against, then set the fc_auth flag to True")
 
     @classmethod
-    def setUpClass(self):
-        self.gc_project_name = "project-name"
-        self.gc_bucket_name = "project-name-data"
-        self.gc_default_path = "/".join(["gs:/", self.gc_bucket_name, "test"])
-        self.gc_pathhandler = GoogleCloudHandler()
+    def setUpClass(cls):
+        cls.gc_project_name = "project-name"
+        cls.gc_bucket_name = "project-name-data"
+        cls.gc_default_path = "/".join(["gs:/", cls.gc_bucket_name, "test"])
+        cls.gc_pathhandler = GoogleCloudHandler()
 
     @classmethod
-    def tearDownClass(self, _gc_auth=gc_auth):
+    def tearDownClass(cls, _gc_auth=gc_auth):
         shutil.rmtree("tmp/")
         if not _gc_auth:
             return
-        remote_file_path = "/".join([self.gc_default_path, "path/test.txt"])
-        self.gc_pathhandler._delete_remote_resource(remote_file_path)
-        remote_file_path = "/".join([self.gc_default_path, "path/uploaded.txt"])
-        self.gc_pathhandler._delete_remote_resource(remote_file_path)
+        remote_file_path = "/".join([cls.gc_default_path, "path/test.txt"])
+        cls.gc_pathhandler._delete_remote_resource(remote_file_path)
+        remote_file_path = "/".join([cls.gc_default_path, "path/uploaded.txt"])
+        cls.gc_pathhandler._delete_remote_resource(remote_file_path)
 
     def test_supported_prefixes(self):
         supported_prefixes = self.gc_pathhandler._get_supported_prefixes()

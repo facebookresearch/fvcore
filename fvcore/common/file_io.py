@@ -754,7 +754,7 @@ class GoogleCloudHandler(PathHandler):
     def _create_gc_client(self, path: str):
         namespace = self._extract_gc_namespace(path)
         gc_client = storage.Client(project=namespace)
-        setattr(self, "_gc_client", gc_client)
+        self._gc_client = gc_client
 
     def _get_blob(self, path: str) -> storage.Blob:
         gc_bucket = self._get_gc_bucket(path)
@@ -796,8 +796,8 @@ class GoogleCloudHandler(PathHandler):
     def _decorate_file_with_gc_methods(
         self, file: Union[IO[str], IO[bytes]], gc_blob: storage.Blob
     ):
-        setattr(file, "_gc_blob", gc_blob)
-        setattr(file, "_close", file.close)
+        file._gc_blob = gc_blob
+        file._close = file.close
         file.close = types.MethodType(close_and_upload, file)
 
     def _maybe_make_directory(self, path: str) -> bool:
