@@ -1,6 +1,6 @@
-import unittest
 import inspect
 import shutil
+import unittest
 
 from fvcore.common.gc_file_io import *
 
