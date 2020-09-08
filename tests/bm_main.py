@@ -3,8 +3,6 @@
 
 import glob
 import importlib
-
-# pyre-fixme[21]: Could not find name `sys` in `os.path`.
 from os.path import basename, dirname, isfile, join, sys
 
 
