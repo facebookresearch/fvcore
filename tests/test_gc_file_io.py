@@ -1,5 +1,5 @@
-import io
 import inspect
+import io
 import os
 import shutil
 import unittest
