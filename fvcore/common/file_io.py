@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 
 import portalocker  # type: ignore
 from fvcore.common.download import download
+from fvcore.common.gc_file_io import GoogleCloudHandler
 
 
 __all__ = ["LazyPath", "PathManager", "get_cache_dir", "file_lock"]
@@ -896,3 +897,4 @@ and this global is still named "PathManager" to keep backward compatibility.
 
 PathManager.register_handler(HTTPURLHandler())
 PathManager.register_handler(OneDrivePathHandler())
+PathManager.register_handler(GoogleCloudHandler())
