@@ -38,7 +38,7 @@ install_dep: &install_dep
   - run:
       name: Install Dependencies
       command: |
-        pip install --progress-bar off torch shapely flake8 flake8-bugbear flake8-comprehensions isort 'black @ git+https://github.com/psf/black@673327449f86fce558adde153bb6cbe54bfebad2'
+        pip install --progress-bar off torch shapely
 
 install_fvcore: &install_fvcore
   - run:
@@ -82,19 +82,6 @@ jobs:
           key: cache-key-{{ .Branch }}-ID-20200130
 
       - <<: *install_fvcore
-
-      - run:
-          name: isort
-          command: |
-            isort -c -sp .
-      - run:
-          name: black
-          command: |
-            black --check .
-      - run:
-          name: flake8
-          command: |
-            flake8 .
 
       - <<: *run_unittests
 
