@@ -1,7 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
-from tabulate import tabulate
 from typing import Dict, Optional
+
+from tabulate import tabulate
 
 
 class Registry(object):
@@ -77,5 +78,7 @@ class Registry(object):
 
     def __repr__(self) -> str:
         table_headers = ["Names", "Objects"]
-        table = tabulate(self._obj_map.items(), headers=table_headers, tablefmt="fancy_grid")
+        table = tabulate(
+            self._obj_map.items(), headers=table_headers, tablefmt="fancy_grid"
+        )
         return "Registry of {}:\n".format(self._name) + table
