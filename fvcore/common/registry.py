@@ -2,6 +2,8 @@
 
 from typing import Dict, Optional
 
+from tabulate import tabulate
+
 
 class Registry(object):
     """
@@ -73,3 +75,12 @@ class Registry(object):
 
     def __contains__(self, name: str) -> bool:
         return name in self._obj_map
+
+    def __repr__(self) -> str:
+        table_headers = ["Names", "Objects"]
+        table = tabulate(
+            self._obj_map.items(), headers=table_headers, tablefmt="fancy_grid"
+        )
+        return "Registry of {}:\n".format(self._name) + table
+
+    __str__ = __repr__
