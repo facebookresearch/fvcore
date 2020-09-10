@@ -82,3 +82,5 @@ class Registry(object):
             self._obj_map.items(), headers=table_headers, tablefmt="fancy_grid"
         )
         return "Registry of {}:\n".format(self._name) + table
+
+    __str__ = __repr__
