@@ -83,4 +83,5 @@ class Registry(object):
         )
         return "Registry of {}:\n".format(self._name) + table
 
+    # pyre-fixme[4]: Attribute must be annotated.
     __str__ = __repr__
