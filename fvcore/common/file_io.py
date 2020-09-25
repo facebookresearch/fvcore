@@ -495,7 +495,6 @@ class HTTPURLHandler(PathHandler):
             cached = os.path.join(dirname, filename)
             with file_lock(cached):
                 if not os.path.isfile(cached):
-                    logger.info("Downloading {} ...".format(path))
                     cached = download(path, dirname, filename=filename)
             logger.info("URL {} cached in {}".format(path, cached))
             self.cache_map[path] = cached
