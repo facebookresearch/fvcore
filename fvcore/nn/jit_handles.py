@@ -89,7 +89,7 @@ def get_jit_model_analysis(
     if isinstance(
         model, (nn.parallel.distributed.DistributedDataParallel, nn.DataParallel)
     ):
-        model = model.module  # pyre-ignore
+        model = model.module
 
     # Compatibility with torch.jit.
     if hasattr(torch.jit, "get_trace_graph"):

@@ -351,8 +351,8 @@ class PeriodicCheckpointer:
 
             if self.max_to_keep is not None:
                 self.recent_checkpoints.append(self.checkpointer.get_checkpoint_file())
-                # pyre-fixme[6]: Expected `int` for 1st param but got `Optional[int]`.
-                # pyre-fixme[6]: Expected `int` for 1st param but got `Optional[int]`.
+                # pyre-fixme[58]: `>` is not supported for operand types `int` and
+                #  `Optional[int]`.
                 if len(self.recent_checkpoints) > self.max_to_keep:
                     file_to_delete = self.recent_checkpoints.pop(0)
                     if PathManager.exists(
