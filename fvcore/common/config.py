@@ -60,7 +60,7 @@ class CfgNode(_CfgNode):
                     )
                 )
                 f.close()
-                with open(filename, "r") as f:
+                with PathManager.open(filename, "r") as f:
                     cfg = yaml.unsafe_load(f)  # pyre-ignore
 
         # pyre-ignore
