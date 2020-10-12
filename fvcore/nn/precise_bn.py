@@ -60,10 +60,20 @@ def update_bn_stats(
     for bn in bn_layers:
         bn.momentum = 1.0
 
-    # Note that running_var here actually means "running average of batch variance"
-    # It behaves close to population variance as long as batch size is not too
-    # small, and total #samples is large enough.
-    # TODO implement the version that computes actual population variance
+    # Note that PyTorch's running_var means "running average of
+    # bessel-corrected batch variance". (PyTorch's BN normalizes by biased
+    # variance, but updates EMA by unbiased (bessel-corrected) variance).
+    # So we estimate population variance by "simple average of bessel-corrected
+    # batch variance". This is the same as in the BatchNorm paper, Sec 3.1.
+    # This estimator converges to population variance as long as batch size
+    # is not too small, and total #samples for PreciseBN is large enough.
+    # Its convergence may be affected by small batch size.
+
+    # Alternatively, one can estimate population variance by the sample variance
+    # of all batches combined. However, this needs a way to know the batch size
+    # of each batch in this function (otherwise we only have access to the
+    # bessel-corrected batch variance given by pytorch), which is an extra
+    # requirement.
     running_mean = [
         torch.zeros_like(bn.running_mean) for bn in bn_layers  # pyre-ignore
     ]
@@ -77,7 +87,6 @@ def update_bn_stats(
             # Accumulates the bn stats.
             running_mean[i] += (bn.running_mean - running_mean[i]) / (ind + 1)
             running_var[i] += (bn.running_var - running_var[i]) / (ind + 1)
-            # We compute the "average of variance" across iterations.
     assert ind == num_iters - 1, (
         "update_bn_stats is meant to run for {} iterations, "
         "but the dataloader stops at {} iterations.".format(num_iters, ind)
