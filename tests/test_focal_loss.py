@@ -211,9 +211,9 @@ class TestFocalLoss(unittest.TestCase):
     def focal_loss_with_init(N: int, alpha: float = -1) -> typing.Callable[[], None]:
         device = torch.device("cuda:0")
         inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
-        targets: torch.Tensor = torch.randint(0, 2, (N,)).float().to(
-            device
-        ).requires_grad_()
+        targets: torch.Tensor = (
+            torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
+        )
         torch.cuda.synchronize()
 
         def run_focal_loss() -> None:
@@ -231,9 +231,9 @@ class TestFocalLoss(unittest.TestCase):
     ) -> typing.Callable[[], None]:
         device = torch.device("cuda:0")
         inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
-        targets: torch.Tensor = torch.randint(0, 2, (N,)).float().to(
-            device
-        ).requires_grad_()
+        targets: torch.Tensor = (
+            torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
+        )
         torch.cuda.synchronize()
 
         def run_focal_loss_jit() -> None:
@@ -436,9 +436,9 @@ class TestFocalLossStar(unittest.TestCase):
     ) -> typing.Callable[[], None]:
         device = torch.device("cuda:0")
         inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
-        targets: torch.Tensor = torch.randint(0, 2, (N,)).float().to(
-            device
-        ).requires_grad_()
+        targets: torch.Tensor = (
+            torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
+        )
         torch.cuda.synchronize()
 
         def run_focal_loss_star() -> None:
@@ -456,9 +456,9 @@ class TestFocalLossStar(unittest.TestCase):
     ) -> typing.Callable[[], None]:
         device = torch.device("cuda:0")
         inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
-        targets: torch.Tensor = torch.randint(0, 2, (N,)).float().to(
-            device
-        ).requires_grad_()
+        targets: torch.Tensor = (
+            torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
+        )
         torch.cuda.synchronize()
 
         def run_focal_loss_star_jit() -> None:

@@ -53,7 +53,7 @@ def smooth_l1_loss(
         implement Smooth L1 loss, nor does it implement Huber loss. It implements
         the special case of both in which they are equal (beta=1).
         See: https://pytorch.org/docs/stable/nn.html#torch.nn.SmoothL1Loss.
-     """
+    """
     if beta < 1e-5:
         # if beta == 0, then torch.where will result in nan gradients when
         # the chain rule is applied due to pytorch implementation details

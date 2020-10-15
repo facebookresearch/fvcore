@@ -146,9 +146,7 @@ class TestNativeIO(unittest.TestCase):
     def test_bad_args(self) -> None:
         # TODO (T58240718): Replace with dynamic checks
         with self.assertRaises(ValueError):
-            PathManager.copy(
-                self._tmpfile, self._tmpfile, foo="foo"  # type: ignore
-            )
+            PathManager.copy(self._tmpfile, self._tmpfile, foo="foo")  # type: ignore
         with self.assertRaises(ValueError):
             PathManager.exists(self._tmpfile, foo="foo")  # type: ignore
         with self.assertRaises(ValueError):
@@ -168,9 +166,7 @@ class TestNativeIO(unittest.TestCase):
 
         PathManager.set_strict_kwargs_checking(False)
 
-        PathManager.copy(
-            self._tmpfile, self._tmpfile, foo="foo"  # type: ignore
-        )
+        PathManager.copy(self._tmpfile, self._tmpfile, foo="foo")  # type: ignore
         PathManager.exists(self._tmpfile, foo="foo")  # type: ignore
         PathManager.get_local_path(self._tmpfile, foo="foo")  # type: ignore
         PathManager.isdir(self._tmpfile, foo="foo")  # type: ignore
@@ -248,9 +244,7 @@ class TestHTTPIO(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             PathManager.exists(self._remote_uri, foo="foo")  # type: ignore
         with self.assertRaises(ValueError):
-            PathManager.get_local_path(
-                self._remote_uri, foo="foo"  # type: ignore
-            )
+            PathManager.get_local_path(self._remote_uri, foo="foo")  # type: ignore
         with self.assertRaises(NotImplementedError):
             PathManager.isdir(self._remote_uri, foo="foo")  # type: ignore
         with self.assertRaises(NotImplementedError):
