@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
-from fvcore.common.file_io import PathManager
+from fvcore.common.file_io import PathManager, PathManagerBase
 from termcolor import colored
 from torch.nn.parallel import DataParallel, DistributedDataParallel
 
@@ -66,6 +66,9 @@ class Checkpointer(object):
         self.logger = logging.getLogger(__name__)  # pyre-ignore
         self.save_dir = save_dir
         self.save_to_disk = save_to_disk
+        # Default to the global PathManager in fvcore.
+        # But a user may want to use a different project-specific PathManager
+        self.path_manager: PathManagerBase = PathManager
 
     def save(self, name: str, **kwargs: Dict[str, str]) -> None:
         """
@@ -88,7 +91,7 @@ class Checkpointer(object):
         save_file = os.path.join(self.save_dir, basename)
         assert os.path.basename(save_file) == basename, basename
         self.logger.info("Saving checkpoint to {}".format(save_file))
-        with PathManager.open(save_file, "wb") as f:
+        with self.path_manager.open(save_file, "wb") as f:
             torch.save(data, f)
         self.tag_last_checkpoint(basename)
 
@@ -114,7 +117,7 @@ class Checkpointer(object):
             return {}
         self.logger.info("Loading checkpoint from {}".format(path))
         if not os.path.isfile(path):
-            path = PathManager.get_local_path(path)
+            path = self.path_manager.get_local_path(path)
             assert os.path.isfile(path), "Checkpoint {} not found!".format(path)
 
         checkpoint = self._load_file(path)
@@ -139,7 +142,7 @@ class Checkpointer(object):
             bool: whether a checkpoint exists in the target directory.
         """
         save_file = os.path.join(self.save_dir, "last_checkpoint")
-        return PathManager.exists(save_file)
+        return self.path_manager.exists(save_file)
 
     def get_checkpoint_file(self) -> str:
         """
@@ -148,7 +151,7 @@ class Checkpointer(object):
         """
         save_file = os.path.join(self.save_dir, "last_checkpoint")
         try:
-            with PathManager.open(save_file, "r") as f:
+            with self.path_manager.open(save_file, "r") as f:
                 last_saved = f.read().strip()
         except IOError:
             # if file doesn't exist, maybe because it has just been
@@ -164,8 +167,8 @@ class Checkpointer(object):
         """
         all_model_checkpoints = [
             os.path.join(self.save_dir, file)
-            for file in PathManager.ls(self.save_dir)
-            if PathManager.isfile(os.path.join(self.save_dir, file))
+            for file in self.path_manager.ls(self.save_dir)
+            if self.path_manager.isfile(os.path.join(self.save_dir, file))
             and file.endswith(".pth")
         ]
         return all_model_checkpoints
@@ -199,13 +202,14 @@ class Checkpointer(object):
             last_filename_basename (str): the basename of the last filename.
         """
         save_file = os.path.join(self.save_dir, "last_checkpoint")
-        with PathManager.open(save_file, "w") as f:
+        with self.path_manager.open(save_file, "w") as f:
             f.write(last_filename_basename)  # pyre-ignore
 
     def _load_file(self, f: str) -> object:
         """
         Load a checkpoint file. Can be overwritten by subclasses to support
         different formats.
+
         Args:
             f (str): a locally mounted file path.
         Returns:
@@ -333,6 +337,7 @@ class PeriodicCheckpointer:
             assert max_to_keep > 0
         self.max_to_keep = max_to_keep
         self.recent_checkpoints = []  # pyre-ignore
+        self.path_manager: PathManagerBase = checkpointer.path_manager
 
     def step(self, iteration: int, **kwargs: Any) -> None:
         """
@@ -355,10 +360,10 @@ class PeriodicCheckpointer:
                 #  `Optional[int]`.
                 if len(self.recent_checkpoints) > self.max_to_keep:
                     file_to_delete = self.recent_checkpoints.pop(0)
-                    if PathManager.exists(
+                    if self.path_manager.exists(
                         file_to_delete
                     ) and not file_to_delete.endswith("model_final.pth"):
-                        PathManager.rm(file_to_delete)
+                        self.path_manager.rm(file_to_delete)
 
         if iteration >= self.max_iter - 1:  # pyre-ignore
             self.checkpointer.save("model_final", **additional_state)
