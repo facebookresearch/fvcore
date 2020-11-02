@@ -192,7 +192,9 @@ workflows:
       - cpu_tests:
           context:
             - DOCKERHUB_TOKEN
-      - gpu_tests
+      - gpu_tests:
+          context:
+            - DOCKERHUB_TOKEN
 
   nightly:
     jobs:
