@@ -10,6 +10,9 @@ version: 2.1
 cpu: &cpu
   docker:
     - image: circleci/python:3.7
+      auth:
+        username: $DOCKERHUB_USERNAME
+        password: $DOCKERHUB_TOKEN
   resource_class: medium
 
 gpu: &gpu
@@ -122,6 +125,8 @@ jobs:
       - run:
           name: Launch docker
           command: |
+            # https://support.circleci.com/hc/en-us/articles/360050623311-Docker-Hub-rate-limiting-FAQ
+            docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_TOKEN
             nvidia-docker run -itd --name fvcore pytorch/pytorch
             docker exec -it fvcore nvidia-smi
 
@@ -139,6 +144,9 @@ jobs:
   upload_wheel:
     docker:
       - image: circleci/python:3.7
+        auth:
+          username: $DOCKERHUB_USERNAME
+          password: $DOCKERHUB_TOKEN
     working_directory: ~/fvcore
     steps:
       - checkout
@@ -159,6 +167,9 @@ jobs:
   build_conda:
     docker:
       - image: continuumio/miniconda3
+        auth:
+          username: $DOCKERHUB_USERNAME
+          password: $DOCKERHUB_TOKEN
     steps:
       - checkout
       - run:
@@ -178,21 +189,32 @@ workflows:
   version: 2
   regular_test:
     jobs:
-      - cpu_tests
+      - cpu_tests:
+          context:
+            - DOCKERHUB_TOKEN
       - gpu_tests
 
   nightly:
     jobs:
-      - cpu_tests
-      - gpu_tests
+      # https://circleci.com/docs/2.0/contexts/#creating-and-using-a-context
+      - cpu_tests:
+          context:
+            - DOCKERHUB_TOKEN
+      - gpu_tests:
+          context:
+            - DOCKERHUB_TOKEN
       - build_conda:
           requires:
             - cpu_tests
             - gpu_tests
+          context:
+            - DOCKERHUB_TOKEN
       - upload_wheel:
           requires:
             - cpu_tests
             - gpu_tests
+          context:
+            - DOCKERHUB_TOKEN
     triggers:
       - schedule:
           cron: "0 0 * * *"
