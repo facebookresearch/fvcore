@@ -223,3 +223,8 @@ class TestRegistry(unittest.TestCase):
             "No object named 'Object2' found in 'OBJECT' registry!"
             in str(err.exception)
         )
+
+        items = list(OBJECT_REGISTRY)
+        self.assertListEqual(
+            items, [("Object1", Object1)], "Registry iterable contains valid item"
+        )

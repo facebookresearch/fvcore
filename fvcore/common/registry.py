@@ -1,11 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Iterable, Tuple, Iterator
 
 from tabulate import tabulate
 
 
-class Registry(object):
+class Registry(Iterable[Tuple[str, object]]):
     """
     The registry that provides name -> object mapping, to support third-party
     users' custom modules.
@@ -82,6 +82,9 @@ class Registry(object):
             self._obj_map.items(), headers=table_headers, tablefmt="fancy_grid"
         )
         return "Registry of {}:\n".format(self._name) + table
+
+    def __iter__(self) -> Iterator[Tuple[str, object]]:
+        return iter(self._obj_map.items())
 
     # pyre-fixme[4]: Attribute must be annotated.
     __str__ = __repr__
