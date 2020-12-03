@@ -319,6 +319,7 @@ class PeriodicCheckpointer:
         period: int,
         max_iter: Optional[int] = None,
         max_to_keep: Optional[int] = None,
+        file_prefix: str = "model",
     ) -> None:
         """
         Args:
@@ -326,9 +327,10 @@ class PeriodicCheckpointer:
             checkpoints.
             period (int): the period to save checkpoint.
             max_iter (int): maximum number of iterations. When it is reached,
-                a checkpoint named "model_final" will be saved.
+                a checkpoint named "{file_prefix}_final" will be saved.
             max_to_keep (int): maximum number of most current checkpoints to keep,
                 previous checkpoints will be deleted
+            file_prefix (str): the prefix of checkpoint's filename
         """
         self.checkpointer = checkpointer
         self.period = int(period)
@@ -338,6 +340,7 @@ class PeriodicCheckpointer:
         self.max_to_keep = max_to_keep
         self.recent_checkpoints = []  # pyre-ignore
         self.path_manager: PathManagerBase = checkpointer.path_manager
+        self.file_prefix = file_prefix
 
     def step(self, iteration: int, **kwargs: Any) -> None:
         """
@@ -351,8 +354,11 @@ class PeriodicCheckpointer:
         iteration = int(iteration)
         additional_state = {"iteration": iteration}
         additional_state.update(kwargs)
+
         if (iteration + 1) % self.period == 0:
-            self.checkpointer.save("model_{:07d}".format(iteration), **additional_state)
+            self.checkpointer.save(
+                "{}_{:07d}".format(self.file_prefix, iteration), **additional_state
+            )
 
             if self.max_to_keep is not None:
                 self.recent_checkpoints.append(self.checkpointer.get_checkpoint_file())
@@ -362,11 +368,11 @@ class PeriodicCheckpointer:
                     file_to_delete = self.recent_checkpoints.pop(0)
                     if self.path_manager.exists(
                         file_to_delete
-                    ) and not file_to_delete.endswith("model_final.pth"):
+                    ) and not file_to_delete.endswith(f"{self.file_prefix}_final.pth"):
                         self.path_manager.rm(file_to_delete)
 
         if iteration >= self.max_iter - 1:  # pyre-ignore
-            self.checkpointer.save("model_final", **additional_state)
+            self.checkpointer.save(f"{self.file_prefix}_final", **additional_state)
 
     def save(self, name: str, **kwargs: Any) -> None:
         """
