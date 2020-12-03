@@ -5,6 +5,7 @@ import errno
 import logging
 import os
 import shutil
+import tempfile
 import traceback
 from collections import OrderedDict
 from typing import IO, Any, Callable, Dict, List, MutableMapping, Optional, Union
@@ -33,6 +34,14 @@ def get_cache_dir(cache_dir: Optional[str] = None) -> str:
         cache_dir = os.path.expanduser(
             os.getenv("FVCORE_CACHE", "~/.torch/fvcore_cache")
         )
+    try:
+        PathManager.mkdirs(cache_dir)
+        assert os.access(cache_dir, os.W_OK)
+    except (OSError, AssertionError):
+        tmp_dir = os.path.join(tempfile.gettempdir(), "fvcore_cache")
+        logger = logging.getLogger(__name__)
+        logger.warning(f"{cache_dir} is not accessible! Using {tmp_dir} instead!")
+        cache_dir = tmp_dir
     return cache_dir
 
 
