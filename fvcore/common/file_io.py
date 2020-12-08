@@ -616,6 +616,12 @@ class PathManagerBase:
         """
         A NativePathHandler that works on posix paths. This is used as the fallback.
         """
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            "** fvcore version of PathManager will be deprecated soon. **\n"
+            "** Please migrate to the version in iopath repo. **\n"
+            "https://github.com/facebookresearch/iopath \n"
+        )
 
     def __get_path_handler(self, path: Union[str, os.PathLike]) -> PathHandler:
         """
