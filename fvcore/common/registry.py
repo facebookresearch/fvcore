@@ -1,6 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
-from typing import Dict, Optional, Iterable, Tuple, Iterator
+from typing import Dict, Iterable, Iterator, Optional, Tuple
 
 from tabulate import tabulate
 
