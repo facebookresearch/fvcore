@@ -9,7 +9,6 @@ from contextlib import contextmanager
 from typing import Generator, Optional
 from unittest.mock import MagicMock, patch
 
-from fvcore.common import file_io
 from fvcore.common.file_io import (
     HTTPURLHandler,
     LazyPath,
@@ -195,6 +194,8 @@ class TestHTTPIO(unittest.TestCase):
             with open(dest, "w") as f:
                 f.write("test")
             return dest
+
+        from iopath.common import file_io
 
         with patch.object(
             file_io, "get_cache_dir", return_value=self._cache_dir
