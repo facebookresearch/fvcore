@@ -69,7 +69,7 @@ class CfgNode(_CfgNode):
                 )
                 f.close()
                 with cls._open_cfg(filename) as f:
-                    cfg = yaml.unsafe_load(f)  # pyre-ignore
+                    cfg = yaml.unsafe_load(f)
 
         # pyre-ignore
         def merge_a_into_b(a: Dict[Any, Any], b: Dict[Any, Any]) -> None:
