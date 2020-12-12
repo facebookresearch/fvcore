@@ -14,6 +14,7 @@ from .transform_util import to_float_tensor, to_numpy
 __all__ = [
     "BlendTransform",
     "CropTransform",
+    "PadTransform",
     "GridSampleTransform",
     "HFlipTransform",
     "VFlipTransform",
@@ -640,11 +641,20 @@ class GridSampleTransform(Transform):
 
 
 class CropTransform(Transform):
-    def __init__(self, x0: int, y0: int, w: int, h: int):
-        # TODO: flip the order of w and h.
+    def __init__(
+        self,
+        x0: int,
+        y0: int,
+        w: int,
+        h: int,
+        orig_w: Optional[int] = None,
+        orig_h: Optional[int] = None,
+    ):
         """
         Args:
             x0, y0, w, h (int): crop the image(s) by img[y0:y0+h, x0:x0+w].
+            orig_w, orig_h (int): optional, the original width and height
+                before cropping. Needed to make this transform invertible.
         """
         super().__init__()
         self._set_attributes(locals())
@@ -721,6 +731,66 @@ class CropTransform(Transform):
                 # `tests/test_data_transform.py`
                 cropped_polygons.append(coords[:-1])
         return [self.apply_coords(p) for p in cropped_polygons]
+
+    def inverse(self) -> Transform:
+        assert (
+            self.orig_w is not None and self.orig_h is not None
+        ), "orig_w, orig_h are required for CropTransform to be invertible!"
+        pad_x1 = self.orig_w - self.x0 - self.w
+        pad_y1 = self.orig_h - self.y0 - self.h
+        return PadTransform(
+            self.x0, self.y0, pad_x1, pad_y1, orig_w=self.w, orig_h=self.h
+        )
+
+
+class PadTransform(Transform):
+    def __init__(
+        self,
+        x0: int,
+        y0: int,
+        x1: int,
+        y1: int,
+        orig_w: Optional[int] = None,
+        orig_h: Optional[int] = None,
+        pad_value: float = 0,
+    ):
+        """
+        Args:
+            x0, y0: number of padded pixels on the left and top
+            x1, y1: number of padded pixels on the right and bottom
+            orig_w, orig_h: optional, original width and height.
+                Needed to make this transform invertible.
+            pad_value: the padding value
+        """
+        super().__init__()
+        self._set_attributes(locals())
+
+    def apply_image(self, img):
+        if img.ndim == 3:
+            padding = ((self.y0, self.y1), (self.x0, self.x1), (0, 0))
+        else:
+            padding = ((self.y0, self.y1), (self.x0, self.x1))
+        return np.pad(
+            img,
+            padding,
+            mode="constant",
+            constant_values=self.pad_value,
+        )
+
+    def apply_coords(self, coords):
+        coords[:, 0] += self.x0
+        coords[:, 1] += self.y0
+        return coords
+
+    def inverse(self) -> Transform:
+        assert (
+            self.orig_w is not None and self.orig_h is not None
+        ), "orig_w, orig_h are required for PadTransform to be invertible!"
+        neww = self.orig_w + self.x0 + self.x1
+        newh = self.orig_h + self.y0 + self.y1
+        return CropTransform(
+            self.x0, self.y0, self.orig_w, self.orig_h, orig_w=neww, orig_h=newh
+        )
 
 
 class BlendTransform(Transform):

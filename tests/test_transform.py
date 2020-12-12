@@ -756,7 +756,7 @@ class TestTransforms(unittest.TestCase):
                 transformation.
             (list): expected shape of the output array.
         """
-        x0, y0, w, h = args
+        x0, y0, w, h, ow, oh = args
         coords[:, 0] -= x0
         coords[:, 1] -= y0
         return coords, coords.shape
@@ -767,15 +767,15 @@ class TestTransforms(unittest.TestCase):
         """
         _trans_name = "CropTransform"
         params = (
-            (0, 0, 0, 0),
-            (0, 0, 1, 1),
-            (0, 0, 6, 1),
-            (0, 0, 1, 6),
-            (0, 0, 6, 6),
-            (1, 3, 6, 6),
-            (3, 1, 6, 6),
-            (3, 3, 6, 6),
-            (6, 6, 6, 6),
+            (0, 0, 0, 0, 10, 11),
+            (0, 0, 1, 1, 10, 11),
+            (0, 0, 6, 1, 10, 11),
+            (0, 0, 1, 6, 10, 11),
+            (0, 0, 6, 6, 10, 11),
+            (1, 3, 6, 6, 10, 11),
+            (3, 1, 6, 6, 10, 11),
+            (3, 3, 6, 6, 10, 11),
+            (6, 6, 6, 6, 10, 11),
         )
         for coords, param in itertools.product(
             TestTransforms._coords_provider(), params
@@ -800,6 +800,12 @@ class TestTransforms(unittest.TestCase):
                 "params {} given input with shape {}".format(
                     _trans_name, param, result.shape
                 ),
+            )
+
+            coords_inversed = transformer.inverse().apply_coords(result)
+            self.assertTrue(
+                np.allclose(coords_inversed, coords),
+                f"Transform {_trans_name}'s inverse fails to produce the original coordinates.",
             )
 
     @staticmethod
