@@ -5,7 +5,7 @@ import os
 from typing import IO, Any, Callable, Dict, List, Union
 
 import yaml
-from fvcore.common.file_io import PathManager
+from iopath.common.file_io import g_pathmgr
 from yacs.config import CfgNode as _CfgNode
 
 
@@ -37,7 +37,7 @@ class CfgNode(_CfgNode):
         Defines how a config file is opened. May be overridden to support
         different file schemas.
         """
-        return PathManager.open(filename, "r")
+        return g_pathmgr.open(filename, "r")
 
     @classmethod
     def load_yaml_with_base(cls, filename: str, allow_unsafe: bool = False) -> None:
