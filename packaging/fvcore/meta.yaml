@@ -16,7 +16,7 @@ requirements:
     - yacs
     - pyyaml
     - tqdm
-    - portalocker
+    - iopath
     - termcolor
     - pillow
     - tabulate
