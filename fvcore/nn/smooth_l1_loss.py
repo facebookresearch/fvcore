@@ -67,7 +67,7 @@ def smooth_l1_loss(
         loss = torch.where(cond, 0.5 * n ** 2 / beta, n - 0.5 * beta)
 
     if reduction == "mean":
-        loss = loss.mean()
+        loss = loss.mean() if loss.numel() > 0 else 0.0 * loss.sum()
     elif reduction == "sum":
         loss = loss.sum()
     return loss

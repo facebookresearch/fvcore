@@ -44,3 +44,16 @@ class TestGIoULoss(unittest.TestCase):
 
         loss = giou_loss(box1s, box2s, reduction="mean")
         self.assertTrue(np.allclose(loss, [1.25]))
+
+    def test_empty_inputs(self) -> None:
+        box1 = torch.randn([0, 4], dtype=torch.float32).requires_grad_()
+        box2 = torch.randn([0, 4], dtype=torch.float32).requires_grad_()
+        loss = giou_loss(box1, box2, reduction="mean")
+        loss.backward()
+
+        self.assertEqual(loss.detach().numpy(), 0.0)
+        self.assertIsNotNone(box1.grad)
+        self.assertIsNotNone(box2.grad)
+
+        loss = giou_loss(box1, box2, reduction="none")
+        self.assertEqual(loss.numel(), 0)

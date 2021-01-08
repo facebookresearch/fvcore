@@ -5,9 +5,9 @@ from typing import Iterable
 
 import torch
 from fvcore.layers.squeeze_excitation import (
-    SqueezeExcitation,
-    SpatialSqueezeExcitation,
     ChannelSpatialSqueezeExcitation,
+    SpatialSqueezeExcitation,
+    SqueezeExcitation,
 )
 
 

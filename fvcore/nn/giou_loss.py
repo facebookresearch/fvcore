@@ -56,7 +56,7 @@ def giou_loss(
     loss = 1 - miouk
 
     if reduction == "mean":
-        loss = loss.mean()
+        loss = loss.mean() if loss.numel() > 0 else 0.0 * loss.sum()
     elif reduction == "sum":
         loss = loss.sum()
 

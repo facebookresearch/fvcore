@@ -22,3 +22,12 @@ class TestSmoothL1Loss(unittest.TestCase):
         beta = 0.05
         loss = smooth_l1_loss(inputs, targets, beta=beta, reduction="none").numpy()
         self.assertTrue(np.allclose(loss, [0.1 - 0.5 * beta, 0, 1.5 - 0.5 * beta]))
+
+    def test_empty_inputs(self) -> None:
+        inputs = torch.empty([0, 10], dtype=torch.float32).requires_grad_()
+        targets = torch.empty([0, 10], dtype=torch.float32)
+        loss = smooth_l1_loss(inputs, targets, beta=0.5, reduction="mean")
+        loss.backward()
+
+        self.assertEqual(loss.detach().numpy(), 0.0)
+        self.assertIsNotNone(inputs.grad)
