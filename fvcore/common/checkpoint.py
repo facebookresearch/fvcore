@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
-from iopath.common.file_io import PathManager, g_pathmgr
+from iopath.common.file_io import HTTPURLHandler, PathManager
 from termcolor import colored
 from torch.nn.parallel import DataParallel, DistributedDataParallel
 
@@ -65,9 +65,10 @@ class Checkpointer(object):
         self.logger = logging.getLogger(__name__)  # pyre-ignore
         self.save_dir = save_dir
         self.save_to_disk = save_to_disk
-        # Default to the global PathManager
-        # But a user may want to use a different project-specific PathManager
-        self.path_manager: PathManager = g_pathmgr
+        # Default PathManager, support HTTP URLs (for backward compatibility in open source).
+        # A user may want to use a different project-specific PathManager
+        self.path_manager: PathManager = PathManager()
+        self.path_manager.register_handler(HTTPURLHandler())
 
     def save(self, name: str, **kwargs: Dict[str, str]) -> None:
         """
