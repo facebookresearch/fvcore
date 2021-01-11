@@ -114,8 +114,8 @@ class MatmulNet(nn.Module):
 
 class BMMNet(nn.Module):
     """
-    A network with a single torch.matmul operation. This is used for testing
-    flop count for torch.matmul.
+    A network with a single torch.bmm operation. This is used for testing
+    flop count for torch.bmm.
     """
 
     def __init__(self) -> None:
