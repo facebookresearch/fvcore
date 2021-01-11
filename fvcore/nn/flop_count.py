@@ -8,6 +8,7 @@ import torch.nn as nn
 
 from .jit_handles import (
     addmm_flop_jit,
+    bmm_flop_jit,
     conv_flop_jit,
     einsum_flop_jit,
     get_jit_model_analysis,
@@ -19,6 +20,7 @@ from .jit_handles import (
 # pyre-fixme[24]: Generic type `typing.Callable` expects 2 type parameters.
 _DEFAULT_SUPPORTED_OPS: typing.Dict[str, typing.Callable] = {
     "aten::addmm": addmm_flop_jit,
+    "aten::bmm": bmm_flop_jit,
     "aten::_convolution": conv_flop_jit,
     "aten::einsum": einsum_flop_jit,
     "aten::matmul": matmul_flop_jit,
