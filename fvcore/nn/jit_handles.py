@@ -207,13 +207,12 @@ def bmm_flop_jit(
 ) -> typing.Counter[str]:
     """
     This method counts the flops for the bmm operation.
-    We currently support the operation: "nct,ntd->ntd" .
 
     Args:
         inputs (list(torch._C.Value)): The input shape in the form of a list of
-            jit object before einsum.
+            jit object before bmm.
         outputs (list(torch._C.Value)): The output shape in the form of a list
-            of jit object after einsum.
+            of jit object after bmm.
 
     Returns:
         Counter: A Counter dictionary that records the number of flops for each
