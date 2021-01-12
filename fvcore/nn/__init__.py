@@ -14,4 +14,5 @@ from .smooth_l1_loss import smooth_l1_loss
 from .weight_init import c2_msra_fill, c2_xavier_fill
 
 
+# pyre-fixme[5]: Global expression must be annotated.
 __all__ = [k for k in globals().keys() if not k.startswith("_")]
