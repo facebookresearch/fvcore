@@ -118,9 +118,6 @@ class BMMNet(nn.Module):
     flop count for torch.bmm.
     """
 
-    def __init__(self) -> None:
-        super(BMMNet, self).__init__()
-
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         x = torch.bmm(x, y)
         return x
