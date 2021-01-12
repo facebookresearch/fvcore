@@ -117,6 +117,7 @@ class BMMNet(nn.Module):
     A network with a single torch.bmm operation. This is used for testing
     flop count for torch.bmm.
     """
+
     def __init__(self) -> None:
         super(BMMNet, self).__init__()
 
