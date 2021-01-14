@@ -112,6 +112,17 @@ class MatmulNet(nn.Module):
         return x
 
 
+class BMMNet(nn.Module):
+    """
+    A network with a single torch.bmm operation. This is used for testing
+    flop count for torch.bmm.
+    """
+
+    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        x = torch.bmm(x, y)
+        return x
+
+
 class CustomNet(nn.Module):
     """
     A network with a fully connected layer followed by a sigmoid layer. This is
@@ -449,6 +460,28 @@ class TestFlopCount(unittest.TestCase):
         gt_dict["matmul"] = gt_flop
         self.assertDictEqual(
             flop_dict, gt_dict, "Matmul operation failed to pass the flop count test."
+        )
+
+    def test_bmm(self) -> None:
+        """
+        Test flop count for operation torch.bmm. The case checkes
+        torch.bmm with equation nct,ntp->ncp.
+        """
+        n = 2
+        c = 5
+        t = 2
+        p = 12
+        eNet = BMMNet()
+        x = torch.randn(n, c, t)
+        y = torch.randn(n, t, p)
+        flop_dict, _ = flop_count(eNet, (x, y))
+        gt_flop = n * t * p * c / 1e9
+        gt_dict = defaultdict(float)
+        gt_dict["bmm"] = gt_flop
+        self.assertDictEqual(
+            flop_dict,
+            gt_dict,
+            "bmm operation nct,ncp->ntp failed to pass the flop count test.",
         )
 
     def test_einsum(self) -> None:

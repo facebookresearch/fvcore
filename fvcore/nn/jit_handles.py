@@ -202,6 +202,33 @@ def addmm_flop_jit(
     return flop_counter
 
 
+def bmm_flop_jit(
+    inputs: typing.List[object], outputs: typing.List[object]
+) -> typing.Counter[str]:
+    """
+    This method counts the flops for the bmm operation.
+
+    Args:
+        inputs (list(torch._C.Value)): The input shape in the form of a list of
+            jit object before bmm.
+        outputs (list(torch._C.Value)): The output shape in the form of a list
+            of jit object after bmm.
+
+    Returns:
+        Counter: A Counter dictionary that records the number of flops for each
+            operation.
+    """
+    # Inputs should be a list of length 2.
+    # Inputs contains the shapes of two tensor.
+    assert len(inputs) == 2, len(inputs)
+    input_shapes = [get_shape(v) for v in inputs]
+    n, c, t = input_shapes[0]
+    d = input_shapes[-1][-1]
+    flop = n * c * t * d
+    flop_counter = Counter({"bmm": flop})
+    return flop_counter
+
+
 def conv_flop_count(
     x_shape: typing.List[int], w_shape: typing.List[int], out_shape: typing.List[int]
 ) -> typing.Counter[str]:
