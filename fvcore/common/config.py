@@ -40,7 +40,9 @@ class CfgNode(_CfgNode):
         return g_pathmgr.open(filename, "r")
 
     @classmethod
-    def load_yaml_with_base(cls, filename: str, allow_unsafe: bool = False) -> None:
+    def load_yaml_with_base(
+        cls, filename: str, allow_unsafe: bool = False
+    ) -> Dict[str, Any]:
         """
         Just like `yaml.load(open(filename))`, but inherit attributes from its
             `_BASE_`.
@@ -71,8 +73,7 @@ class CfgNode(_CfgNode):
                 with cls._open_cfg(filename) as f:
                     cfg = yaml.unsafe_load(f)
 
-        # pyre-ignore
-        def merge_a_into_b(a: Dict[Any, Any], b: Dict[Any, Any]) -> None:
+        def merge_a_into_b(a: Dict[str, Any], b: Dict[str, Any]) -> None:
             # merge dict a into dict b. values in a will overwrite b.
             for k, v in a.items():
                 if isinstance(v, dict) and k in b:
@@ -93,8 +94,6 @@ class CfgNode(_CfgNode):
             base_cfg = cls.load_yaml_with_base(base_cfg_file, allow_unsafe=allow_unsafe)
             del cfg[BASE_KEY]
 
-            # pyre-fixme[6]: Expected `Dict[typing.Any, typing.Any]` for 2nd param
-            #  but got `None`.
             merge_a_into_b(cfg, base_cfg)
             return base_cfg
         return cfg
@@ -113,17 +112,17 @@ class CfgNode(_CfgNode):
         self.merge_from_other_cfg(loaded_cfg)
 
     # Forward the following calls to base, but with a check on the BASE_KEY.
-    def merge_from_other_cfg(self, cfg_other: object) -> Callable[[], None]:
+    def merge_from_other_cfg(self, cfg_other: "CfgNode") -> Callable[[], None]:
         """
         Args:
             cfg_other (CfgNode): configs to merge from.
         """
         assert (
-            BASE_KEY not in cfg_other  # pyre-ignore
+            BASE_KEY not in cfg_other
         ), "The reserved key '{}' can only be used in files!".format(BASE_KEY)
         return super().merge_from_other_cfg(cfg_other)
 
-    def merge_from_list(self, cfg_list: List[object]) -> Callable[[], None]:
+    def merge_from_list(self, cfg_list: List[str]) -> Callable[[], None]:
         """
         Args:
             cfg_list (list): list of configs to merge from.

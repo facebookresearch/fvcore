@@ -1,12 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-
+# pyre-ignore-all-errors[2]
 import typing
 import unittest
 from collections import Counter, defaultdict
+from typing import Any, Dict
 
 import torch
 import torch.nn as nn
-from fvcore.nn.flop_count import flop_count
+from fvcore.nn.flop_count import Handle, flop_count
 from fvcore.nn.jit_handles import batchnorm_flop_jit
 
 
@@ -154,7 +155,7 @@ class TestFlopCount(unittest.TestCase):
         """
         # New handle for a new operation.
         def dummy_sigmoid_flop_jit(
-            inputs: typing.List[object], outputs: typing.List[object]
+            inputs: typing.List[Any], outputs: typing.List[Any]
         ) -> typing.Counter[str]:
             """
             A dummy handle function for sigmoid. Note the handle here does
@@ -168,7 +169,7 @@ class TestFlopCount(unittest.TestCase):
         input_dim = 5
         output_dim = 4
         customNet = CustomNet(input_dim, output_dim)
-        custom_ops = {"aten::sigmoid": dummy_sigmoid_flop_jit}
+        custom_ops: Dict[str, Handle] = {"aten::sigmoid": dummy_sigmoid_flop_jit}
         x = torch.rand(batch_size, input_dim)
         flop_dict1, _ = flop_count(customNet, (x,), supported_ops=custom_ops)
         flop_sigmoid = 10000 / 1e9
@@ -192,7 +193,7 @@ class TestFlopCount(unittest.TestCase):
             flop_dict["addmm"] = 400000
             return flop_dict
 
-        custom_ops2 = {"aten::addmm": addmm_dummy_flop_jit}
+        custom_ops2: Dict[str, Handle] = {"aten::addmm": addmm_dummy_flop_jit}
         flop_dict2, _ = flop_count(customNet, (x,), supported_ops=custom_ops2)
         flop = 400000 / 1e9
         self.assertEqual(
@@ -529,7 +530,7 @@ class TestFlopCount(unittest.TestCase):
         BatchNorm1d, BatchNorm2d and BatchNorm3d.
         """
         # Test for BatchNorm1d.
-        supported_ops = {"aten::batch_norm": batchnorm_flop_jit}
+        supported_ops: Dict[str, Handle] = {"aten::batch_norm": batchnorm_flop_jit}
         batch_size = 10
         input_dim = 10
         batch_1d = nn.BatchNorm1d(input_dim, affine=False)

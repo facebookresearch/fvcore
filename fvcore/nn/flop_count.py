@@ -1,8 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+# pyre-ignore-all-errors[2,33]
 
 import logging
-import typing
 from collections import defaultdict
+from typing import Any, Callable, Counter, DefaultDict, Dict, List, Tuple, Union
 
 import torch.nn as nn
 
@@ -16,9 +17,9 @@ from .jit_handles import (
 )
 
 
+Handle = Callable[[List[Any], List[Any]], Counter[str]]
 # A dictionary that maps supported operations to their flop count jit handles.
-# pyre-fixme[24]: Generic type `typing.Callable` expects 2 type parameters.
-_DEFAULT_SUPPORTED_OPS: typing.Dict[str, typing.Callable] = {
+_DEFAULT_SUPPORTED_OPS: Dict[str, Handle] = {
     "aten::addmm": addmm_flop_jit,
     "aten::bmm": bmm_flop_jit,
     "aten::_convolution": conv_flop_jit,
@@ -29,10 +30,9 @@ _DEFAULT_SUPPORTED_OPS: typing.Dict[str, typing.Callable] = {
 
 def flop_count(
     model: nn.Module,
-    inputs: typing.Tuple[object, ...],
-    # pyre-fixme[24]: Generic type `typing.Callable` expects 2 type parameters.
-    supported_ops: typing.Union[typing.Dict[str, typing.Callable], None] = None,
-) -> typing.Tuple[typing.DefaultDict[str, float], typing.Counter[str]]:
+    inputs: Tuple[Any, ...],
+    supported_ops: Union[Dict[str, Handle], None] = None,
+) -> Tuple[DefaultDict[str, float], Counter[str]]:
     """
     Given a model and an input to the model, compute the Gflops of the given
     model.

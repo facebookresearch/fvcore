@@ -179,11 +179,7 @@ class TestCheckpointer(unittest.TestCase):
             )
             state_dict = checkpointables.state_dict()
             for key, _ in state_dict.items():
-                self.assertTrue(
-                    # pyre-ignore
-                    checkpoint["checkpointables"].get(key)
-                    is not None
-                )
+                self.assertTrue(checkpoint["checkpointables"].get(key) is not None)
                 self.assertTrue(checkpoint["checkpointables"][key] == state_dict[key])
 
     def test_load_reused_params(self) -> None:

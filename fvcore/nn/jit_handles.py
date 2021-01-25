@@ -1,7 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+# pyre-ignore-all-errors[2,3]
+# NOTE: most Any type in this file should be torch._C.Value - which was not yet annotated.
 
 import typing
 from collections import Counter, OrderedDict
+from typing import Any, Callable, Dict, List, Set, Tuple
 
 import torch
 import torch.nn as nn
@@ -9,7 +12,7 @@ from numpy import prod
 
 
 # A list that contains ignored operations.
-_IGNORED_OPS: typing.Set[str] = {
+_IGNORED_OPS: Set[str] = {
     "aten::Int",
     "aten::ScalarImplicit",
     "aten::__and__",
@@ -68,10 +71,9 @@ _IGNORED_OPS: typing.Set[str] = {
 
 def get_jit_model_analysis(
     model: nn.Module,
-    inputs: typing.Tuple[object, ...],
-    # pyre-fixme[24]: Generic type `typing.Callable` expects 2 type parameters.
-    ops_handles: typing.Dict[str, typing.Callable],
-) -> typing.Tuple[typing.Counter[str], typing.Counter[str]]:
+    inputs: Tuple[Any, ...],
+    ops_handles: Dict[str, Callable[[Any, Any], typing.Counter[str]]],
+) -> Tuple[typing.Counter[str], typing.Counter[str]]:
     """
     Given a model, the inputs and the handles for each operation, return the
     results for the model analysis.
@@ -80,11 +82,11 @@ def get_jit_model_analysis(
         model (nn.Module): The model for torch script to trace.
         inputs (tuple): Inputs that are passed to `model` to trace. Inputs need
             to be in a tuple.
-        ops_handles (typing.Dict[str, typing.Callable]): A dictionary of handles
+        ops_handles (Dict[str, Callable]): A dictionary of handles
             for model analysis.
 
     Returns:
-        typing.Tuple[typing.Counter[str], typing.Counter[str]]: A counter that
+        Tuple[Counter[str], Counter[str]]: A counter that
             contains the results of per operation analysis of the model and a
             Counter of ignored operations.
     """
@@ -116,16 +118,15 @@ def get_jit_model_analysis(
         handle_count = ops_handles.get(kind, None)
         if handle_count is None:
             continue
-        # pyre-ignore
-        inputs, outputs = list(node.inputs()), list(node.outputs())
-        op_count = handle_count(inputs, outputs)
+        op_inputs, op_outputs = list(node.inputs()), list(node.outputs())
+        op_count = handle_count(op_inputs, op_outputs)
         total_count += op_count
     return total_count, skipped_ops
 
 
 def generic_activation_jit(
     op_name: str,
-) -> typing.Callable[[typing.List[object], typing.List[object]], typing.Counter[str]]:
+) -> Callable[[List[Any], List[Any]], typing.Counter[str]]:
     """
     This method return a handle that counts the number of activation from the
     output shape for the specified operation.
@@ -134,10 +135,10 @@ def generic_activation_jit(
         op_name (str): The name of the operation.
 
     Returns:
-        typing.Callable: An activation handle for the given operation.
+        Callable: An activation handle for the given operation.
     """
 
-    def _generic_activation_jit(outputs: typing.List[object]) -> int:
+    def _generic_activation_jit(outputs: List[Any]) -> int:
         """
         This is a generic jit handle that counts the number of activations for any
         operation given the output shape.
@@ -156,7 +157,7 @@ def generic_activation_jit(
     return lambda inputs, outputs: Counter({op_name: _generic_activation_jit(outputs)})
 
 
-def get_shape(val: object) -> typing.List[int]:
+def get_shape(val: Any) -> List[int]:
     """
     Get the shapes from a jit value object.
 
@@ -166,15 +167,13 @@ def get_shape(val: object) -> typing.List[int]:
     Returns:
         list(int): return a list of ints.
     """
-    if val.isCompleteTensor():  # pyre-ignore
-        return val.type().sizes()  # pyre-ignore
+    if val.isCompleteTensor():
+        return val.type().sizes()
     else:
         raise ValueError()
 
 
-def addmm_flop_jit(
-    inputs: typing.List[object], outputs: typing.List[object]
-) -> typing.Counter[str]:
+def addmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
     This method counts the flops for fully connected layers with torch script.
 
@@ -202,9 +201,7 @@ def addmm_flop_jit(
     return flop_counter
 
 
-def bmm_flop_jit(
-    inputs: typing.List[object], outputs: typing.List[object]
-) -> typing.Counter[str]:
+def bmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
     This method counts the flops for the bmm operation.
 
@@ -230,7 +227,7 @@ def bmm_flop_jit(
 
 
 def conv_flop_count(
-    x_shape: typing.List[int], w_shape: typing.List[int], out_shape: typing.List[int]
+    x_shape: List[int], w_shape: List[int], out_shape: List[int]
 ) -> typing.Counter[str]:
     """
     This method counts the flops for convolution. Note only multiplication is
@@ -252,9 +249,7 @@ def conv_flop_count(
     return flop_counter
 
 
-def conv_flop_jit(
-    inputs: typing.List[object], outputs: typing.List[object]
-) -> typing.Counter[str]:
+def conv_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
     This method counts the flops for convolution using torch script.
 
@@ -279,9 +274,7 @@ def conv_flop_jit(
     return conv_flop_count(x_shape, w_shape, out_shape)
 
 
-def einsum_flop_jit(
-    inputs: typing.List[object], outputs: typing.List[object]
-) -> typing.Counter[str]:
+def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
     This method counts the flops for the einsum operation. We currently support
     two einsum operations: "nct,ncp->ntp" and "ntg,ncg->nct".
@@ -300,7 +293,7 @@ def einsum_flop_jit(
     # Inputs[0] stores the equation used for einsum.
     # Inputs[1] stores the list of input shapes.
     assert len(inputs) == 2, len(inputs)
-    equation = inputs[0].toIValue()  # pyre-ignore
+    equation = inputs[0].toIValue()
     # Get rid of white space in the equation string.
     equation = equation.replace(" ", "")
     # Re-map equation so that same equation with different alphabet
@@ -308,7 +301,7 @@ def einsum_flop_jit(
     letter_order = OrderedDict((k, 0) for k in equation if k.isalpha()).keys()
     mapping = {ord(x): 97 + i for i, x in enumerate(letter_order)}
     equation = equation.translate(mapping)
-    input_shapes_jit = inputs[1].node().inputs()  # pyre-ignore
+    input_shapes_jit = inputs[1].node().inputs()
     input_shapes = [get_shape(v) for v in input_shapes_jit]
 
     if equation == "abc,abd->acd":
@@ -329,9 +322,7 @@ def einsum_flop_jit(
         raise NotImplementedError("Unsupported einsum operation.")
 
 
-def matmul_flop_jit(
-    inputs: typing.List[object], outputs: typing.List[object]
-) -> typing.Counter[str]:
+def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
     This method counts the flops for matmul.
 
@@ -358,9 +349,7 @@ def matmul_flop_jit(
     return flop_counter
 
 
-def batchnorm_flop_jit(
-    inputs: typing.List[object], outputs: typing.List[object]
-) -> typing.Counter[str]:
+def batchnorm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
     This method counts the flops for batch norm.
 

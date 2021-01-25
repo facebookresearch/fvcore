@@ -1,12 +1,14 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+# pyre-ignore-all-errors[2]
 
 import typing
 import unittest
 from collections import Counter, defaultdict
+from typing import Any, Dict, List
 
 import torch
 import torch.nn as nn
-from fvcore.nn.activation_count import activation_count
+from fvcore.nn.activation_count import Handle, activation_count
 from numpy import prod
 
 
@@ -89,9 +91,7 @@ class TestActivationCount(unittest.TestCase):
         Test the activation count for user provided handles.
         """
 
-        def dummy_handle(
-            inputs: typing.List[object], outputs: typing.List[object]
-        ) -> typing.Counter[str]:
+        def dummy_handle(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
             return Counter({"conv": 100})
 
         batch_size = 1
@@ -99,7 +99,7 @@ class TestActivationCount(unittest.TestCase):
         spatial_dim = 32
         x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
         convNet = SmallConvNet(input_dim)
-        sp_ops = {"aten::_convolution": dummy_handle}
+        sp_ops: Dict[str, Handle] = {"aten::_convolution": dummy_handle}
         ac_dict, _ = activation_count(convNet, (x,), sp_ops)
         gt_dict = defaultdict(float)
         conv_layers = 3

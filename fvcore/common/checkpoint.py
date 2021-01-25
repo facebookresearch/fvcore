@@ -1,4 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+# pyre-ignore-all-errors[2,3]
 
 import copy
 import logging
@@ -23,17 +24,14 @@ class _IncompatibleKeys(
         [
             ("missing_keys", List[str]),
             ("unexpected_keys", List[str]),
-            # pyre-fixme[24]: Generic type `tuple` expects at least 1 type parameter.
-            # pyre-fixme[24]: Generic type `tuple` expects at least 1 type parameter.
-            # pyre-fixme[24]: Generic type `tuple` expects at least 1 type parameter.
-            ("incorrect_shapes", List[Tuple]),
+            ("incorrect_shapes", List[Tuple[str, Tuple[int], Tuple[int]]]),
         ],
     )
 ):
     pass
 
 
-class Checkpointer(object):
+class Checkpointer:
     """
     A checkpointer that can save/load model as well as extra checkpointable
     objects.
@@ -45,7 +43,7 @@ class Checkpointer(object):
         save_dir: str = "",
         *,
         save_to_disk: bool = True,
-        **checkpointables: object,
+        **checkpointables: Any,
     ) -> None:
         """
         Args:
@@ -61,8 +59,8 @@ class Checkpointer(object):
         if isinstance(model, (DistributedDataParallel, DataParallel)):
             model = model.module
         self.model = model
-        self.checkpointables = copy.copy(checkpointables)  # pyre-ignore
-        self.logger = logging.getLogger(__name__)  # pyre-ignore
+        self.checkpointables: Dict[str, Any] = copy.copy(checkpointables)
+        self.logger: logging.Logger = logging.getLogger(__name__)
         self.save_dir = save_dir
         self.save_to_disk = save_to_disk
         # Default PathManager, support HTTP URLs (for backward compatibility in open source).
@@ -95,7 +93,9 @@ class Checkpointer(object):
             torch.save(data, f)
         self.tag_last_checkpoint(basename)
 
-    def load(self, path: str, checkpointables: Optional[List[str]] = None) -> object:
+    def load(
+        self, path: str, checkpointables: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """
         Load from the given checkpoint. When path points to network file, this
         function has to be called on all ranks.
@@ -128,10 +128,10 @@ class Checkpointer(object):
             self._log_incompatible_keys(incompatible)
 
         for key in self.checkpointables if checkpointables is None else checkpointables:
-            if key in checkpoint:  # pyre-ignore
+            if key in checkpoint:
                 self.logger.info("Loading {} from {}".format(key, path))
                 obj = self.checkpointables[key]
-                obj.load_state_dict(checkpoint.pop(key))  # pyre-ignore
+                obj.load_state_dict(checkpoint.pop(key))
 
         # return any further checkpoint data
         return checkpoint
@@ -157,7 +157,7 @@ class Checkpointer(object):
             # if file doesn't exist, maybe because it has just been
             # deleted by a separate process
             return ""
-        return os.path.join(self.save_dir, last_saved)  # pyre-ignore
+        return os.path.join(self.save_dir, last_saved)  # pyre-fixme[6]
 
     def get_all_checkpoint_files(self) -> List[str]:
         """
@@ -173,7 +173,7 @@ class Checkpointer(object):
         ]
         return all_model_checkpoints
 
-    def resume_or_load(self, path: str, *, resume: bool = True) -> object:
+    def resume_or_load(self, path: str, *, resume: bool = True) -> Dict[str, Any]:
         """
         If `resume` is True, this method attempts to resume from the last
         checkpoint, if exists. Otherwise, load checkpoint from the given path.
@@ -205,7 +205,7 @@ class Checkpointer(object):
         with self.path_manager.open(save_file, "w") as f:
             f.write(last_filename_basename)  # pyre-ignore
 
-    def _load_file(self, f: str) -> object:
+    def _load_file(self, f: str) -> Dict[str, Any]:
         """
         Load a checkpoint file. Can be overwritten by subclasses to support
         different formats.
@@ -219,7 +219,7 @@ class Checkpointer(object):
         """
         return torch.load(f, map_location=torch.device("cpu"))
 
-    def _load_model(self, checkpoint: Any) -> _IncompatibleKeys:  # pyre-ignore
+    def _load_model(self, checkpoint: Any) -> _IncompatibleKeys:
         """
         Load weights from a checkpoint.
 
@@ -315,7 +315,7 @@ class PeriodicCheckpointer:
 
     def __init__(
         self,
-        checkpointer: Any,  # pyre-ignore
+        checkpointer: Any,
         period: int,
         max_iter: Optional[int] = None,
         max_to_keep: Optional[int] = None,
@@ -338,7 +338,7 @@ class PeriodicCheckpointer:
         if max_to_keep is not None:
             assert max_to_keep > 0
         self.max_to_keep = max_to_keep
-        self.recent_checkpoints = []  # pyre-ignore
+        self.recent_checkpoints: List[str] = []
         self.path_manager: PathManager = checkpointer.path_manager
         self.file_prefix = file_prefix
 
@@ -371,8 +371,10 @@ class PeriodicCheckpointer:
                     ) and not file_to_delete.endswith(f"{self.file_prefix}_final.pth"):
                         self.path_manager.rm(file_to_delete)
 
-        if iteration >= self.max_iter - 1:  # pyre-ignore
-            self.checkpointer.save(f"{self.file_prefix}_final", **additional_state)
+        if self.max_iter is not None:
+            # pyre-fixme[58]
+            if iteration >= self.max_iter - 1:
+                self.checkpointer.save(f"{self.file_prefix}_final", **additional_state)
 
     def save(self, name: str, **kwargs: Any) -> None:
         """

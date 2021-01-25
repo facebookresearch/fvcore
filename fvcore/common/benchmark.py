@@ -1,5 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-
+# pyre-ignore-all-errors[2,3]
 import sys
 import time
 from typing import Any, Callable, Dict, List
@@ -9,7 +9,7 @@ import numpy as np
 
 def timeit(
     num_iters: int = -1, warmup_iters: int = 0
-) -> Callable[[], Callable[[], Dict[str, float]]]:
+) -> Callable[[Callable[[], Any]], Callable[[], Dict[str, float]]]:
     """
     This is intened to be used as a decorator to time any function.
 
@@ -33,7 +33,6 @@ def timeit(
                       function.
     """
 
-    # pyre-ignore
     def decorator(func: Callable[[], Any]) -> Callable[[], Dict[str, float]]:
         def decorated(*args: Any, **kwargs: Any) -> Dict[str, float]:
             # Warmup phase.
@@ -69,13 +68,13 @@ def timeit(
 
         return decorated
 
-    return decorator  # pyre-ignore
+    return decorator
 
 
 def benchmark(
-    func: Callable[[], Any],  # pyre-ignore
+    func: Callable[[], Any],
     bm_name: str,
-    kwargs_list: List[Any],  # pyre-ignore
+    kwargs_list: List[Any],
     *,
     num_iters: int = -1,
     warmup_iters: int = 0
@@ -109,7 +108,6 @@ def benchmark(
     outputs = []
     for kwargs in kwargs_list:
         func_bm = func(**kwargs)
-        # pyre-ignore
         time_func = timeit(num_iters=num_iters, warmup_iters=warmup_iters)(func_bm)
 
         ret = time_func()
