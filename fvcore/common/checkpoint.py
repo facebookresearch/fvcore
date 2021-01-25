@@ -18,6 +18,9 @@ from torch.nn.parallel import DataParallel, DistributedDataParallel
 __all__ = ["Checkpointer", "PeriodicCheckpointer"]
 
 
+TORCH_VERSION: Tuple[int, ...] = tuple(int(x) for x in torch.__version__.split(".")[:2])
+
+
 class _IncompatibleKeys(
     NamedTuple(
         "IncompatibleKeys",
@@ -245,12 +248,18 @@ class Checkpointer:
         # remove the "module" prefix before performing the matching.
         _strip_prefix_if_present(checkpoint_state_dict, "module.")
 
-        # work around https://github.com/pytorch/pytorch/issues/24139
+        # workaround https://github.com/pytorch/pytorch/issues/24139
         model_state_dict = self.model.state_dict()
         incorrect_shapes = []
         for k in list(checkpoint_state_dict.keys()):
             if k in model_state_dict:
-                shape_model = tuple(model_state_dict[k].shape)
+                model_param = model_state_dict[k]
+                # Allow mismatch for uninitialized parameters
+                if TORCH_VERSION >= (1, 8) and isinstance(
+                    model_param, nn.parameter.UninitializedParameter
+                ):
+                    continue
+                shape_model = tuple(model_param.shape)
                 shape_checkpoint = tuple(checkpoint_state_dict[k].shape)
                 if shape_model != shape_checkpoint:
                     incorrect_shapes.append((k, shape_checkpoint, shape_model))

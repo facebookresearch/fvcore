@@ -203,6 +203,29 @@ class TestCheckpointer(unittest.TestCase):
         )
         logger.info.assert_not_called()
 
+    @unittest.skipIf(  # pyre-fixme[56]
+        not hasattr(nn, "LazyLinear"), "LazyModule not supported"
+    )
+    def test_load_lazy_module(self) -> None:
+        def _get_model() -> nn.Sequential:  # pyre-fixme[11]
+            return nn.Sequential(nn.LazyLinear(10))
+
+        m1, m2 = _get_model(), _get_model()
+        m1(torch.randn(4, 2, 4, 4))  # initialize m1, but not m2
+        # Load m1's checkpoint into m2.
+        with TemporaryDirectory() as f:
+            checkpointer = Checkpointer(m1, save_dir=f)
+            checkpointer.save("checkpoint_file")
+
+            fresh_checkpointer = Checkpointer(m2, save_dir=f)
+            self.assertTrue(fresh_checkpointer.has_checkpoint())
+            self.assertEqual(
+                fresh_checkpointer.get_checkpoint_file(),
+                os.path.join(f, "checkpoint_file.pth"),
+            )
+            fresh_checkpointer.load(fresh_checkpointer.get_checkpoint_file())
+            self.assertTrue(torch.equal(m1[0].weight, m2[0].weight))
+
 
 class TestPeriodicCheckpointer(unittest.TestCase):
     def _create_model(self) -> nn.Module:
