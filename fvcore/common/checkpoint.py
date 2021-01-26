@@ -262,6 +262,36 @@ class Checkpointer:
                 shape_model = tuple(model_param.shape)
                 shape_checkpoint = tuple(checkpoint_state_dict[k].shape)
                 if shape_model != shape_checkpoint:
+
+                    has_observer_base_classes = (
+                        TORCH_VERSION >= (1, 8)
+                        and hasattr(torch.quantization, "ObserverBase")
+                        and hasattr(torch.quantization, "FakeQuantizeBase")
+                    )
+                    if has_observer_base_classes:
+                        # Handle the special case of quantization per channel observers,
+                        # where buffer shape mismatches are expected.
+                        def _get_module_for_key(
+                            model: torch.nn.Module, key: str
+                        ) -> torch.nn.Module:
+                            # foo.bar.param_or_buffer_name -> [foo, bar]
+                            key_parts = key.split(".")[:-1]
+                            cur_module = model
+                            for key_part in key_parts:
+                                cur_module = getattr(cur_module, key_part)
+                            return cur_module
+
+                        cls_to_skip = (
+                            torch.quantization.ObserverBase,
+                            torch.quantization.FakeQuantizeBase,
+                        )
+                        target_module = _get_module_for_key(self.model, k)
+                        if isinstance(target_module, cls_to_skip):
+                            # Do not remove modules with expected shape mismatches
+                            # them from the state_dict loading. They have special logic
+                            # in _load_from_state_dict to handle the mismatches.
+                            continue
+
                     incorrect_shapes.append((k, shape_checkpoint, shape_model))
                     checkpoint_state_dict.pop(k)
         # pyre-ignore

@@ -45,6 +45,42 @@ class TestCheckpointer(unittest.TestCase):
 
         return m, state_dict
 
+    @unittest.skipIf(  # pyre-fixme[56]
+        (not hasattr(torch.quantization, "ObserverBase"))
+        or (not hasattr(torch.quantization, "FakeQuantizeBase")),
+        "quantization per-channel observer base classes not supported",
+    )
+    def test_loading_objects_with_expected_shape_mismatches(self) -> None:
+        def _get_model() -> torch.nn.Module:
+            m = nn.Sequential(nn.Conv2d(2, 2, 1))
+            m.qconfig = torch.quantization.get_default_qat_qconfig("fbgemm")
+            m = torch.quantization.prepare_qat(m)
+            return m
+
+        m1, m2 = _get_model(), _get_model()
+        # Calibrate m1 with data to populate the observer stats
+        m1(torch.randn(4, 2, 4, 4))
+        # Load m1's checkpoint into m2. This should work without errors even
+        # though the shapes of per-channel observer buffers do not match.
+        with TemporaryDirectory() as f:
+            checkpointer = Checkpointer(m1, save_dir=f)
+            checkpointer.save("checkpoint_file")
+
+            # in the same folder
+            fresh_checkpointer = Checkpointer(m2, save_dir=f)
+            self.assertTrue(fresh_checkpointer.has_checkpoint())
+            self.assertEqual(
+                fresh_checkpointer.get_checkpoint_file(),
+                os.path.join(f, "checkpoint_file.pth"),
+            )
+            fresh_checkpointer.load(fresh_checkpointer.get_checkpoint_file())
+            # Run the expected input through the network with observers
+            # disabled and fake_quant enabled. If buffers were loaded correctly
+            # into per-channel observers, this line will not crash.
+            m2.apply(torch.quantization.disable_observer)
+            m2.apply(torch.quantization.enable_fake_quant)
+            m2(torch.randn(4, 2, 4, 4))
+
     def test_from_last_checkpoint_model(self) -> None:
         """
         test that loading works even if they differ by a prefix.
