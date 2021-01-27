@@ -1,7 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 # pyre-ignore-all-errors[2,3]
 
-import copy
 import logging
 import os
 from collections import defaultdict
@@ -55,14 +54,16 @@ class Checkpointer:
             save_to_disk (bool): if True, save checkpoint to disk, otherwise
                 disable saving for this checkpointer.
             checkpointables (object): any checkpointable objects, i.e., objects
-                that have the `state_dict()` and `load_state_dict()` method. For
+                that have the ``state_dict()`` and ``load_state_dict()`` method. For
                 example, it can be used like
                 `Checkpointer(model, "dir", optimizer=optimizer)`.
         """
         if isinstance(model, (DistributedDataParallel, DataParallel)):
             model = model.module
         self.model = model
-        self.checkpointables: Dict[str, Any] = copy.copy(checkpointables)
+        self.checkpointables: Dict[str, Any] = {}
+        for k, v in checkpointables.items():
+            self.add_checkpointable(k, v)
         self.logger: logging.Logger = logging.getLogger(__name__)
         self.save_dir = save_dir
         self.save_to_disk = save_to_disk
@@ -71,7 +72,24 @@ class Checkpointer:
         self.path_manager: PathManager = PathManager()
         self.path_manager.register_handler(HTTPURLHandler())
 
-    def save(self, name: str, **kwargs: Dict[str, str]) -> None:
+    def add_checkpointable(self, key: str, checkpointable: Any) -> None:
+        """
+        Add checkpointable object for this checkpointer to track.
+
+        Args:
+            key (str): the key used to save the object
+            checkpointable: any object with ``state_dict()`` and
+                ``load_state_dict()`` method
+        """
+        if key in self.checkpointables:
+            raise KeyError(f"Key {key} already used in the Checkpointer")
+        if not hasattr(checkpointable, "state_dict"):
+            raise TypeError(
+                "add_checkpointable needs an object with 'state_dict()' method."
+            )
+        self.checkpointables[key] = checkpointable
+
+    def save(self, name: str, **kwargs: Any) -> None:
         """
         Dump model and checkpointables to a file.
 
@@ -100,8 +118,7 @@ class Checkpointer:
         self, path: str, checkpointables: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
-        Load from the given checkpoint. When path points to network file, this
-        function has to be called on all ranks.
+        Load from the given checkpoint.
 
         Args:
             path (str): path or url to the checkpoint. If empty, will not load
@@ -350,11 +367,14 @@ class PeriodicCheckpointer:
     Save checkpoints periodically. When `.step(iteration)` is called, it will
     execute `checkpointer.save` on the given checkpointer, if iteration is a
     multiple of period or if `max_iter` is reached.
+
+    Attributes:
+        checkpointer (Checkpointer): the underlying checkpointer object
     """
 
     def __init__(
         self,
-        checkpointer: Any,
+        checkpointer: Checkpointer,
         period: int,
         max_iter: Optional[int] = None,
         max_to_keep: Optional[int] = None,
@@ -362,8 +382,7 @@ class PeriodicCheckpointer:
     ) -> None:
         """
         Args:
-            checkpointer (Any): the checkpointer object used to save
-            checkpoints.
+            checkpointer: the checkpointer object used to save checkpoints.
             period (int): the period to save checkpoint.
             max_iter (int): maximum number of iterations. When it is reached,
                 a checkpoint named "{file_prefix}_final" will be saved.
