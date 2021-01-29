@@ -4,11 +4,12 @@
 import typing
 import unittest
 from collections import Counter, defaultdict
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import torch
 import torch.nn as nn
-from fvcore.nn.activation_count import Handle, activation_count
+from fvcore.nn.activation_count import activation_count, default_activation_counter
+from fvcore.nn.jit_handles import Handle
 from numpy import prod
 
 
@@ -33,15 +34,14 @@ class SmallConvNet(nn.Module):
         x = self.conv3(x)
         return x
 
-    def get_gt_activation(self, x: torch.Tensor) -> int:
-        count = 0
+    def get_gt_activation(self, x: torch.Tensor) -> Tuple[int, int, int]:
         x = self.conv1(x)
-        count += prod(list(x.size()))
+        count1 = prod(list(x.size()))
         x = self.conv2(x)
-        count += prod(list(x.size()))
+        count2 = prod(list(x.size()))
         x = self.conv3(x)
-        count += prod(list(x.size()))
-        return count
+        count3 = prod(list(x.size()))
+        return (count1, count2, count3)
 
 
 class TestActivationCount(unittest.TestCase):
@@ -59,7 +59,7 @@ class TestActivationCount(unittest.TestCase):
         x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
         convNet = SmallConvNet(input_dim)
         ac_dict, _ = activation_count(convNet, (x,))
-        gt_count = convNet.get_gt_activation(x)
+        gt_count = sum(convNet.get_gt_activation(x))
 
         gt_dict = defaultdict(float)
         gt_dict["conv"] = gt_count / 1e6
@@ -107,5 +107,51 @@ class TestActivationCount(unittest.TestCase):
         self.assertDictEqual(
             gt_dict,
             ac_dict,
+            "ConvNet with 3 layers failed to pass the activation count test.",
+        )
+
+    def test_default_activation_counter(self) -> None:
+        """
+        Test that the default activation counter returns the expected flops
+        in the expected scale.
+        """
+        batch_size = 1
+        input_dim = 10
+        output_dim = 20
+        netLinear = nn.Linear(input_dim, output_dim)
+        x = torch.randn(batch_size, input_dim)
+        gt_count = batch_size * output_dim / 1e6
+        gt_dict = Counter(
+            {
+                "": gt_count,
+            }
+        )
+        acts_counter = default_activation_counter(netLinear, (x,))
+        self.assertEqual(
+            acts_counter.by_module(),
+            gt_dict,
+            "default_activation_counter is not producing an analyzer "
+            "with the correct properties for a linear net.",
+        )
+
+        batch_size = 1
+        input_dim = 3
+        spatial_dim = 32
+        x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
+        convNet = SmallConvNet(input_dim)
+        acts_counter = default_activation_counter(convNet, (x,))
+        gt_counts = convNet.get_gt_activation(x)
+        gt_dict = Counter(
+            {
+                "": sum(gt_counts) / 1e6,
+                "conv1": gt_counts[0] / 1e6,
+                "conv2": gt_counts[1] / 1e6,
+                "conv3": gt_counts[2] / 1e6,
+            }
+        )
+
+        self.assertDictEqual(
+            gt_dict,
+            acts_counter.by_module(),
             "ConvNet with 3 layers failed to pass the activation count test.",
         )

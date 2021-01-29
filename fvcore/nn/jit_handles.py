@@ -4,124 +4,12 @@
 
 import typing
 from collections import Counter, OrderedDict
-from typing import Any, Callable, Dict, List, Set, Tuple
+from typing import Any, Callable, List
 
-import torch
-import torch.nn as nn
 from numpy import prod
 
 
-# A list that contains ignored operations.
-_IGNORED_OPS: Set[str] = {
-    "aten::Int",
-    "aten::ScalarImplicit",
-    "aten::__and__",
-    "aten::arange",
-    "aten::cat",
-    "aten::chunk",
-    "aten::clamp",
-    "aten::clamp_",
-    "aten::constant_pad_nd",
-    "aten::contiguous",
-    "aten::copy_",
-    "aten::detach",
-    "aten::dropout",
-    "aten::empty",
-    "aten::eq",
-    "aten::expand",
-    "aten::flatten",
-    "aten::floor",
-    "aten::floor_divide",
-    "aten::full",
-    "aten::ge",
-    "aten::gt",
-    "aten::index",
-    "aten::index_put_",
-    "aten::max",
-    "aten::nonzero",
-    "aten::permute",
-    "aten::relu",
-    "aten::relu_",
-    "aten::remainder",
-    "aten::reshape",
-    "aten::select",
-    "aten::size",
-    "aten::slice",
-    "aten::split",
-    "aten::split_with_sizes",
-    "aten::squeeze",
-    "aten::stack",
-    "aten::t",
-    "aten::to",
-    "aten::transpose",
-    "aten::unsqueeze",
-    "aten::unsqueeze_",
-    "aten::view",
-    "aten::zeros",
-    "aten::zeros_like",
-    "prim::Constant",
-    "prim::ImplicitTensorToNum",
-    "prim::Int",
-    "prim::ListConstruct",
-    "prim::ListUnpack",
-    "prim::NumToTensor",
-    "prim::TupleConstruct",
-}
-
-
-def get_jit_model_analysis(
-    model: nn.Module,
-    inputs: Tuple[Any, ...],
-    ops_handles: Dict[str, Callable[[Any, Any], typing.Counter[str]]],
-) -> Tuple[typing.Counter[str], typing.Counter[str]]:
-    """
-    Given a model, the inputs and the handles for each operation, return the
-    results for the model analysis.
-
-    Args:
-        model (nn.Module): The model for torch script to trace.
-        inputs (tuple): Inputs that are passed to `model` to trace. Inputs need
-            to be in a tuple.
-        ops_handles (Dict[str, Callable]): A dictionary of handles
-            for model analysis.
-
-    Returns:
-        Tuple[Counter[str], Counter[str]]: A counter that
-            contains the results of per operation analysis of the model and a
-            Counter of ignored operations.
-    """
-    # Torch script does not support parallel torch models.
-    if isinstance(
-        model, (nn.parallel.distributed.DistributedDataParallel, nn.DataParallel)
-    ):
-        model = model.module
-
-    # Compatibility with torch.jit.
-    if hasattr(torch.jit, "get_trace_graph"):
-        trace, _ = torch.jit.get_trace_graph(model, inputs)
-        trace_nodes = trace.graph().nodes()
-    else:
-        trace, _ = torch.jit._get_trace_graph(model, inputs)
-        trace_nodes = trace.nodes()
-
-    skipped_ops = Counter()
-    total_count = Counter()
-
-    for node in trace_nodes:
-        kind = node.kind()
-        if kind not in ops_handles.keys():
-            # If the operation is not in _IGNORED_OPS, count skipped operations.
-            if kind not in _IGNORED_OPS:
-                skipped_ops[kind] += 1
-            continue
-
-        handle_count = ops_handles.get(kind, None)
-        if handle_count is None:
-            continue
-        op_inputs, op_outputs = list(node.inputs()), list(node.outputs())
-        op_count = handle_count(op_inputs, op_outputs)
-        total_count += op_count
-    return total_count, skipped_ops
+Handle = Callable[[List[Any], List[Any]], typing.Counter[str]]
 
 
 def generic_activation_jit(
