@@ -151,7 +151,11 @@ def _get_scoped_trace_graph(
     else:
         recurse_hooks(module, "")
 
-    graph, _ = _get_trace_graph(module, inputs)
+    if hasattr(torch.jit, "get_trace_graph"):
+        trace, _ = torch.jit.get_trace_graph(module, inputs)
+        graph = trace.graph()
+    else:
+        graph, _ = _get_trace_graph(module, inputs)
 
     for handle in hook_handles:
         handle.remove()
