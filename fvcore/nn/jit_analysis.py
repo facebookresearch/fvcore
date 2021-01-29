@@ -3,13 +3,14 @@ import typing
 import warnings
 from collections import Counter
 from copy import copy
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import torch
 import torch.nn as nn
 from torch.jit import _get_trace_graph
 
 
-_IGNORED_OPS: typing.Set[str] = {
+_IGNORED_OPS: Set[str] = {
     "aten::Int",
     "aten::ScalarImplicit",
     "aten::__and__",
@@ -67,8 +68,8 @@ _IGNORED_OPS: typing.Set[str] = {
 
 
 def _get_scoped_trace_graph(
-    module: nn.Module, inputs: typing.Tuple[object, ...]
-) -> typing.Tuple[torch._C.Graph, typing.Dict[str or nn.Module, str]]:
+    module: nn.Module, inputs: Tuple[object, ...]
+) -> typing.Tuple[torch._C.Graph, Dict[Union[str, nn.Module], str]]:
     """
     Traces the provided module using torch.jit._get_trace_graph, but adds
     submodule scope information to each graph node. The resulting graph
@@ -94,8 +95,8 @@ def _get_scoped_trace_graph(
             self.name = name
 
         def __call__(
-            self, module: nn.Module, inputs: typing.Tuple[object, ...]
-        ) -> typing.Tuple[object, ...]:
+            self, module: nn.Module, inputs: Tuple[object, ...]
+        ) -> Tuple[object, ...]:
             tracing_state = torch._C._get_tracing_state()
             if tracing_state:
                 name = self.name
@@ -106,9 +107,9 @@ def _get_scoped_trace_graph(
         def __call__(
             self,
             module: nn.Module,
-            inputs: typing.Tuple[object, ...],
-            outputs: typing.Tuple[object, ...],
-        ) -> typing.Tuple[object, ...]:
+            inputs: Tuple[object, ...],
+            outputs: Tuple[object, ...],
+        ) -> Tuple[object, ...]:
             tracing_state = torch._C._get_tracing_state()
             if tracing_state:
                 tracing_state.pop_scope()
@@ -186,8 +187,8 @@ class JitModelAnalysis(object):
     def __init__(
         self,
         model: nn.Module,
-        inputs: typing.Tuple[object, ...],
-        ops_handles: typing.Dict[str, typing.Callable] = {},
+        inputs: Tuple[object, ...],
+        ops_handles: Dict[str, typing.Callable] = {},
     ) -> None:
         """
         Args:
@@ -208,7 +209,7 @@ class JitModelAnalysis(object):
         self.warn_trace = True
         self.scale = 1
 
-    def total(self, module: str or nn.Module = "") -> int or float:
+    def total(self, module: Union[str, nn.Module] = "") -> float:
         """
         Returns the total aggregated statistic across all operators
         for the requested module.
@@ -225,7 +226,7 @@ class JitModelAnalysis(object):
         total_count = sum([c for c in self.counts[module].values()])
         return self._rescale_count(total_count)
 
-    def by_operator(self, module: str or nn.Module = "") -> typing.Counter[str]:
+    def by_operator(self, module: Union[str, nn.Module] = "") -> typing.Counter[str]:
         """
         Returns the statistics for a requested module, separated out by
         operator type. The operator handle determines the name associated
@@ -242,7 +243,7 @@ class JitModelAnalysis(object):
         self._warn_skipped_ops(module)
         return self._rescale_dict(self.counts[module])
 
-    def by_module_and_operator(self) -> typing.Dict[str, typing.Counter[str]]:
+    def by_module_and_operator(self) -> Dict[str, typing.Counter[str]]:
         """
         Returns the statistics for all submodules, separated out by
         operator type for each submodule. The operator handle determines
@@ -277,7 +278,7 @@ class JitModelAnalysis(object):
             summed_counts[mod] = sum([c for c in results.values()])
         return self._rescale_dict(summed_counts)
 
-    def skipped_ops(self, module: str or nn.Module = "") -> typing.Counter[str]:
+    def skipped_ops(self, module: Union[str, nn.Module] = "") -> typing.Counter[str]:
         """
         Lists the number of operators that were skipped because no
         operator handle existed for them. Does not include operators
@@ -293,7 +294,7 @@ class JitModelAnalysis(object):
         module = self._canonical_module_name(module)
         return self._skipped_ops[module]
 
-    def set_ops_handle(self, name: str, func: typing.Callable) -> None:
+    def set_ops_handle(self, name: str, func: Callable) -> None:
         """
         Sets an additional operator handle, or replacing an existing one.
 
@@ -314,7 +315,7 @@ class JitModelAnalysis(object):
         self._ops_handles = {}
         self.counts = None
 
-    def set_output_scale(self, scale: str or float) -> None:
+    def set_output_scale(self, scale: Union[str, float]) -> None:
         """
         Sets the scale of the output statistics.
 
@@ -349,8 +350,8 @@ class JitModelAnalysis(object):
 
     def copy(
         self,
-        new_model: nn.Module or None = None,
-        new_inputs: typing.Tuple[object, ...] or None = None,
+        new_model: Optional[nn.Module] = None,
+        new_inputs: Tuple[object, ...] or None = None,
     ) -> "JitModelAnalysis":
         """
         Returns a copy of the JitModelAnalysis object, keeping all
@@ -404,20 +405,20 @@ class JitModelAnalysis(object):
         self.counts = None
 
     @property
-    def inputs(self) -> typing.Tuple[object, ...]:
+    def inputs(self) -> Tuple[object, ...]:
         return self._inputs
 
     @inputs.setter
-    def inputs(self, new_inputs: typing.Tuple[object, ...]) -> None:
+    def inputs(self, new_inputs: Tuple[object, ...]) -> None:
         self._inputs = new_inputs
         self.counts = None
 
     @property
-    def ops_handles(self) -> typing.Dict[str, typing.Callable]:
+    def ops_handles(self) -> Dict[str, Callable]:
         return self.__ops_handles
 
     @ops_handles.setter
-    def ops_handles(self, new_ops_handles: typing.Dict[str, typing.Callable]) -> None:
+    def ops_handles(self, new_ops_handles: Dict[str, Callable]) -> None:
         self._ops_handles = new_ops_handles
         self.counts = None
 
@@ -426,13 +427,13 @@ class JitModelAnalysis(object):
             return count  # Maintain integer-valued counters
         return count / self.scale
 
-    def _rescale_dict(self, count_dict: typing.Dict) -> typing.Dict:
+    def _rescale_dict(self, count_dict: Dict[Any, float]) -> Dict[Any, float]:
         scaled_dict = {k: self._rescale_count(count) for k, count in count_dict.items()}
         if isinstance(count_dict, Counter):
             scaled_dict = Counter(scaled_dict)
         return scaled_dict
 
-    def _warn_skipped_ops(self, module: str or nn.Module) -> None:
+    def _warn_skipped_ops(self, module: Union[str, nn.Module]) -> None:
         if not self.warn_skipped:
             return
         logger = logging.getLogger(__name__)
@@ -441,7 +442,7 @@ class JitModelAnalysis(object):
             for op, freq in skipped_ops.items():
                 logger.warning("Skipped operation {} {} time(s)".format(op, freq))
 
-    def _canonical_module_name(self, module: str or nn.Module) -> str:
+    def _canonical_module_name(self, module: Union[str, nn.Module]) -> str:
         if module in self.aliases:
             return self.aliases[module]
         return module
