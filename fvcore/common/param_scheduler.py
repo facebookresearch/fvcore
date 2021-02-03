@@ -140,9 +140,8 @@ class MultiStepParamScheduler(ParamScheduler):
         num_updates: int,
         milestones: Optional[List[int]] = None,
     ) -> None:
-        assert num_updates >= len(
-            values
-        ), "num_updates must be greater than param schedule"
+        if num_updates < len(values):
+            raise ValueError("num_updates must be greater than param schedule")
 
         self._param_schedule = values
         self._num_updates = num_updates
@@ -154,23 +153,29 @@ class MultiStepParamScheduler(ParamScheduler):
             for idx in range(len(self._param_schedule) - 1):
                 milestones.append(step_width * (idx + 1))
         self._milestones: List[int] = milestones
-        assert (
-            isinstance(self._milestones, list)
+        if not (
+            isinstance(self._milestones, Sequence)
             and len(self._milestones) == len(values) - 1
-        ), "Non-Equi Step scheduler requires a list of %d miletones" % (len(values) - 1)
+        ):
+            raise ValueError(
+                "Non-Equi Step scheduler requires a list of %d miletones"
+                % (len(values) - 1)
+            )
 
         start_epoch = 0
         for milestone in self._milestones:
             # Do not exceed the total number of epochs
-            assert milestone < self._num_updates, (
-                "Milestone must be smaller than total number of updates: "
-                "num_updates=%d, milestone=%d" % (self._num_updates, milestone)
-            )
+            if milestone >= self._num_updates:
+                raise ValueError(
+                    "Milestone must be smaller than total number of updates: "
+                    "num_updates=%d, milestone=%d" % (self._num_updates, milestone)
+                )
             # Must be in ascending order
-            assert start_epoch < milestone, (
-                "Milestone must be smaller than start epoch: start_epoch=%d, milestone=%d"
-                % (start_epoch, milestone)
-            )
+            if start_epoch >= milestone:
+                raise ValueError(
+                    "Milestone must be smaller than start epoch: start_epoch=%d, milestone=%d"
+                    % (start_epoch, milestone)
+                )
             start_epoch = milestone
 
     def __call__(self, where: float) -> float:
@@ -228,10 +233,12 @@ class StepParamScheduler(ParamScheduler):
         num_updates: Union[int, float],
         values: List[float],
     ) -> None:
-        assert num_updates > 0, "Number of updates must be larger than 0"
-        assert (
-            isinstance(values, Sequence) and len(values) > 0
-        ), "Step scheduler requires a list of at least one param value"
+        if num_updates <= 0:
+            raise ValueError("Number of updates must be larger than 0")
+        if not (isinstance(values, Sequence) and len(values) > 0):
+            raise ValueError(
+                "Step scheduler requires a list of at least one param value"
+            )
         self._param_schedule = values
 
     def __call__(self, where: float) -> float:
@@ -263,13 +270,11 @@ class StepWithFixedGammaParamScheduler(ParamScheduler):
         num_updates: int,
     ) -> None:
         for k in [base_value, gamma]:
-            assert (
-                isinstance(k, (int, float)) and k > 0
-            ), "base_value and gamma must be positive numbers"
+            if not (isinstance(k, (int, float)) and k > 0):
+                raise ValueError("base_value and gamma must be positive numbers")
         for k in [num_decays, num_updates]:
-            assert (
-                isinstance(k, int) and k > 0
-            ), "num_decays and num_updates must be positive integers"
+            if not (isinstance(k, int) and k > 0):
+                raise ValueError("num_decays and num_updates must be positive integers")
 
         self.base_value = base_value
         self.num_decays = num_decays
@@ -324,19 +329,19 @@ class CompositeParamScheduler(ParamScheduler):
         lengths: List[float],
         interval_scaling: Sequence[str],
     ) -> None:
-        assert len(schedulers) == len(
-            lengths
-        ), "Schedulers and lengths must be same length"
-        assert (
-            len(schedulers) > 0
-        ), "There must be at least one scheduler in the composite scheduler"
-        assert (
-            abs(sum(lengths) - 1.0) < 1e-3
-        ), "The sum of all values in lengths must be 1"
+        if len(schedulers) != len(lengths):
+            raise ValueError("Schedulers and lengths must be same length")
+        if len(schedulers) == 0:
+            raise ValueError(
+                "There must be at least one scheduler in the composite scheduler"
+            )
+        if abs(sum(lengths) - 1.0) >= 1e-3:
+            raise ValueError("The sum of all values in lengths must be 1")
         if sum(lengths) != 1.0:
             lengths[-1] = 1.0 - sum(lengths[:-1])
         for s in interval_scaling:
-            assert s in ["rescaled", "fixed"], f"Unsupported interval_scaling: {s}"
+            if s not in ["rescaled", "fixed"]:
+                raise ValueError(f"Unsupported interval_scaling: {s}")
 
         self._lengths = lengths
         self._schedulers = schedulers

@@ -22,41 +22,41 @@ class TestMultiStepParamScheduler(unittest.TestCase):
 
         bad_config = copy.deepcopy(config)
         bad_config["num_updates"] = -1
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             MultiStepParamScheduler(**bad_config)
 
         bad_config["values"] = {"a": "b"}
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             MultiStepParamScheduler(**bad_config)
 
         bad_config["values"] = []
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             MultiStepParamScheduler(**bad_config)
 
         # Invalid drop epochs
         bad_config["values"] = config["values"]
         bad_config["milestones"] = {"a": "b"}
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             MultiStepParamScheduler(**bad_config)
 
         # Too many
         bad_config["milestones"] = [3, 6, 8, 12]
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             MultiStepParamScheduler(**bad_config)
 
         # Too few
         bad_config["milestones"] = [3, 6]
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             MultiStepParamScheduler(**bad_config)
 
         # Exceeds num_updates
         bad_config["milestones"] = [3, 6, 12]
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             MultiStepParamScheduler(**bad_config)
 
         # Out of order
         bad_config["milestones"] = [3, 8, 6]
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             MultiStepParamScheduler(**bad_config)
 
     def _test_config_scheduler(self, config, expected_schedule):

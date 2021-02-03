@@ -65,29 +65,29 @@ class TestCompositeScheduler(unittest.TestCase):
         bad_config["schedulers"] = copy.deepcopy(config["schedulers"])
         bad_config["lengths"] = copy.deepcopy(config["lengths"])
         bad_config["schedulers"].append(bad_config["schedulers"][-1])
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             CompositeParamScheduler(**bad_config)
 
         # Sum of lengths < 1
         bad_config["schedulers"] = copy.deepcopy(config["schedulers"])
         bad_config["lengths"][-1] -= 0.1
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             CompositeParamScheduler(**bad_config)
 
         # Sum of lengths > 1
         bad_config["lengths"] = copy.deepcopy(config["lengths"])
         bad_config["lengths"][-1] += 0.1
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             CompositeParamScheduler(**bad_config)
 
         # Bad value for composition_mode
         bad_config["interval_scaling"] = ["rescaled", "rescaleds"]
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             CompositeParamScheduler(**bad_config)
 
         # Wrong number composition modes
         bad_config["interval_scaling"] = ["rescaled"]
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             CompositeParamScheduler(**bad_config)
 
     def test_long_scheduler(self):

@@ -22,15 +22,15 @@ class TestStepScheduler(unittest.TestCase):
 
         bad_config = copy.deepcopy(config)
         bad_config["num_updates"] = -1
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             StepParamScheduler(**bad_config)
 
         bad_config["values"] = {"a": "b"}
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             StepParamScheduler(**bad_config)
 
         bad_config["values"] = []
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             StepParamScheduler(**bad_config)
 
     def test_scheduler(self):
