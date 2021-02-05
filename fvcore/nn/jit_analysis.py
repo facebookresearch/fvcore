@@ -7,8 +7,8 @@ from typing import Any, Callable, Dict, Optional, Set, Tuple, Union
 
 import torch
 import torch.nn as nn
-from torch.jit import _get_trace_graph
 from fvcore.common.checkpoint import _named_modules_with_dup
+from torch.jit import _get_trace_graph
 
 
 _IGNORED_OPS: Set[str] = {
@@ -69,8 +69,8 @@ _IGNORED_OPS: Set[str] = {
 
 
 def _get_scoped_trace_graph(
-    module: nn.Module, 
-    inputs: Tuple[object, ...], 
+    module: nn.Module,
+    inputs: Tuple[object, ...],
     aliases: Dict[Union[str, nn.Module], str],
 ) -> typing.Tuple[torch._C.Graph, Dict[Union[str, nn.Module], str]]:
     """
@@ -84,7 +84,7 @@ def _get_scoped_trace_graph(
         model (nn.Module) : The module to trace
         inputs (tuple) : Inputs used during the trace of the model
         aliases (dict(str or nn.Module, str) : maps modules and module
-            names to the canonical name to be used as the scope for 
+            names to the canonical name to be used as the scope for
             that module.
 
     Returns:
@@ -130,7 +130,6 @@ def _get_scoped_trace_graph(
         hook_handles.append(prehook)
         hook_handles.append(posthook)
 
-
     # Torch script does not support parallel torch models, but we still
     # want the scope names to be correct for the complete module.
     if isinstance(
@@ -148,7 +147,6 @@ def _get_scoped_trace_graph(
             name = aliases[mod]
             register_hooks(mod, name)
             seen.add(mod)
-    
 
     if hasattr(torch.jit, "get_trace_graph"):
         trace, _ = torch.jit.get_trace_graph(module, inputs)
@@ -331,13 +329,10 @@ class JitModelAnalysis(object):
         model = self._model if new_model is None else new_model
         inputs = self._inputs if new_inputs is None else new_inputs
         analyzer = JitModelAnalysis(
-                model=model,
-                inputs=inputs,
-                ops_handles=self._ops_handles
+            model=model, inputs=inputs, ops_handles=self._ops_handles
         )
         analyzer.warn_skipped = self.warn_skipped
         analyzer.warn_trace = self.warn_trace
-
 
         return analyzer
 
@@ -376,7 +371,8 @@ class JitModelAnalysis(object):
         if module in self.aliases:
             return self.aliases[module]
         else:
-            raise KeyError("Requested module or module name is not among "
+            raise KeyError(
+                "Requested module or module name is not among "
                 "the descendants of the analyzed model."
             )
 
@@ -387,7 +383,6 @@ class JitModelAnalysis(object):
                 aliases[module] = name
             aliases[name] = aliases[module]
         return aliases
-
 
     def _analyze(self) -> None:
         # Don't calculate if results are already stored.

@@ -1,22 +1,23 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 # pyre-ignore-all-errors[2,33]
 
-import torch.nn as nn
 from collections import defaultdict
 from typing import (
-    Any, 
-    Callable, 
-    Counter, 
-    DefaultDict, 
-    Dict, 
-    List, 
-    Tuple, 
+    Any,
+    Callable,
+    Counter,
+    DefaultDict,
+    Dict,
+    List,
+    Optional,
+    Tuple,
     Union,
-    Optional
 )
 
+import torch.nn as nn
+
 from .jit_analysis import JitModelAnalysis
-from .jit_handles import generic_activation_jit, Handle
+from .jit_handles import Handle, generic_activation_jit
 
 
 # A dictionary that maps supported operations to their activation count handles.
@@ -24,6 +25,7 @@ _DEFAULT_SUPPORTED_OPS: Dict[str, Handle] = {
     "aten::_convolution": generic_activation_jit("conv"),
     "aten::addmm": generic_activation_jit("addmm"),
 }
+
 
 class ActivationCount(JitModelAnalysis):
     """
@@ -35,7 +37,7 @@ class ActivationCount(JitModelAnalysis):
     aten::_convolution, used by convolutional layers
 
     Handles for additional may be added, or the default ones overwritten,
-    using the 'additional_ops' input at initialization or the 
+    using the 'additional_ops' input at initialization or the
     .set_op_handle(name, func) method.
 
     Activation counts can be obtained as:
@@ -43,20 +45,21 @@ class ActivationCount(JitModelAnalysis):
     .total(module="") : total activation count for the module
     .by_operator(module="") : activation counts for the module, as a
         dictionary over different operator types
-    .by_module() : dictionary of activation counts for all descendants 
+    .by_module() : dictionary of activation counts for all descendants
         of the model,
     .by_module_and_operator() : dictionary indexed by descendant of dictionaries
         over different operator types
 
     Modules may be referenced using their name as a string (where the
     input model is "") or using the reference to the module itelf.
-        
+
     """
+
     def __init__(
         self,
         model: nn.Module,
         inputs: Tuple[Any, ...],
-        additional_ops: Optional[Dict[str, Handle]] = None
+        additional_ops: Optional[Dict[str, Handle]] = None,
     ) -> None:
         """
         Args:
@@ -64,17 +67,15 @@ class ActivationCount(JitModelAnalysis):
             inputs (tuple) : The inputs to the model for analysis.
             additional_ops (dict(str,Callable) : Map an operator name in the
                 trace graph to a function used to calculate the activation
-                The function must take the inputs and outputs of the op, 
-                each as a list(torch._C.Value), and returns a counter of 
+                The function must take the inputs and outputs of the op,
+                each as a list(torch._C.Value), and returns a counter of
                 the form {op_name : number}. This adds to or overwrites
-                the default activation handles for aten::addmm and 
+                the default activation handles for aten::addmm and
                 aten::_convolution.
         """
         ops_handles = {**_DEFAULT_SUPPORTED_OPS, **(additional_ops or {})}
         super(ActivationCount, self).__init__(
-            model=model,
-            inputs=inputs,
-            ops_handles=ops_handles
+            model=model, inputs=inputs, ops_handles=ops_handles
         )
 
 

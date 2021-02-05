@@ -35,9 +35,23 @@ class NestedNetInnerModule(nn.Module):
         )
         self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
 
-        self.fc_flops = fc_in * fc_out
+        fc_flops = fc_in * fc_out
+        fc_flops = Counter({"addmm": fc_flops})
         spatial_pos = (conv_input_size[1] + 2 * padding) - 2 * (kernel_size // 2)
-        self.conv_flops = spatial_pos * kernel_size * conv_in * conv_out
+        conv_flops = spatial_pos * kernel_size * conv_in * conv_out
+        conv_flops = Counter({"conv": conv_flops})
+        model_flops = conv_flops + fc_flops
+        self.flops = {
+            "": model_flops,
+            "fc": fc_flops,
+            "conv": conv_flops,
+        }
+
+        self.name_to_module = {
+            "": self,
+            "fc": self.fc,
+            "conv": self.conv,
+        }
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.reshape(-1, 2, 5)
@@ -73,9 +87,30 @@ class NestedNet(nn.Module):
             padding=padding,
         )
 
-        self.fc_flops = fc_in * fc_out
+        fc_flops = fc_in * fc_out
+        fc_flops = Counter({"addmm": fc_flops})
         spatial_pos = (self.input_size[1] + 2 * padding) - 2 * (kernel_size // 2)
-        self.conv_flops = spatial_pos * kernel_size * conv_in * conv_out
+        conv_flops = spatial_pos * kernel_size * conv_in * conv_out
+        conv_flops = Counter({"conv": conv_flops})
+
+        model_flops = conv_flops + fc_flops + self.submod.flops[""]
+        self.flops = {
+            "": model_flops,
+            "fc": fc_flops,
+            "conv": conv_flops,
+            "submod": self.submod.flops[""],
+            "submod.fc": self.submod.flops["fc"],
+            "submod.conv": self.submod.flops["conv"],
+        }
+
+        self.name_to_module = {
+            "": self,
+            "fc": self.fc,
+            "conv": self.conv,
+            "submod": self.submod,
+            "submod.fc": self.submod.name_to_module["fc"],
+            "submod.conv": self.submod.name_to_module["conv"],
+        }
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)
@@ -264,44 +299,18 @@ class TestJitModelAnalysis(unittest.TestCase):
         analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
         analyzer.skipped_ops_warnings(enabled=False)
 
-        submod_flops = model.submod.fc_flops + model.submod.conv_flops
-        model_flops = model.conv_flops + model.fc_flops + submod_flops
-        flops = {
-            "": model_flops,
-            "fc": model.fc_flops,
-            "conv": model.conv_flops,
-            "submod": submod_flops,
-            "submod.fc": model.submod.fc_flops,
-            "submod.conv": model.submod.conv_flops,
-        }
-
-        name_to_module = {
-            "": model,
-            "fc": model.fc,
-            "conv": model.conv,
-            "submod": model.submod,
-            "submod.fc": model.submod.fc,
-            "submod.conv": model.submod.conv,
-        }
-
         # Using a string input
-        for name in flops:
+        for name in model.flops:
             with self.subTest(name=name):
-                self.assertEqual(
-                    analyzer.total(name),
-                    flops[name],
-                    ".total(...) failed count test for input string.",
-                )
+                gt_flops = sum(model.flops[name].values())
+                self.assertEqual(analyzer.total(name), gt_flops)
 
         # Using a module input
-        for name in flops:
+        for name in model.flops:
             with self.subTest(name=name):
-                mod = name_to_module[name]
-                self.assertEqual(
-                    analyzer.total(mod),
-                    flops[name],
-                    ".total(...) failed count test for input module.",
-                )
+                mod = model.name_to_module[name]
+                gt_flops = sum(model.flops[name].values())
+                self.assertEqual(analyzer.total(mod), gt_flops)
 
     def test_by_module(self) -> None:
         """
@@ -319,18 +328,9 @@ class TestJitModelAnalysis(unittest.TestCase):
         analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
         analyzer.skipped_ops_warnings(enabled=False)
 
-        submod_flops = model.submod.fc_flops + model.submod.conv_flops
-        model_flops = model.conv_flops + model.fc_flops + submod_flops
-        flops = {
-            "": model_flops,
-            "fc": model.fc_flops,
-            "conv": model.conv_flops,
-            "submod": submod_flops,
-            "submod.fc": model.submod.fc_flops,
-            "submod.conv": model.submod.conv_flops,
-        }
+        flops = {name: sum(counts.values()) for name, counts in model.flops.items()}
 
-        self.assertEqual(analyzer.by_module(), flops, ".by_module() failed count test.")
+        self.assertEqual(analyzer.by_module(), flops)
 
     def test_by_operator(self) -> None:
         """
@@ -348,48 +348,16 @@ class TestJitModelAnalysis(unittest.TestCase):
         analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
         analyzer.skipped_ops_warnings(enabled=False)
 
-        submod_conv_flops = Counter({"conv": model.submod.conv_flops})
-        submod_fc_flops = Counter({"addmm": model.submod.fc_flops})
-        submod_flops = submod_conv_flops + submod_fc_flops
-        conv_flops = Counter({"conv": model.conv_flops})
-        fc_flops = Counter({"addmm": model.fc_flops})
-        model_flops = submod_flops + conv_flops + fc_flops
-        flops = {
-            "": model_flops,
-            "fc": fc_flops,
-            "conv": conv_flops,
-            "submod": submod_flops,
-            "submod.fc": submod_fc_flops,
-            "submod.conv": submod_conv_flops,
-        }
-
-        name_to_module = {
-            "": model,
-            "fc": model.fc,
-            "conv": model.conv,
-            "submod": model.submod,
-            "submod.fc": model.submod.fc,
-            "submod.conv": model.submod.conv,
-        }
-
         # Using a string input
-        for name in flops:
+        for name in model.flops:
             with self.subTest(name=name):
-                self.assertEqual(
-                    analyzer.by_operator(name),
-                    flops[name],
-                    ".total(...) failed count test for input string.",
-                )
+                self.assertEqual(analyzer.by_operator(name), model.flops[name])
 
         # Using a module input
-        for name in flops:
+        for name in model.flops:
             with self.subTest(name=name):
-                mod = name_to_module[name]
-                self.assertEqual(
-                    analyzer.by_operator(mod),
-                    flops[name],
-                    ".total(...) failed count test for input module.",
-                )
+                mod = model.name_to_module[name]
+                self.assertEqual(analyzer.by_operator(mod), model.flops[name])
 
     def test_by_module_and_operator(self) -> None:
         """
@@ -407,24 +375,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
         analyzer.skipped_ops_warnings(enabled=False)
 
-        submod_conv_flops = Counter({"conv": model.submod.conv_flops})
-        submod_fc_flops = Counter({"addmm": model.submod.fc_flops})
-        submod_flops = submod_conv_flops + submod_fc_flops
-        conv_flops = Counter({"conv": model.conv_flops})
-        fc_flops = Counter({"addmm": model.fc_flops})
-        model_flops = submod_flops + conv_flops + fc_flops
-        flops = {
-            "": model_flops,
-            "fc": fc_flops,
-            "conv": conv_flops,
-            "submod": submod_flops,
-            "submod.fc": submod_fc_flops,
-            "submod.conv": submod_conv_flops,
-        }
-
-        self.assertEqual(
-            analyzer.by_module_and_operator(), flops, ".by_module() failed count test."
-        )
+        self.assertEqual(analyzer.by_module_and_operator(), model.flops)
 
     def test_unused_module(self) -> None:
         """
@@ -444,23 +395,9 @@ class TestJitModelAnalysis(unittest.TestCase):
         unused_per_operator = Counter()
         model_count = model.fc1_flops + model.fc2_flops
 
-        self.assertEqual(
-            analyzer.total("unused"),
-            unused_count,
-            "Unused module failed to result in .total(unused)=0.",
-        )
-
-        self.assertEqual(
-            analyzer.by_operator("unused"),
-            unused_per_operator,
-            "Unused module failed to result in .by_operator(unused)=Counter().",
-        )
-
-        self.assertEqual(
-            analyzer.total(""),
-            model_count,
-            "Unused module caused parent to return incorrect total count.",
-        )
+        self.assertEqual(analyzer.total("unused"), unused_count)
+        self.assertEqual(analyzer.by_operator("unused"), unused_per_operator)
+        self.assertEqual(analyzer.total(""), model_count)
 
     def test_repeated_module(self) -> None:
         """
@@ -481,29 +418,10 @@ class TestJitModelAnalysis(unittest.TestCase):
         total_count = fc1_count + fc2_count
         fc1_per_operator = Counter({"addmm": fc1_count})
 
-        self.assertEqual(
-            analyzer.total("fc1"),
-            fc1_count,
-            ".total() failed to aggregate counts over repeated module calls.",
-        )
-
-        self.assertEqual(
-            analyzer.total("fc2"),
-            fc2_count,
-            ".total() failed to aggregate counts over repeated module calls.",
-        )
-
-        self.assertEqual(
-            analyzer.total(""),
-            total_count,
-            "Repeated submodule calls caused incorrect count in parent.",
-        )
-
-        self.assertEqual(
-            analyzer.by_operator("fc1"),
-            fc1_per_operator,
-            ".by_operator() failed to aggregate counts over repeated module calls.",
-        )
+        self.assertEqual(analyzer.total("fc1"), fc1_count)
+        self.assertEqual(analyzer.total("fc2"), fc2_count)
+        self.assertEqual(analyzer.total(""), total_count)
+        self.assertEqual(analyzer.by_operator("fc1"), fc1_per_operator)
 
     def test_non_forward_func_call(self) -> None:
         """
@@ -523,23 +441,9 @@ class TestJitModelAnalysis(unittest.TestCase):
         inner_fc_count = model.submod.fc_flops
         total_count = model.fc_flops + inner_fc_count
 
-        self.assertEqual(
-            analyzer.total("submod"),
-            submod_count,
-            ".total('submod') fails to give 0 count.",
-        )
-
-        self.assertEqual(
-            analyzer.total("submod.fc"),
-            inner_fc_count,
-            ".total('submod.fc') fails to give the correct count.",
-        )
-
-        self.assertEqual(
-            analyzer.total(""),
-            total_count,
-            ".total('') fails to give the correct count.",
-        )
+        self.assertEqual(analyzer.total("submod"), submod_count)
+        self.assertEqual(analyzer.total("submod.fc"), inner_fc_count)
+        self.assertEqual(analyzer.total(""), total_count)
 
     def test_shared_module(self) -> None:
         """
@@ -571,36 +475,27 @@ class TestJitModelAnalysis(unittest.TestCase):
             "multiname1": multiname_flops,
         }
 
-        self.assertEqual(
-            analyzer.by_module(),
-            flops,
-            ".by_module() failed to give the expected names for shared modules.",
-        )
+        self.assertEqual(analyzer.by_module(), flops)
 
         # Test access by alternative name
         self.assertEqual(
             analyzer.total("submod2.submod"),
             flops["submod1.submod"],
-            ".total(...) fails to return correct result for alternative name "
-            "of shared module.",
         )
 
         self.assertEqual(
             analyzer.total(model.submod2.submod),
             flops["submod1.submod"],
-            ".total(...) fails to return correct result for alternative name "
-            "of shared module.",
         )
 
-        # multiname2 is not a valid name since it is never encountered
-        # in .named_children() or .named_modules(), so the analysis
-        # doesn't know anything about it. Access using the model's
-        # attribute should still work though:
+        self.assertEqual(
+            analyzer.total("multiname2"),
+            flops["multiname1"],
+        )
+
         self.assertEqual(
             analyzer.total(model.multiname2),
             flops["multiname1"],
-            ".total(...) fails to return correct result for alternative name "
-            "of submodule with multiple names.",
         )
 
     def test_data_parallel(self) -> None:
@@ -615,55 +510,37 @@ class TestJitModelAnalysis(unittest.TestCase):
             "aten::_convolution": conv_flop_jit,
         }
 
-        submod_flops = model.submod.fc_flops + model.submod.conv_flops
-        model_flops = model.conv_flops + model.fc_flops + submod_flops
+        # Find flops for wrapper
         flops = {
-            "": model_flops,
-            "module": model_flops,
-            "module.fc": model.fc_flops,
-            "module.conv": model.conv_flops,
-            "module.submod": submod_flops,
-            "module.submod.fc": model.submod.fc_flops,
-            "module.submod.conv": model.submod.conv_flops,
+            "module" + ("." if name else "") + name: flop
+            for name, flop in model.flops.items()
         }
+        flops[""] = model.flops[""]
+        name_to_module = {
+            "module" + ("." if name else "") + name: mod
+            for name, mod in model.name_to_module.items()
+        }
+        name_to_module[""] = model.name_to_module[""]
 
         model = torch.nn.DataParallel(model)
         analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
         analyzer.skipped_ops_warnings(enabled=False)
 
-        name_to_module = {
-            "": model,
-            "module": model.module,
-            "module.fc": model.module.fc,
-            "module.conv": model.module.conv,
-            "module.submod": model.module.submod,
-            "module.submod.fc": model.module.submod.fc,
-            "module.submod.conv": model.module.submod.conv,
-        }
-
         # Using a string input
         for name in flops:
             with self.subTest(name=name):
-                self.assertEqual(
-                    analyzer.total(name),
-                    flops[name],
-                    ".total(...) failed for DataParallel model for input string.",
-                )
+                gt_flops = sum(flops[name].values())
+                self.assertEqual(analyzer.total(name), gt_flops)
 
         # Using a module input
         for name in flops:
             with self.subTest(name=name):
                 mod = name_to_module[name]
-                self.assertEqual(
-                    analyzer.total(mod),
-                    flops[name],
-                    ".total(...) failed for DataParallel model for input module.",
-                )
+                gt_flops = sum(flops[name].values())
+                self.assertEqual(analyzer.total(mod), gt_flops)
 
         # Output as dictionary
-        self.assertEqual(
-            analyzer.by_module(), flops, ".by_module() failed for DataParallel model."
-        )
+        self.assertEqual(analyzer.by_module_and_operator(), flops)
 
     def test_skipped_ops(self) -> None:
         """
@@ -700,38 +577,20 @@ class TestJitModelAnalysis(unittest.TestCase):
             "submod.fc": skipped_inner_fc,
         }
 
-        name_to_module = {
-            "": model,
-            "fc": model.fc,
-            "conv": model.conv,
-            "submod": model.submod,
-            "submod.fc": model.submod.fc,
-            "submod.conv": model.submod.conv,
-        }
-
         # Access by string
         for name in skipped:
             with self.subTest(name=name):
-                self.assertEqual(
-                    analyzer.skipped_ops(name),
-                    skipped[name],
-                    ".skipped_ops(...) failed count test for input module.",
-                )
+                self.assertEqual(analyzer.skipped_ops(name), skipped[name])
 
         # Access by module
         for name in skipped:
             with self.subTest(name=name):
-                mod = name_to_module[name]
-                self.assertEqual(
-                    analyzer.skipped_ops(mod),
-                    skipped[name],
-                    ".skipped_ops(...) failed count test for input module.",
-                )
+                mod = model.name_to_module[name]
+                self.assertEqual(analyzer.skipped_ops(mod), skipped[name])
 
     def test_changing_handles(self) -> None:
         """
-        Tests .set_ops_handle(), .clear_ops_handles(), and modifying
-        .ops_handles directly.
+        Tests .set_ops_handle(), .clear_ops_handles()
         """
         model = NestedNet()
         inputs = (torch.randn((1, *model.input_size)),)
@@ -748,79 +607,39 @@ class TestJitModelAnalysis(unittest.TestCase):
         # Add an op handle
         analyzer.set_ops_handle("aten::_convolution", conv_flop_jit)
 
-        submod_conv_flops = Counter({"conv": model.submod.conv_flops})
-        submod_fc_flops = Counter({"addmm": model.submod.fc_flops})
-        submod_flops = submod_conv_flops + submod_fc_flops
-        conv_flops = Counter({"conv": model.conv_flops})
-        fc_flops = Counter({"addmm": model.fc_flops})
-        model_flops = submod_flops + conv_flops + fc_flops
-        flops = {
-            "": model_flops,
-            "fc": fc_flops,
-            "conv": conv_flops,
-            "submod": submod_flops,
-            "submod.fc": submod_fc_flops,
-            "submod.conv": submod_conv_flops,
-        }
-
-        self.assertEqual(
-            analyzer.by_module_and_operator(),
-            flops,
-            ".by_module_and_operator() failed count test when a handle was added.",
-        )
+        self.assertEqual(analyzer.by_module_and_operator(), model.flops)
 
         # Overwrite an op handle
-        def make_dummy_op(output: int) -> Handle:
+        def make_dummy_op(name: str, output: int) -> Handle:
             def dummy_ops_handle(
                 inputs: List[Any], outputs: List[Any]
             ) -> typing.Counter:
-                return Counter({"dummy_op": output})
+                return Counter({name: output})
 
             return dummy_ops_handle
 
+        dummy_name = "dummy_op"
         dummy_out = 1000
-        analyzer.set_ops_handle("aten::addmm", make_dummy_op(dummy_out))
+        analyzer.set_ops_handle("aten::addmm", make_dummy_op(dummy_name, dummy_out))
 
-        submod_conv_flops = Counter({"conv": model.submod.conv_flops})
-        submod_fc_flops = Counter({"dummy_op": dummy_out})
-        submod_flops = submod_conv_flops + submod_fc_flops
-        conv_flops = Counter({"conv": model.conv_flops})
-        fc_flops = Counter({"dummy_op": dummy_out})
-        model_flops = submod_flops + conv_flops + fc_flops
-        dummy_flops = {
-            "": Counter({"dummy_op": 2000, "conv": 260}),
-            "fc": Counter({"dummy_op": 1000}),
-            "conv": Counter({"conv": 240}),
-            "submod": Counter({"dummy_op": 1000, "conv": 20}),
-            "submod.fc": Counter({"dummy_op": 1000}),
-            "submod.conv": Counter({"conv": 20}),
-        }
+        dummy_flops = {}
+        for name, counts in model.flops.items():
+            dummy_flops[name] = Counter(
+                {op: flop for op, flop in counts.items() if op != "addmm"}
+            )
+        dummy_flops[""][dummy_name] = 2 * dummy_out
+        dummy_flops["fc"][dummy_name] = dummy_out
+        dummy_flops["submod"][dummy_name] = dummy_out
+        dummy_flops["submod.fc"][dummy_name] = dummy_out
 
-        self.assertEqual(
-            analyzer.by_module_and_operator(),
-            dummy_flops,
-            ".by_module_and_operator() failed count test when a handle"
-            " was overwritten.",
-        )
+        self.assertEqual(analyzer.by_module_and_operator(), dummy_flops)
 
         # Clear ops handles
         analyzer.clear_ops_handles()
 
-        empty_flops = {
-            "": Counter(),
-            "fc": Counter(),
-            "conv": Counter(),
-            "submod": Counter(),
-            "submod.fc": Counter(),
-            "submod.conv": Counter(),
-        }
+        empty_flops = {name: Counter() for name in model.flops}
 
-        self.assertEqual(
-            analyzer.by_module_and_operator(),
-            empty_flops,
-            ".by_module_and_operator() failed count test when handles"
-            " were cleared with .clear_ops_handles().",
-        )
+        self.assertEqual(analyzer.by_module_and_operator(), empty_flops)
 
     def test_copy(self) -> None:
         """
@@ -846,29 +665,15 @@ class TestJitModelAnalysis(unittest.TestCase):
         self.assertEqual(
             analyzer.by_module_and_operator(),
             analyzer_copy.by_module_and_operator(),
-            ".copy() gives JitModelAnalysis with different results than.",
         )
 
         # Settings match
-        self.assertEqual(
-            analyzer.warn_skipped,
-            analyzer_copy.warn_skipped,
-            ".copy() gives JitModelAnalysis with different warning settings.",
-        )
-
-        self.assertEqual(
-            analyzer.warn_trace,
-            analyzer_copy.warn_trace,
-            ".copy() gives JitModelAnalysis with different warning settings.",
-        )
+        self.assertEqual(analyzer.warn_skipped, analyzer_copy.warn_skipped)
+        self.assertEqual(analyzer.warn_trace, analyzer_copy.warn_trace)
 
         # Changing copy does not change original
         analyzer_copy.skipped_ops_warnings(enabled=True)
-        self.assertNotEqual(
-            analyzer.warn_skipped,
-            analyzer_copy.warn_skipped,
-            "Changing setting from .copy() changed original too.",
-        )
+        self.assertNotEqual(analyzer.warn_skipped, analyzer_copy.warn_skipped)
 
         # Copy with new model and inputs
         new_model = NonForwardNet()
@@ -879,31 +684,14 @@ class TestJitModelAnalysis(unittest.TestCase):
         non_forward_flops = new_model.fc_flops + new_model.submod.fc_flops
 
         # Total is correct for new model and inputs
-        self.assertAlmostEqual(
-            analyzer_new.total(),
-            non_forward_flops * bs,
-            msg=".copy() with new model/inputs gives incorrect results.",
-        )
+        self.assertAlmostEqual(analyzer_new.total(), non_forward_flops * bs)
 
         # Original is unaffected
-        self.assertAlmostEqual(
-            analyzer.total(),
-            repeated_net_flops,
-            msg=".copy() with new model/inputs changed original.",
-        )
+        self.assertAlmostEqual(analyzer.total(), repeated_net_flops)
 
         # Settings match
-        self.assertEqual(
-            analyzer.warn_skipped,
-            analyzer_new.warn_skipped,
-            ".copy() gives JitModelAnalysis with different warning settings.",
-        )
-
-        self.assertEqual(
-            analyzer.warn_trace,
-            analyzer_new.warn_trace,
-            ".copy() gives JitModelAnalysis with different warning settings.",
-        )
+        self.assertEqual(analyzer.warn_skipped, analyzer_new.warn_skipped)
+        self.assertEqual(analyzer.warn_trace, analyzer_new.warn_trace)
 
     def test_disable_warnings(self) -> None:
         """
@@ -924,45 +712,24 @@ class TestJitModelAnalysis(unittest.TestCase):
             warnings.simplefilter("always")
             _ = analyzer.total()
             warning_types = [s.category for s in w]
-            self.assertFalse(
-                torch.jit._trace.TracerWarning in warning_types,
-                "TracerWarning was not correctly suppressed.",
-            )
+            self.assertFalse(torch.jit._trace.TracerWarning in warning_types)
 
         analyzer.tracer_warnings(enabled=True)
         analyzer.counts = None  # Manually clear cache so trace is rerun
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            _ = analyzer.total()
-            warning_types = [s.category for s in w]
-            self.assertTrue(
-                torch.jit._trace.TracerWarning in warning_types,
-                "TracerWarning was incorrectly suppressed.",
-            )
+        self.assertWarns(torch.jit._trace.TracerWarning, analyzer.total)
 
         # Skipped ops warnings
-        analyzer.skipped_ops_warnings(enabled=False)
 
         logger = logging.getLogger()
-        log_stream = StringIO()
-        handler = logging.StreamHandler(stream=log_stream)
-        handler.setLevel(logging.WARNING)
-        logger.addHandler(handler)
         skipped_string = "Skipped operation aten::add 1 time(s)"
 
-        _ = analyzer.total()
-        self.assertFalse(
-            skipped_string in log_stream.getvalue(),
-            "Skipped op warning was not correctly suppressed.",
-        )
+        analyzer.skipped_ops_warnings(enabled=False)
+        with self.assertLogs(logger, logging.WARN) as cm:
+            logger.warn("Dummy warning.")
+            _ = analyzer.total()
+        self.assertTrue(cm.output == ["WARNING:root:Dummy warning."])
 
         analyzer.skipped_ops_warnings(enabled=True)
-
-        _ = analyzer.total()
-        self.assertTrue(
-            skipped_string in log_stream.getvalue(),
-            "Skipped op warning was incorrectly suppressed.",
-        )
-
-        logger.removeHandler(handler)
+        with self.assertLogs(logger, logging.WARN) as cm:
+            _ = analyzer.total()
+        self.assertTrue(skipped_string in cm.output[0])
