@@ -205,7 +205,6 @@ class SharedModuleNet(nn.Module):
         self.submod1 = SharingInnerModule(inner)
         self.submod2 = SharingInnerModule(inner)
         multiname = nn.Linear(in_features=fc2_in, out_features=fc2_out)
-        # multiname2 will not appear in module.named_children()
         self.multiname1 = multiname
         self.multiname2 = multiname
 
@@ -823,186 +822,6 @@ class TestJitModelAnalysis(unittest.TestCase):
             " were cleared with .clear_ops_handles().",
         )
 
-        # Directly write to JitModelAnalysis ops_handles property
-        analyzer.ops_handles = {
-            "aten::addmm": addmm_flop_jit,
-            "aten::_convolution": conv_flop_jit,
-        }
-
-        self.assertEqual(
-            analyzer.by_module_and_operator(),
-            flops,
-            ".by_module_and_operator() failed count test when handles"
-            " were set directly.",
-        )
-
-    def test_changing_model_and_inputs(self) -> None:
-        """
-        Tests direct changes to the .model and .inputs properties of
-        JitModelAnalysis.
-        """
-        model = RepeatedNet()
-        inputs = (torch.randn((1, *model.input_size)),)
-        ops_handles = {
-            "aten::addmm": addmm_flop_jit,
-        }
-
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
-
-        repeated_net_flops = model.fc1_num * model.fc1_flops
-        repeated_net_flops += model.fc2_num * model.fc2_flops
-
-        # Request once to cache results
-        _ = analyzer.total()
-
-        # Change model
-        new_model = NonForwardNet()
-        self.assertEqual(
-            new_model.input_size,
-            model.input_size,
-            "Test failed to be consistent; to test model change valid "
-            "input sizes need to be the same for the two models.",
-        )
-
-        analyzer.model = new_model
-
-        non_forward_flops = new_model.fc_flops + new_model.submod.fc_flops
-
-        self.assertEqual(
-            analyzer.total(),
-            non_forward_flops,
-            ".total() returned incorrect count after model was changed.",
-        )
-
-        # Change the inputs
-        bs = 5
-        analyzer.inputs = (torch.randn((bs, *new_model.input_size)),)
-
-        self.assertEqual(
-            analyzer.total(),
-            non_forward_flops * bs,
-            ".total() returned incorrect count after inputs were changed.",
-        )
-
-    def test_output_scale(self) -> None:
-        """
-        Tests .set_output_scale(...) and .get_output_scale().
-        """
-
-        model = NestedNet()
-        inputs = (torch.randn((1, *model.input_size)),)
-        ops_handles = {
-            "aten::addmm": addmm_flop_jit,
-            "aten::_convolution": conv_flop_jit,
-        }
-
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
-        analyzer.skipped_ops_warnings(enabled=False)
-        analyzer.set_output_scale(scale="kilo")
-
-        def rescale(counter: Dict[str, int], x: int) -> Dict[str, float]:
-            out_dict = {k: v / x for k, v in counter.items()}
-            if isinstance(counter, Counter):
-                out_dict = Counter(out_dict)
-            return out_dict
-
-        submod_conv_flops = Counter({"conv": model.submod.conv_flops})
-        submod_fc_flops = Counter({"addmm": model.submod.fc_flops})
-        submod_flops = submod_conv_flops + submod_fc_flops
-        conv_flops = Counter({"conv": model.conv_flops})
-        fc_flops = Counter({"addmm": model.fc_flops})
-        model_flops = submod_flops + conv_flops + fc_flops
-        flops = {
-            "": rescale(model_flops, 1e3),
-            "fc": rescale(fc_flops, 1e3),
-            "conv": rescale(conv_flops, 1e3),
-            "submod": rescale(submod_flops, 1e3),
-            "submod.fc": rescale(submod_fc_flops, 1e3),
-            "submod.conv": rescale(submod_conv_flops, 1e3),
-        }
-
-        # Test rescaling in .by_module_and_operator()
-        self.assertEqual(
-            analyzer.by_module_and_operator(),
-            flops,
-            "Incorrect results for fractional counter values when outputting "
-            "at non-unity scale in .by_module_and_operator().",
-        )
-
-        # Test rescaling in .by_operator()
-        self.assertEqual(
-            analyzer.by_operator(""),
-            flops[""],
-            "Incorrect results for fractional counter values when outputting "
-            "at non-unity scale in .by_operator().",
-        )
-
-        submod_flops = model.submod.fc_flops + model.submod.conv_flops
-        model_flops = model.conv_flops + model.fc_flops + submod_flops
-        flops = {
-            "": model_flops,
-            "fc": model.fc_flops,
-            "conv": model.conv_flops,
-            "submod": submod_flops,
-            "submod.fc": model.submod.fc_flops,
-            "submod.conv": model.submod.conv_flops,
-        }
-        flops = rescale(flops, 1e3)
-
-        # Test rescaling in .by_module()
-        self.assertEqual(
-            analyzer.by_module(),
-            flops,
-            "Incorrect results for fractional counter values when outputting "
-            "at non-unity scale in .by_module().",
-        )
-
-        # Test rescaling in .total()
-        self.assertEqual(
-            analyzer.total(""),
-            flops[""],
-            "Incorrect results for fractional counter values when outputting "
-            "at non-unity scale in .by_module().",
-        )
-
-        # Test named scales
-        named_scales = {
-            "unity": 1,
-            "kilo": 1e3,
-            "mega": 1e6,
-            "giga": 1e9,
-            "tera": 1e12,
-            "peta": 1e15,
-        }
-
-        for name, scale in named_scales.items():
-            with self.subTest(name=name):
-                analyzer.set_output_scale(name)
-                self.assertEqual(
-                    analyzer.total(),
-                    model_flops / scale,
-                    ".total() returned incorrect count for scale {}".format(name),
-                )
-                self.assertEqual(
-                    analyzer.get_output_scale(),
-                    scale,
-                    ".get_output_scale() returned the wrong scale.",
-                )
-
-        # Test explicit numeric scale
-        test_scale = 2500
-        analyzer.set_output_scale(test_scale)
-        self.assertEqual(
-            analyzer.total(),
-            model_flops / test_scale,
-            ".total() returned incorrect results for numerical scale.",
-        )
-        self.assertEqual(
-            analyzer.get_output_scale(),
-            test_scale,
-            ".get_output_scale() returned the wrong scale.",
-        )
-
     def test_copy(self) -> None:
         """
         Tests .copy(...)
@@ -1015,7 +834,6 @@ class TestJitModelAnalysis(unittest.TestCase):
         }
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
-        analyzer.set_output_scale("giga")
         analyzer.skipped_ops_warnings(enabled=False)
         analyzer.tracer_warnings(enabled=False)
 
@@ -1063,14 +881,14 @@ class TestJitModelAnalysis(unittest.TestCase):
         # Total is correct for new model and inputs
         self.assertAlmostEqual(
             analyzer_new.total(),
-            non_forward_flops * bs / 1e9,
+            non_forward_flops * bs,
             msg=".copy() with new model/inputs gives incorrect results.",
         )
 
         # Original is unaffected
         self.assertAlmostEqual(
             analyzer.total(),
-            repeated_net_flops / 1e9,
+            repeated_net_flops,
             msg=".copy() with new model/inputs changed original.",
         )
 

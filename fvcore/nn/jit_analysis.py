@@ -3,11 +3,12 @@ import typing
 import warnings
 from collections import Counter
 from copy import copy
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Optional, Set, Tuple, Union
 
 import torch
 import torch.nn as nn
 from torch.jit import _get_trace_graph
+from fvcore.common.checkpoint import _named_modules_with_dup
 
 
 _IGNORED_OPS: Set[str] = {
@@ -68,7 +69,9 @@ _IGNORED_OPS: Set[str] = {
 
 
 def _get_scoped_trace_graph(
-    module: nn.Module, inputs: Tuple[object, ...]
+    module: nn.Module, 
+    inputs: Tuple[object, ...], 
+    aliases: Dict[Union[str, nn.Module], str],
 ) -> typing.Tuple[torch._C.Graph, Dict[Union[str, nn.Module], str]]:
     """
     Traces the provided module using torch.jit._get_trace_graph, but adds
@@ -80,6 +83,9 @@ def _get_scoped_trace_graph(
     Args:
         model (nn.Module) : The module to trace
         inputs (tuple) : Inputs used during the trace of the model
+        aliases (dict(str or nn.Module, str) : maps modules and module
+            names to the canonical name to be used as the scope for 
+            that module.
 
     Returns:
         graph (torch._C.Graph) : The pytorch JIT trace of the model
@@ -115,7 +121,7 @@ def _get_scoped_trace_graph(
                 tracing_state.pop_scope()
             return outputs
 
-    aliases = {}
+    seen = set()
     hook_handles = []
 
     def register_hooks(mod: nn.Module, name: str) -> None:
@@ -124,33 +130,25 @@ def _get_scoped_trace_graph(
         hook_handles.append(prehook)
         hook_handles.append(posthook)
 
-    # This naming scheme for scopes matches the structure of
-    # fvcore.nn.parameter_count. Names may not be completely identical
-    # since the module structure may not be walked in the same order.
-    # It does not match the naming scheme used by torch.jit.trace(...).
-    def recurse_hooks(mod: nn.Module, name: str) -> None:
-        if mod not in aliases:
-            register_hooks(mod, name)
-            aliases[mod] = name
-        else:
-            # We've seen this submodule before. Add the new name to aliases
-            aliases[name] = aliases[mod]
-        for subname, child in mod.named_children():
-            if name != "":
-                subname = name + "." + subname
-            recurse_hooks(child, subname)
 
     # Torch script does not support parallel torch models, but we still
     # want the scope names to be correct for the complete module.
     if isinstance(
         module, (nn.parallel.distributed.DistributedDataParallel, nn.DataParallel)
     ):
-        aliases[module] = ""
+
+        # Since DataParallel just wraps the model, add an extra set of hooks
+        # to the model it wraps to account for the wrapper. Then trace it.
+        root_name = aliases[module]
         module = module.module
-        register_hooks(module, "")  # Push scope for the removed DataParallel wrapper
-        recurse_hooks(module, "module")
-    else:
-        recurse_hooks(module, "")
+        register_hooks(module, root_name)
+
+    for name, mod in module.named_modules():
+        if mod not in seen:
+            name = aliases[mod]
+            register_hooks(mod, name)
+            seen.add(mod)
+    
 
     if hasattr(torch.jit, "get_trace_graph"):
         trace, _ = torch.jit.get_trace_graph(module, inputs)
@@ -161,7 +159,7 @@ def _get_scoped_trace_graph(
     for handle in hook_handles:
         handle.remove()
 
-    return graph, aliases
+    return graph
 
 
 class JitModelAnalysis(object):
@@ -188,7 +186,7 @@ class JitModelAnalysis(object):
         self,
         model: nn.Module,
         inputs: Tuple[object, ...],
-        ops_handles: Dict[str, typing.Callable] = {},
+        ops_handles: Optional[Dict[str, typing.Callable]] = None,
     ) -> None:
         """
         Args:
@@ -203,11 +201,11 @@ class JitModelAnalysis(object):
         self._model = model
         self._inputs = inputs
         self._ops_handles = ops_handles
+        self.aliases = self._get_aliases(model)
         self.counts = None
         self._skipped_ops = None
         self.warn_skipped = True
-        self.warn_trace = True
-        self.scale = 1
+        self.warn_trace = False
 
     def total(self, module: Union[str, nn.Module] = "") -> float:
         """
@@ -223,8 +221,8 @@ class JitModelAnalysis(object):
         self._analyze()
         module = self._canonical_module_name(module)
         self._warn_skipped_ops(module)
-        total_count = sum([c for c in self.counts[module].values()])
-        return self._rescale_count(total_count)
+        total_count = sum(self.counts[module].values())
+        return total_count
 
     def by_operator(self, module: Union[str, nn.Module] = "") -> typing.Counter[str]:
         """
@@ -241,7 +239,7 @@ class JitModelAnalysis(object):
         self._analyze()
         module = self._canonical_module_name(module)
         self._warn_skipped_ops(module)
-        return self._rescale_dict(self.counts[module])
+        return self.counts[module]
 
     def by_module_and_operator(self) -> Dict[str, typing.Counter[str]]:
         """
@@ -251,15 +249,12 @@ class JitModelAnalysis(object):
 
         Returns:
             dict(str, Counter(str)) : The statistics for each submodule
-                and each operator. Organized per-module, labelled
+                and each operator. Organized per-module, labeled
                 by the submodule's name, then by operator name.
         """
         self._analyze()
         self._warn_skipped_ops("")
-        counts = {}
-        for mod in self.counts:
-            counts[mod] = self._rescale_dict(self.counts[mod])
-        return counts
+        return self.counts
 
     def by_module(self) -> typing.Counter[str]:
         """
@@ -268,15 +263,15 @@ class JitModelAnalysis(object):
 
         Returns:
             Counter(str) : The statistics for each submodule
-                and each operator. Organized per-module, labelled
+                and each operator. Organized per-module, labeled
                 by the submodule's name.
         """
         self._analyze()
         self._warn_skipped_ops("")
         summed_counts = Counter()
         for mod, results in self.counts.items():
-            summed_counts[mod] = sum([c for c in results.values()])
-        return self._rescale_dict(summed_counts)
+            summed_counts[mod] = sum(results.values())
+        return summed_counts
 
     def skipped_ops(self, module: Union[str, nn.Module] = "") -> typing.Counter[str]:
         """
@@ -315,39 +310,6 @@ class JitModelAnalysis(object):
         self._ops_handles = {}
         self.counts = None
 
-    def set_output_scale(self, scale: Union[str, float]) -> None:
-        """
-        Sets the scale of the output statistics.
-
-        Args:
-            scale (str or float) : The scale to output statistics with.
-                Can be a string in ['unity', 'kilo', 'mega', 'giga',
-                'tera', 'peta'] or a number to divide results by.
-        """
-        named_scales = {
-            "unity": 1,
-            "kilo": 1e3,
-            "mega": 1e6,
-            "giga": 1e9,
-            "tera": 1e12,
-            "peta": 1e15,
-        }
-        if scale in named_scales:
-            scale = named_scales[scale]
-        assert not isinstance(
-            scale, str
-        ), "Unrecognized scale name. Must be in {}.".format(list(named_scales.keys()))
-        self.scale = scale
-
-    def get_output_scale(self) -> float:
-        """
-        Gets the output scale of the statistics.
-
-        Returns:
-            float : the output scale divided by
-        """
-        return self.scale
-
     def copy(
         self,
         new_model: Optional[nn.Module] = None,
@@ -368,9 +330,15 @@ class JitModelAnalysis(object):
         """
         model = self._model if new_model is None else new_model
         inputs = self._inputs if new_inputs is None else new_inputs
-        analyzer = copy(self)
-        analyzer.model = model
-        analyzer.inputs = inputs
+        analyzer = JitModelAnalysis(
+                model=model,
+                inputs=inputs,
+                ops_handles=self._ops_handles
+        )
+        analyzer.warn_skipped = self.warn_skipped
+        analyzer.warn_trace = self.warn_trace
+
+
         return analyzer
 
     def tracer_warnings(self, enabled: bool) -> None:
@@ -395,44 +363,6 @@ class JitModelAnalysis(object):
         """
         self.warn_skipped = enabled
 
-    @property
-    def model(self) -> nn.Module:
-        return self._model
-
-    @model.setter
-    def model(self, new_model: nn.Module) -> None:
-        self._model = new_model
-        self.counts = None
-
-    @property
-    def inputs(self) -> Tuple[object, ...]:
-        return self._inputs
-
-    @inputs.setter
-    def inputs(self, new_inputs: Tuple[object, ...]) -> None:
-        self._inputs = new_inputs
-        self.counts = None
-
-    @property
-    def ops_handles(self) -> Dict[str, Callable]:
-        return self.__ops_handles
-
-    @ops_handles.setter
-    def ops_handles(self, new_ops_handles: Dict[str, Callable]) -> None:
-        self._ops_handles = new_ops_handles
-        self.counts = None
-
-    def _rescale_count(self, count: int) -> float:
-        if self.scale == 1:
-            return count  # Maintain integer-valued counters
-        return count / self.scale
-
-    def _rescale_dict(self, count_dict: Dict[Any, float]) -> Dict[Any, float]:
-        scaled_dict = {k: self._rescale_count(count) for k, count in count_dict.items()}
-        if isinstance(count_dict, Counter):
-            scaled_dict = Counter(scaled_dict)
-        return scaled_dict
-
     def _warn_skipped_ops(self, module: Union[str, nn.Module]) -> None:
         if not self.warn_skipped:
             return
@@ -445,7 +375,19 @@ class JitModelAnalysis(object):
     def _canonical_module_name(self, module: Union[str, nn.Module]) -> str:
         if module in self.aliases:
             return self.aliases[module]
-        return module
+        else:
+            raise KeyError("Requested module or module name is not among "
+                "the descendants of the analyzed model."
+            )
+
+    def _get_aliases(self, model: nn.Module) -> Dict[Union[str, nn.Module], str]:
+        aliases = {}
+        for name, module in _named_modules_with_dup(model):
+            if module not in aliases:
+                aliases[module] = name
+            aliases[name] = aliases[module]
+        return aliases
+
 
     def _analyze(self) -> None:
         # Don't calculate if results are already stored.
@@ -455,7 +397,7 @@ class JitModelAnalysis(object):
         with warnings.catch_warnings():
             if not self.warn_trace:
                 warnings.simplefilter("ignore")
-            graph, self.aliases = _get_scoped_trace_graph(self._model, self._inputs)
+            graph = _get_scoped_trace_graph(self._model, self._inputs, self.aliases)
 
         # Assures even modules not in the trace graph are initialized to zero count
         counts = {}
