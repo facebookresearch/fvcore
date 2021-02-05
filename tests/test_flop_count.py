@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 import torch
 import torch.nn as nn
-from fvcore.nn.flop_count import default_flop_counter, flop_count
+from fvcore.nn.flop_count import FlopCount, flop_count
 from fvcore.nn.jit_handles import Handle, batchnorm_flop_jit
 
 
@@ -610,10 +610,9 @@ class TestFlopCount(unittest.TestCase):
             "The three-layer network failed to pass the flop count test.",
         )
 
-    def test_default_flop_counter(self) -> None:
+    def test_flop_counter_class(self) -> None:
         """
-        Test the default flop counter returns the expected flops in the
-        expected scale.
+        Test FlopCount.
         """
         batch_size = 4
         input_dim = 2
@@ -622,11 +621,11 @@ class TestFlopCount(unittest.TestCase):
         linear_dim = 3
         x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
         threeNet = ThreeNet(input_dim, conv_dim, linear_dim)
-        flop1 = batch_size * conv_dim * input_dim * spatial_dim * spatial_dim / 1e9
-        flop_linear1 = batch_size * conv_dim * linear_dim / 1e9
-        flop_linear2 = batch_size * linear_dim * 1 / 1e9
+        flop1 = batch_size * conv_dim * input_dim * spatial_dim * spatial_dim
+        flop_linear1 = batch_size * conv_dim * linear_dim
+        flop_linear2 = batch_size * linear_dim * 1
         flop2 = flop_linear1 + flop_linear2
-        flop_counter = default_flop_counter(threeNet, (x,))
+        flop_counter = FlopCount(threeNet, (x,))
         gt_dict = Counter(
             {
                 "": flop1 + flop2,
@@ -636,9 +635,4 @@ class TestFlopCount(unittest.TestCase):
                 "pool": 0,
             }
         )
-        self.assertEqual(
-            flop_counter.by_module(),
-            gt_dict,
-            "default_flop_counter is not producing an analyzer with the "
-            "correct properties.",
-        )
+        self.assertEqual(flop_counter.by_module(), gt_dict)

@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple
 
 import torch
 import torch.nn as nn
-from fvcore.nn.activation_count import activation_count, default_activation_counter
+from fvcore.nn.activation_count import activation_count, ActivationCount
 from fvcore.nn.jit_handles import Handle
 from numpy import prod
 
@@ -110,48 +110,38 @@ class TestActivationCount(unittest.TestCase):
             "ConvNet with 3 layers failed to pass the activation count test.",
         )
 
-    def test_default_activation_counter(self) -> None:
+    def test_activation_count_class(self) -> None:
         """
-        Test that the default activation counter returns the expected flops
-        in the expected scale.
+        Tests ActivationCount.
         """
         batch_size = 1
         input_dim = 10
         output_dim = 20
         netLinear = nn.Linear(input_dim, output_dim)
         x = torch.randn(batch_size, input_dim)
-        gt_count = batch_size * output_dim / 1e6
+        gt_count = batch_size * output_dim
         gt_dict = Counter(
             {
                 "": gt_count,
             }
         )
-        acts_counter = default_activation_counter(netLinear, (x,))
-        self.assertEqual(
-            acts_counter.by_module(),
-            gt_dict,
-            "default_activation_counter is not producing an analyzer "
-            "with the correct properties for a linear net.",
-        )
+        acts_counter = ActivationCount(netLinear, (x,))
+        self.assertEqual(acts_counter.by_module(), gt_dict)
 
         batch_size = 1
         input_dim = 3
         spatial_dim = 32
         x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
         convNet = SmallConvNet(input_dim)
-        acts_counter = default_activation_counter(convNet, (x,))
+        acts_counter = ActivationCount(convNet, (x,))
         gt_counts = convNet.get_gt_activation(x)
         gt_dict = Counter(
             {
-                "": sum(gt_counts) / 1e6,
-                "conv1": gt_counts[0] / 1e6,
-                "conv2": gt_counts[1] / 1e6,
-                "conv3": gt_counts[2] / 1e6,
+                "": sum(gt_counts),
+                "conv1": gt_counts[0],
+                "conv2": gt_counts[1],
+                "conv3": gt_counts[2],
             }
         )
 
-        self.assertDictEqual(
-            gt_dict,
-            acts_counter.by_module(),
-            "ConvNet with 3 layers failed to pass the activation count test.",
-        )
+        self.assertDictEqual(gt_dict, acts_counter.by_module())
