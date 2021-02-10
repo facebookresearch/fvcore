@@ -303,13 +303,6 @@ class TestJitModelAnalysis(unittest.TestCase):
                 gt_flops = sum(model.flops[name].values())
                 self.assertEqual(analyzer.total(name), gt_flops)
 
-        # Using a module input
-        for name in model.flops:
-            with self.subTest(name=name):
-                mod = model.name_to_module[name]
-                gt_flops = sum(model.flops[name].values())
-                self.assertEqual(analyzer.total(mod), gt_flops)
-
     def test_by_module(self) -> None:
         """
         Tests that JitModelAnalysis.by_module() returns the correct
@@ -342,12 +335,6 @@ class TestJitModelAnalysis(unittest.TestCase):
         for name in model.flops:
             with self.subTest(name=name):
                 self.assertEqual(analyzer.by_operator(name), model.flops[name])
-
-        # Using a module input
-        for name in model.flops:
-            with self.subTest(name=name):
-                mod = model.name_to_module[name]
-                self.assertEqual(analyzer.by_operator(mod), model.flops[name])
 
     def test_by_module_and_operator(self) -> None:
         """
@@ -469,34 +456,18 @@ class TestJitModelAnalysis(unittest.TestCase):
             flops["submod1.submod"],
         )
         self.assertEqual(
-            analyzer.total(model.submod2.submod),
-            flops["submod1.submod"],
-        )
-        self.assertEqual(
             analyzer.total("multiname2"),
-            flops["multiname1"],
-        )
-        self.assertEqual(
-            analyzer.total(model.multiname2),
             flops["multiname1"],
         )
 
         # Test getting canonical name
         self.assertEqual(analyzer.canonical_module_name("multiname2"), "multiname1")
         self.assertEqual(analyzer.canonical_module_name("multiname1"), "multiname1")
-        self.assertEqual(analyzer.canonical_module_name(model.multiname2), "multiname1")
-        self.assertEqual(analyzer.canonical_module_name(model.multiname1), "multiname1")
         self.assertEqual(
             analyzer.canonical_module_name("submod2.submod"), "submod1.submod"
         )
         self.assertEqual(
             analyzer.canonical_module_name("submod1.submod"), "submod1.submod"
-        )
-        self.assertEqual(
-            analyzer.canonical_module_name(model.submod2.submod), "submod1.submod"
-        )
-        self.assertEqual(
-            analyzer.canonical_module_name(model.submod1.submod), "submod1.submod"
         )
 
     def test_data_parallel(self) -> None:
@@ -528,13 +499,6 @@ class TestJitModelAnalysis(unittest.TestCase):
             with self.subTest(name=name):
                 gt_flops = sum(flops[name].values())
                 self.assertEqual(analyzer.total(name), gt_flops)
-
-        # Using a module input
-        for name in flops:
-            with self.subTest(name=name):
-                mod = name_to_module[name]
-                gt_flops = sum(flops[name].values())
-                self.assertEqual(analyzer.total(mod), gt_flops)
 
         # Output as dictionary
         self.assertEqual(analyzer.by_module_and_operator(), flops)
@@ -578,12 +542,6 @@ class TestJitModelAnalysis(unittest.TestCase):
         for name in skipped:
             with self.subTest(name=name):
                 self.assertEqual(analyzer.skipped_ops(name), skipped[name])
-
-        # Access by module
-        for name in skipped:
-            with self.subTest(name=name):
-                mod = model.name_to_module[name]
-                self.assertEqual(analyzer.skipped_ops(mod), skipped[name])
 
     def test_changing_handles(self) -> None:
         """

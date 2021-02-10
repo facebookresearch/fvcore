@@ -211,37 +211,37 @@ class JitModelAnalysis(object):
         self._warn_skipped = True
         self._warn_trace = "no_trace_warning"
 
-    def total(self, module: Union[str, nn.Module] = "") -> float:
+    def total(self, module_name: str = "") -> int:
         """
         Returns the total aggregated statistic across all operators
         for the requested module.
 
         Args:
-            module (nn.Module or str) : The submodule to get data for.
-                Defaults to the entire model.
+            name (str) : The submodule to get data for. Defaults to
+                the entire model.
         Returns:
-            int or float : The aggregated statistic
+            int : The aggregated statistic
         """
         self._analyze()
-        module = self.canonical_module_name(module)
-        total_count = sum(self._counts[module].values())
+        module_name = self.canonical_module_name(module_name)
+        total_count = sum(self._counts[module_name].values())
         return total_count
 
-    def by_operator(self, module: Union[str, nn.Module] = "") -> typing.Counter[str]:
+    def by_operator(self, module_name: str = "") -> typing.Counter[str]:
         """
         Returns the statistics for a requested module, separated out by
         operator type. The operator handle determines the name associated
         with each operator type.
 
         Args:
-            module (nn.Module or str) : The submodule to get data for.
-                Defaults to the entire model.
+            module_name (str) : The submodule to get data for. Defaults
+                to the entire model.
         Returns:
             Counter(str) : The statistics for each operator.
         """
         self._analyze()
-        module = self.canonical_module_name(module)
-        return self._counts[module]
+        module_name = self.canonical_module_name(module_name)
+        return self._counts[module_name]
 
     def by_module_and_operator(self) -> Dict[str, typing.Counter[str]]:
         """
@@ -273,21 +273,21 @@ class JitModelAnalysis(object):
             summed_counts[mod] = sum(results.values())
         return summed_counts
 
-    def skipped_ops(self, module: Union[str, nn.Module] = "") -> typing.Counter[str]:
+    def skipped_ops(self, name: str = "") -> typing.Counter[str]:
         """
         Lists the number of operators that were skipped because no
         operator handle existed for them. Does not include operators
         listed in _IGNORED_OPS.
 
         Args:
-            module (nn.Module or str) : The submodule to skipped ops for.
-                Defaults to the entire model.
+            name (str) : The submodule to skipped ops for. Defaults to
+                the entire model.
         Returns:
             Counter(str) : The number of each type of operator skipped.
         """
         self._analyze()
-        module = self.canonical_module_name(module)
-        return self._skipped_ops[module]
+        name = self.canonical_module_name(name)
+        return self._skipped_ops[name]
 
     def set_ops_handle(self, name: str, func: Callable) -> None:
         """
@@ -312,7 +312,7 @@ class JitModelAnalysis(object):
         self._counts = None
         self._skipped_ops = None
 
-    def canonical_module_name(self, module: Union[str, nn.Module]) -> str:
+    def canonical_module_name(self, name: str) -> str:
         """
         Returns the canonical module name of the module or module name.
         This is the name that will be used as a key when statistics are
@@ -321,16 +321,17 @@ class JitModelAnalysis(object):
         of the model.
 
         Args:
-            module (nn.Module or str) : The name or module object to find
-                the canonical name for.
+            name (str) : The name of the module to find the canonical name for.
         Returns:
             str : The canonical name of the module.
         """
-        if module in self._aliases:
-            return self._aliases[module]
+        # Blocks access by a direct module reference
+        assert isinstance(name, str), "Module name must be a string."
+        if name in self._aliases:
+            return self._aliases[name]
         else:
             raise KeyError(
-                "Requested module or module name is not among "
+                "Requested module name is not among "
                 "the descendants of the analyzed model."
             )
 
@@ -394,11 +395,11 @@ class JitModelAnalysis(object):
         """
         self._warn_skipped = enabled
 
-    def _warn_skipped_ops(self, module: Union[str, nn.Module] = "") -> None:
+    def _warn_skipped_ops(self, module_name: str = "") -> None:
         if not self._warn_skipped:
             return
         logger = logging.getLogger(__name__)
-        skipped_ops = self._skipped_ops[module]
+        skipped_ops = self._skipped_ops[module_name]
         for op, freq in skipped_ops.items():
             logger.warning("Skipped operation {} {} time(s)".format(op, freq))
 
