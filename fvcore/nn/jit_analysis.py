@@ -169,19 +169,18 @@ class JitModelAnalysis(object):
     that acts on the inputs and outputs to the operator, then aggregates
     this over modules in the model. Can return the aggregate statistic for
     any submodule in the model. Is lazily evaluated, and will perform the
-    trace when a statistic is first requested. Changing the model, inputs,
-    or operator handles will cause the trace to be rerun on the next
-    request.
+    trace when a statistic is first requested. Changing the operator handles
+    will cause the trace to be rerun on the next request.
 
-    Submodules may be referred to using the nn.Module object itself, or
-    a string associated with the module's name. The input model has name
-    '', while its descendants have names of the form
-    'child.grandchild.grandgrandchild...'.
+    Submodules may be referred to using the module's name. The input model has
+    name "", while its descendants have names of the form
+    "child.grandchild.grandgrandchild...".
 
-    An operator is treated as within the scope of a module if that module's
-    .forward() call resulted in that operator being run. In particular,
-    this means that calls to other functions owned by a module will not
-    register resulting operators as contributing statistics to that module.
+    An operator is treated as within the scope of a module if calling that
+    module directly resulted in that operator being run. In particular,
+    this means that calls to other functions owned by a module or explicit
+    calls to module.forward(...) will not register resulting operators as
+    contributing statistics to that module.
     """
 
     ignored_ops = _IGNORED_OPS
@@ -220,7 +219,7 @@ class JitModelAnalysis(object):
             name (str) : The submodule to get data for. Defaults to
                 the entire model.
         Returns:
-            int : The aggregated statistic
+            int : The aggregated statistic.
         """
         self._analyze()
         module_name = self.canonical_module_name(module_name)
@@ -440,14 +439,20 @@ class JitModelAnalysis(object):
                 if kind in self.ignored_ops:
                     continue
 
+                seen = set()
                 for name in scope_names:
-                    skipped_ops[name][kind] += 1
+                    if name not in seen:
+                        skipped_ops[name][kind] += 1
+                        seen.add(name)
             else:
                 inputs, outputs = list(node.inputs()), list(node.outputs())
                 op_counts = self._ops_handles[kind](inputs, outputs)
 
+                seen = set()  # Assures an op contributes at most once to a module
                 for name in scope_names:
-                    counts[name] += op_counts
+                    if name not in seen:
+                        counts[name] += op_counts
+                        seen.add(name)
 
         self._counts = counts
         self._skipped_ops = skipped_ops

@@ -211,7 +211,7 @@ class NonForwardNet(nn.Module):
         return self.submod.other_func(self.fc(x))
 
 
-class SharingInnerModule(nn.Module):
+class SharedInnerModule(nn.Module):
     """
     Is initialized with a module that it may share with other modules.
     """
@@ -237,8 +237,8 @@ class SharedModuleNet(nn.Module):
         fc2_in, fc2_out = 10, 1
 
         inner = nn.Linear(in_features=fc1_in, out_features=fc1_out)
-        self.submod1 = SharingInnerModule(inner)
-        self.submod2 = SharingInnerModule(inner)
+        self.submod1 = SharedInnerModule(inner)
+        self.submod2 = SharedInnerModule(inner)
         multiname = nn.Linear(in_features=fc2_in, out_features=fc2_out)
         self.multiname1 = multiname
         self.multiname2 = multiname
@@ -250,6 +250,26 @@ class SharedModuleNet(nn.Module):
         x = self.submod1(x) + self.submod2(x)
         x = self.multiname1(x) + self.multiname2(x)
         return x
+
+
+class RecursiveScopeNet(nn.Module):
+    """
+    An op is in the same module's scope multiple times.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.input_size = (10,)
+        fc_in, fc_out = 10, 1
+
+        self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
+
+        self.flops = fc_in * fc_out
+
+    def forward(self, x: torch.Tensor, count: int = 3) -> torch.Tensor:
+        if count > 0:
+            return self(x, count - 1)
+        return self.fc(x)
 
 
 class TraceWarningNet(nn.Module):
@@ -469,6 +489,19 @@ class TestJitModelAnalysis(unittest.TestCase):
         self.assertEqual(
             analyzer.canonical_module_name("submod1.submod"), "submod1.submod"
         )
+
+    def test_recursive_scope(self) -> None:
+        """
+        Tests that an op is only counted once per module, even if it is
+        in the scope of that module multiple times.
+        """
+        model = RecursiveScopeNet()
+        inputs = (torch.randn((1, *model.input_size)),)
+
+        analyzer = FlopCount(model, inputs)
+
+        self.assertEqual(analyzer.total(), model.flops)
+        self.assertEqual(analyzer.total("fc"), model.flops)
 
     def test_data_parallel(self) -> None:
         """

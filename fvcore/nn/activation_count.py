@@ -40,8 +40,15 @@ class ActivationCount(JitModelAnalysis):
     .by_module_and_operator() : dictionary indexed by descendant of dictionaries
         over different operator types
 
-    Modules may be referenced using their name as a string (where the
-    input model is "") or using the reference to the module itelf.
+    Submodules may be referred to using the module's name. The input model has
+    name "", while its descendants have names of the form
+    "child.grandchild.grandgrandchild...".
+
+    An operator is treated as within the scope of a module if calling that
+    module directly resulted in that operator being run. In particular,
+    this means that calls to other functions owned by a module or explicit
+    calls to module.forward(...) will not register resulting operators as
+    contributing activations to that module.
 
     """
 
