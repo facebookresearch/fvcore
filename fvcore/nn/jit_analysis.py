@@ -2,13 +2,12 @@ import logging
 import typing
 import warnings
 from collections import Counter
-from copy import copy
-from typing import Any, Callable, Dict, Optional, Set, Tuple, Union
+from typing import Callable, Dict, Optional, Set, Tuple, Union
 
 import torch
 import torch.nn as nn
 from fvcore.common.checkpoint import _named_modules_with_dup
-from torch.jit import _get_trace_graph
+from torch.jit import TracerWarning, _get_trace_graph
 
 
 _IGNORED_OPS: Set[str] = {
@@ -142,7 +141,9 @@ def _get_scoped_trace_graph(
         module = module.module
         register_hooks(module, root_name)
 
-    for name, mod in module.named_modules():
+    # We don't need the duplication here, but self._model.named_modules()
+    # gives slightly different results for some wrapped models.
+    for name, mod in _named_modules_with_dup(module):
         if mod not in seen:
             name = aliases[mod]
             register_hooks(mod, name)
@@ -176,6 +177,11 @@ class JitModelAnalysis(object):
     a string associated with the module's name. The input model has name
     '', while its descendants have names of the form
     'child.grandchild.grandgrandchild...'.
+
+    An operator is treated as within the scope of a module if that module's
+    .forward() call resulted in that operator being run. In particular,
+    this means that calls to other functions owned by a module will not
+    register resulting operators as contributing statistics to that module.
     """
 
     ignored_ops = _IGNORED_OPS
@@ -199,11 +205,11 @@ class JitModelAnalysis(object):
         self._model = model
         self._inputs = inputs
         self._ops_handles = ops_handles
-        self.aliases = self._get_aliases(model)
-        self.counts = None
+        self._aliases = self._get_aliases(model)
+        self._counts = None
         self._skipped_ops = None
-        self.warn_skipped = True
-        self.warn_trace = False
+        self._warn_skipped = True
+        self._warn_trace = "no_trace_warning"
 
     def total(self, module: Union[str, nn.Module] = "") -> float:
         """
@@ -217,9 +223,8 @@ class JitModelAnalysis(object):
             int or float : The aggregated statistic
         """
         self._analyze()
-        module = self._canonical_module_name(module)
-        self._warn_skipped_ops(module)
-        total_count = sum(self.counts[module].values())
+        module = self.canonical_module_name(module)
+        total_count = sum(self._counts[module].values())
         return total_count
 
     def by_operator(self, module: Union[str, nn.Module] = "") -> typing.Counter[str]:
@@ -235,9 +240,8 @@ class JitModelAnalysis(object):
             Counter(str) : The statistics for each operator.
         """
         self._analyze()
-        module = self._canonical_module_name(module)
-        self._warn_skipped_ops(module)
-        return self.counts[module]
+        module = self.canonical_module_name(module)
+        return self._counts[module]
 
     def by_module_and_operator(self) -> Dict[str, typing.Counter[str]]:
         """
@@ -251,8 +255,7 @@ class JitModelAnalysis(object):
                 by the submodule's name, then by operator name.
         """
         self._analyze()
-        self._warn_skipped_ops("")
-        return self.counts
+        return self._counts
 
     def by_module(self) -> typing.Counter[str]:
         """
@@ -265,9 +268,8 @@ class JitModelAnalysis(object):
                 by the submodule's name.
         """
         self._analyze()
-        self._warn_skipped_ops("")
         summed_counts = Counter()
-        for mod, results in self.counts.items():
+        for mod, results in self._counts.items():
             summed_counts[mod] = sum(results.values())
         return summed_counts
 
@@ -284,7 +286,7 @@ class JitModelAnalysis(object):
             Counter(str) : The number of each type of operator skipped.
         """
         self._analyze()
-        module = self._canonical_module_name(module)
+        module = self.canonical_module_name(module)
         return self._skipped_ops[module]
 
     def set_ops_handle(self, name: str, func: Callable) -> None:
@@ -299,14 +301,38 @@ class JitModelAnalysis(object):
                 form of list(torch._C.Value).
         """
         self._ops_handles[name] = func
-        self.counts = None
+        self._counts = None
+        self._skipped_ops = None
 
     def clear_ops_handles(self) -> None:
         """
         Clears all set operator handles.
         """
         self._ops_handles = {}
-        self.counts = None
+        self._counts = None
+        self._skipped_ops = None
+
+    def canonical_module_name(self, module: Union[str, nn.Module]) -> str:
+        """
+        Returns the canonical module name of the module or module name.
+        This is the name that will be used as a key when statistics are
+        output using .by_module() and .by_module_and_operator(). It is
+        the first name encountered for a module when walking the descendants
+        of the model.
+
+        Args:
+            module (nn.Module or str) : The name or module object to find
+                the canonical name for.
+        Returns:
+            str : The canonical name of the module.
+        """
+        if module in self._aliases:
+            return self._aliases[module]
+        else:
+            raise KeyError(
+                "Requested module or module name is not among "
+                "the descendants of the analyzed model."
+            )
 
     def copy(
         self,
@@ -331,20 +357,30 @@ class JitModelAnalysis(object):
         analyzer = JitModelAnalysis(
             model=model, inputs=inputs, ops_handles=self._ops_handles
         )
-        analyzer.warn_skipped = self.warn_skipped
-        analyzer.warn_trace = self.warn_trace
+        analyzer._warn_skipped = self._warn_skipped
+        analyzer._warn_trace = self._warn_trace
 
         return analyzer
 
-    def tracer_warnings(self, enabled: bool) -> None:
+    def tracer_warnings(self, mode: str) -> None:
         """
-        Sets if warnings from the jit tracing process are shown. Defaults
-        to True.
+        Sets which warnings to print when tracing the graph to calculate
+        statistics. There are three modes. Defaults to 'no_tracer_warning'.
+
+        Modes:
+        'all' : keeps all warnings raised while tracing
+        'no_tracer_warning' : suppress torch.jit.TracerWarning only
+        'none' : suppress all warnings raised while tracing
 
         Args:
-            enabled (bool) : Set to 'True' to show tracer warnings
+            mode (str) : warning mode. In ['all', 'no_tracer_warning', 'none'].
         """
-        self.warn_trace = enabled
+        assert mode in [
+            "all",
+            "no_tracer_warning",
+            "none",
+        ], "Unrecognized trace warning mode."
+        self._warn_trace = mode
 
     def skipped_ops_warnings(self, enabled: bool) -> None:
         """
@@ -356,25 +392,15 @@ class JitModelAnalysis(object):
             enabled (bool) : Set to 'True' to show skipped operator
                 warnings.
         """
-        self.warn_skipped = enabled
+        self._warn_skipped = enabled
 
-    def _warn_skipped_ops(self, module: Union[str, nn.Module]) -> None:
-        if not self.warn_skipped:
+    def _warn_skipped_ops(self, module: Union[str, nn.Module] = "") -> None:
+        if not self._warn_skipped:
             return
         logger = logging.getLogger(__name__)
         skipped_ops = self._skipped_ops[module]
-        if len(skipped_ops) > 0:
-            for op, freq in skipped_ops.items():
-                logger.warning("Skipped operation {} {} time(s)".format(op, freq))
-
-    def _canonical_module_name(self, module: Union[str, nn.Module]) -> str:
-        if module in self.aliases:
-            return self.aliases[module]
-        else:
-            raise KeyError(
-                "Requested module or module name is not among "
-                "the descendants of the analyzed model."
-            )
+        for op, freq in skipped_ops.items():
+            logger.warning("Skipped operation {} {} time(s)".format(op, freq))
 
     def _get_aliases(self, model: nn.Module) -> Dict[Union[str, nn.Module], str]:
         aliases = {}
@@ -386,19 +412,23 @@ class JitModelAnalysis(object):
 
     def _analyze(self) -> None:
         # Don't calculate if results are already stored.
-        if self.counts is not None:
+        if self._counts is not None:
             return
 
         with warnings.catch_warnings():
-            if not self.warn_trace:
+            if self._warn_trace == "none":
                 warnings.simplefilter("ignore")
-            graph = _get_scoped_trace_graph(self._model, self._inputs, self.aliases)
+            elif self._warn_trace == "no_tracer_warning":
+                warnings.filterwarnings("ignore", category=TracerWarning)
+            graph = _get_scoped_trace_graph(self._model, self._inputs, self._aliases)
 
         # Assures even modules not in the trace graph are initialized to zero count
         counts = {}
         skipped_ops = {}
-        for _, mod in self._model.named_modules():
-            name = self.aliases[mod]
+        # We don't need the duplication here, but self._model.named_modules()
+        # gives slightly different results for some wrapped models.
+        for _, mod in _named_modules_with_dup(self._model):
+            name = self._aliases[mod]
             counts[name] = Counter()
             skipped_ops[name] = Counter()
 
@@ -418,5 +448,6 @@ class JitModelAnalysis(object):
                 for name in scope_names:
                     counts[name] += op_counts
 
-        self.counts = counts
+        self._counts = counts
         self._skipped_ops = skipped_ops
+        self._warn_skipped_ops()

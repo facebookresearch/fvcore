@@ -3,11 +3,11 @@ import typing
 import unittest
 import warnings
 from collections import Counter
-from io import StringIO
-from typing import Any, Dict, List
+from typing import Any, List
 
 import torch
 import torch.nn as nn
+from fvcore.nn.flop_count import FlopCount
 from fvcore.nn.jit_analysis import JitModelAnalysis
 from fvcore.nn.jit_handles import Handle, addmm_flop_jit, conv_flop_jit
 
@@ -164,9 +164,9 @@ class RepeatedNet(nn.Module):
         self.fc2_flops = fc2_in * fc2_out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        for i in range(self.fc1_num):
+        for _i in range(self.fc1_num):
             x = self.fc1(x)
-        for i in range(self.fc2_num):
+        for _i in range(self.fc2_num):
             x = self.fc2(x)
         return x
 
@@ -254,8 +254,9 @@ class SharedModuleNet(nn.Module):
 
 class TraceWarningNet(nn.Module):
     """
-    Will raise a warning on trace due to python comparison of tensor data.
-    Also has an aten::add op that will be skipped and raise a warning.
+    Will raise a warning on trace due to python comparison of tensor data,
+    and explicitly raises a runtime warning. Also has an aten::add op that
+    will be skipped and raise a warning.
     """
 
     def __init__(self) -> None:
@@ -272,6 +273,7 @@ class TraceWarningNet(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = self.fc1(x).item()
+        warnings.warn("Dummy RuntimeWarning.", RuntimeWarning)
         if y < 0.0:
             x = self.fc2(x)
         return x + 2
@@ -291,12 +293,8 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         model = NestedNet()
         inputs = (torch.randn((1, *model.input_size)),)
-        ops_handles = {
-            "aten::addmm": addmm_flop_jit,
-            "aten::_convolution": conv_flop_jit,
-        }
 
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
+        analyzer = FlopCount(model=model, inputs=inputs)
         analyzer.skipped_ops_warnings(enabled=False)
 
         # Using a string input
@@ -320,12 +318,8 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         model = NestedNet()
         inputs = (torch.randn((1, *model.input_size)),)
-        ops_handles = {
-            "aten::addmm": addmm_flop_jit,
-            "aten::_convolution": conv_flop_jit,
-        }
 
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
+        analyzer = FlopCount(model=model, inputs=inputs)
         analyzer.skipped_ops_warnings(enabled=False)
 
         flops = {name: sum(counts.values()) for name, counts in model.flops.items()}
@@ -340,12 +334,8 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         model = NestedNet()
         inputs = (torch.randn((1, *model.input_size)),)
-        ops_handles = {
-            "aten::addmm": addmm_flop_jit,
-            "aten::_convolution": conv_flop_jit,
-        }
 
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
+        analyzer = FlopCount(model=model, inputs=inputs)
         analyzer.skipped_ops_warnings(enabled=False)
 
         # Using a string input
@@ -367,12 +357,8 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         model = NestedNet()
         inputs = (torch.randn((1, *model.input_size)),)
-        ops_handles = {
-            "aten::addmm": addmm_flop_jit,
-            "aten::_convolution": conv_flop_jit,
-        }
 
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
+        analyzer = FlopCount(model=model, inputs=inputs)
         analyzer.skipped_ops_warnings(enabled=False)
 
         self.assertEqual(analyzer.by_module_and_operator(), model.flops)
@@ -482,20 +468,35 @@ class TestJitModelAnalysis(unittest.TestCase):
             analyzer.total("submod2.submod"),
             flops["submod1.submod"],
         )
-
         self.assertEqual(
             analyzer.total(model.submod2.submod),
             flops["submod1.submod"],
         )
-
         self.assertEqual(
             analyzer.total("multiname2"),
             flops["multiname1"],
         )
-
         self.assertEqual(
             analyzer.total(model.multiname2),
             flops["multiname1"],
+        )
+
+        # Test getting canonical name
+        self.assertEqual(analyzer.canonical_module_name("multiname2"), "multiname1")
+        self.assertEqual(analyzer.canonical_module_name("multiname1"), "multiname1")
+        self.assertEqual(analyzer.canonical_module_name(model.multiname2), "multiname1")
+        self.assertEqual(analyzer.canonical_module_name(model.multiname1), "multiname1")
+        self.assertEqual(
+            analyzer.canonical_module_name("submod2.submod"), "submod1.submod"
+        )
+        self.assertEqual(
+            analyzer.canonical_module_name("submod1.submod"), "submod1.submod"
+        )
+        self.assertEqual(
+            analyzer.canonical_module_name(model.submod2.submod), "submod1.submod"
+        )
+        self.assertEqual(
+            analyzer.canonical_module_name(model.submod1.submod), "submod1.submod"
         )
 
     def test_data_parallel(self) -> None:
@@ -505,10 +506,6 @@ class TestJitModelAnalysis(unittest.TestCase):
         """
         model = NestedNet()
         inputs = (torch.randn((1, *model.input_size)),)
-        ops_handles = {
-            "aten::addmm": addmm_flop_jit,
-            "aten::_convolution": conv_flop_jit,
-        }
 
         # Find flops for wrapper
         flops = {
@@ -523,7 +520,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         name_to_module[""] = model.name_to_module[""]
 
         model = torch.nn.DataParallel(model)
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
+        analyzer = FlopCount(model=model, inputs=inputs)
         analyzer.skipped_ops_warnings(enabled=False)
 
         # Using a string input
@@ -654,7 +651,7 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
         analyzer.skipped_ops_warnings(enabled=False)
-        analyzer.tracer_warnings(enabled=False)
+        analyzer.tracer_warnings(mode="none")
 
         repeated_net_flops = model.fc1_num * model.fc1_flops
         repeated_net_flops += model.fc2_num * model.fc2_flops
@@ -668,12 +665,12 @@ class TestJitModelAnalysis(unittest.TestCase):
         )
 
         # Settings match
-        self.assertEqual(analyzer.warn_skipped, analyzer_copy.warn_skipped)
-        self.assertEqual(analyzer.warn_trace, analyzer_copy.warn_trace)
+        self.assertEqual(analyzer._warn_skipped, analyzer_copy._warn_skipped)
+        self.assertEqual(analyzer._warn_trace, analyzer_copy._warn_trace)
 
         # Changing copy does not change original
         analyzer_copy.skipped_ops_warnings(enabled=True)
-        self.assertNotEqual(analyzer.warn_skipped, analyzer_copy.warn_skipped)
+        self.assertNotEqual(analyzer._warn_skipped, analyzer_copy._warn_skipped)
 
         # Copy with new model and inputs
         new_model = NonForwardNet()
@@ -684,14 +681,14 @@ class TestJitModelAnalysis(unittest.TestCase):
         non_forward_flops = new_model.fc_flops + new_model.submod.fc_flops
 
         # Total is correct for new model and inputs
-        self.assertAlmostEqual(analyzer_new.total(), non_forward_flops * bs)
+        self.assertEqual(analyzer_new.total(), non_forward_flops * bs)
 
         # Original is unaffected
-        self.assertAlmostEqual(analyzer.total(), repeated_net_flops)
+        self.assertEqual(analyzer.total(), repeated_net_flops)
 
         # Settings match
-        self.assertEqual(analyzer.warn_skipped, analyzer_new.warn_skipped)
-        self.assertEqual(analyzer.warn_trace, analyzer_new.warn_trace)
+        self.assertEqual(analyzer._warn_skipped, analyzer_new._warn_skipped)
+        self.assertEqual(analyzer._warn_trace, analyzer_new._warn_trace)
 
     def test_disable_warnings(self) -> None:
         """
@@ -706,17 +703,30 @@ class TestJitModelAnalysis(unittest.TestCase):
         analyzer = JitModelAnalysis(model=model, inputs=inputs, ops_handles=ops_handles)
 
         # Tracer warnings
-        analyzer.tracer_warnings(enabled=False)
+        analyzer.tracer_warnings(mode="all")
+        analyzer._counts = None  # Manually clear cache so trace is rerun
+        self.assertWarns(torch.jit._trace.TracerWarning, analyzer.total)
+        analyzer._counts = None  # Manually clear cache so trace is rerun
+        self.assertWarns(RuntimeWarning, analyzer.total)
 
+        analyzer.tracer_warnings(mode="none")
+        analyzer._counts = None  # Manually clear cache so trace is rerun
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             _ = analyzer.total()
             warning_types = [s.category for s in w]
             self.assertFalse(torch.jit._trace.TracerWarning in warning_types)
+            self.assertFalse(RuntimeWarning in warning_types)
 
-        analyzer.tracer_warnings(enabled=True)
-        analyzer.counts = None  # Manually clear cache so trace is rerun
-        self.assertWarns(torch.jit._trace.TracerWarning, analyzer.total)
+        analyzer.tracer_warnings(mode="no_tracer_warning")
+        analyzer._counts = None  # Manually clear cache so trace is rerun
+        self.assertWarns(RuntimeWarning, analyzer.total)
+        analyzer._counts = None  # Manually clear cache so trace is rerun
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            _ = analyzer.total()
+            warning_types = [s.category for s in w]
+            self.assertFalse(torch.jit._trace.TracerWarning in warning_types)
 
         # Skipped ops warnings
 
@@ -724,12 +734,14 @@ class TestJitModelAnalysis(unittest.TestCase):
         skipped_string = "Skipped operation aten::add 1 time(s)"
 
         analyzer.skipped_ops_warnings(enabled=False)
+        analyzer._counts = None  # Manually clear cache so trace is rerun
         with self.assertLogs(logger, logging.WARN) as cm:
-            logger.warn("Dummy warning.")
+            logger.warning("Dummy warning.")
             _ = analyzer.total()
         self.assertTrue(cm.output == ["WARNING:root:Dummy warning."])
 
         analyzer.skipped_ops_warnings(enabled=True)
+        analyzer._counts = None  # Manually clear cache so trace is rerun
         with self.assertLogs(logger, logging.WARN) as cm:
             _ = analyzer.total()
         self.assertTrue(skipped_string in cm.output[0])

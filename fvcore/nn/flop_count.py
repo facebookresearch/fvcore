@@ -2,17 +2,7 @@
 # pyre-ignore-all-errors[2,33]
 
 from collections import defaultdict
-from typing import (
-    Any,
-    Callable,
-    Counter,
-    DefaultDict,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import Any, Counter, DefaultDict, Dict, Optional, Tuple, Union
 
 import torch.nn as nn
 
