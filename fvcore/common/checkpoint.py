@@ -477,10 +477,9 @@ def get_missing_parameters_message(keys: List[str]) -> str:
         str: message.
     """
     groups = _group_checkpoint_keys(keys)
+    msg_per_group = sorted(k + _group_to_str(v) for k, v in groups.items())
     msg = "Some model parameters or buffers are not found in the checkpoint:\n"
-    msg += "\n".join(
-        "  " + colored(k + _group_to_str(v), "blue") for k, v in groups.items()
-    )
+    msg += "\n".join([colored(x, "blue") for x in msg_per_group])
     return msg
 
 
@@ -569,7 +568,7 @@ def _group_to_str(group: List[str]) -> str:
     if len(group) == 1:
         return "." + group[0]
 
-    return ".{" + ", ".join(group) + "}"
+    return ".{" + ", ".join(sorted(group)) + "}"
 
 
 def _named_modules_with_dup(
