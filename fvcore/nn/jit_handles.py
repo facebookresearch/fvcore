@@ -201,6 +201,28 @@ def addmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]
     return flop_counter
 
 
+def bmm_calculation(input_shapes, counter_name="bmm"):
+    """
+    Computes the flops for batch matrix multiply given input shapes.
+
+    Args:
+        inputs (list(list)): The input shape in the form of a list of
+            integer lists. The first entry in the list is the input
+            shape, and the second entry is the output shape.
+        counter_name (str): Name of the operation counter to use.
+    
+    Returns:
+        Counter: A Counter dictionary that records the number of flops for each
+            operation.
+    """
+
+    n, c, t = input_shapes[0]
+    d = input_shapes[-1][-1]
+    flop = n * c * t * d
+    flop_counter = Counter({counter_name: flop})
+    return flop_counter
+
+
 def bmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
     This method counts the flops for the bmm operation.
@@ -219,11 +241,7 @@ def bmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     # Inputs contains the shapes of two tensor.
     assert len(inputs) == 2, len(inputs)
     input_shapes = [get_shape(v) for v in inputs]
-    n, c, t = input_shapes[0]
-    d = input_shapes[-1][-1]
-    flop = n * c * t * d
-    flop_counter = Counter({"bmm": flop})
-    return flop_counter
+    return bmm_calculation(input_shapes)
 
 
 def conv_flop_count(
@@ -322,6 +340,26 @@ def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str
         raise NotImplementedError("Unsupported einsum operation.")
 
 
+def matmul_broadcasted(input_shapes):
+    """
+    Counts the flops for a broadcasted matrix multiply.
+    For example, the input shapes are [..., m, n] and [..., n, p]
+    """
+    assert len(input_shapes[0]) == len(input_shapes[1]), input_shapes
+
+    batch_dim = 1
+    for i in range(len(input_shapes[0]) - 2):
+        assert input_shapes[0][i] == input_shapes[1][i], input_shapes
+        batch_dim = batch_dim * input_shapes[0][i]
+    
+    input_shapes_for_bmm = [
+        [batch_dim, input_shapes[0][-2], input_shapes[0][-1]],
+        [batch_dim, input_shapes[1][-2], input_shapes[1][-1]]
+    ]
+
+    return bmm_calculation(input_shapes_for_bmm, counter_name='matmul')
+
+
 def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
     This method counts the flops for matmul.
@@ -340,6 +378,8 @@ def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str
     # Inputs contains the shapes of two matrices.
     input_shapes = [get_shape(v) for v in inputs]
     assert len(input_shapes) == 2, input_shapes
+    if len(input_shapes[1]) > 2:
+        return matmul_broadcasted(input_shapes)
     assert len(input_shapes[1]) == 2, input_shapes
     assert input_shapes[0][-1] == input_shapes[1][0], input_shapes
     batch_dim = input_shapes[0][0]

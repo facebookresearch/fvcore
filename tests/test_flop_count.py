@@ -463,6 +463,35 @@ class TestFlopCount(unittest.TestCase):
             flop_dict, gt_dict, "Matmul operation failed to pass the flop count test."
         )
 
+    def test_matmul_broadcast(self) -> None:
+        """
+        Test flop count for operation matmul.
+        """
+        m = 20
+        n = 10
+        p = 100
+        mNet = MatmulNet()
+        x = torch.randn(1, m, n)
+        y = torch.randn(1, n, p)
+        flop_dict, _ = flop_count(mNet, (x, y))
+        gt_flop = m * n * p / 1e9
+        gt_dict = defaultdict(float)
+        gt_dict["matmul"] = gt_flop
+        self.assertDictEqual(
+            flop_dict, gt_dict, "Matmul operation failed to pass the flop count test."
+        )
+
+        x = torch.randn(2, 2, m, n)
+        y = torch.randn(2, 2, n, p)
+        flop_dict, _ = flop_count(mNet, (x, y))
+        gt_flop = 4 * m * n * p / 1e9
+        gt_dict = defaultdict(float)
+        gt_dict["matmul"] = gt_flop
+        self.assertDictEqual(
+            flop_dict, gt_dict, "Matmul operation failed to pass the flop count test."
+        )
+
+
     def test_bmm(self) -> None:
         """
         Test flop count for operation torch.bmm. The case checkes
