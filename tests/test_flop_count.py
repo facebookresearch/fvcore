@@ -491,7 +491,6 @@ class TestFlopCount(unittest.TestCase):
             flop_dict, gt_dict, "Matmul operation failed to pass the flop count test."
         )
 
-
     def test_bmm(self) -> None:
         """
         Test flop count for operation torch.bmm. The case checkes

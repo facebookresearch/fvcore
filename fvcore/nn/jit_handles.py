@@ -210,7 +210,7 @@ def bmm_calculation(input_shapes, counter_name="bmm"):
             integer lists. The first entry in the list is the input
             shape, and the second entry is the output shape.
         counter_name (str): Name of the operation counter to use.
-    
+
     Returns:
         Counter: A Counter dictionary that records the number of flops for each
             operation.
@@ -351,13 +351,13 @@ def matmul_broadcasted(input_shapes):
     for i in range(len(input_shapes[0]) - 2):
         assert input_shapes[0][i] == input_shapes[1][i], input_shapes
         batch_dim = batch_dim * input_shapes[0][i]
-    
+
     input_shapes_for_bmm = [
         [batch_dim, input_shapes[0][-2], input_shapes[0][-1]],
-        [batch_dim, input_shapes[1][-2], input_shapes[1][-1]]
+        [batch_dim, input_shapes[1][-2], input_shapes[1][-1]],
     ]
 
-    return bmm_calculation(input_shapes_for_bmm, counter_name='matmul')
+    return bmm_calculation(input_shapes_for_bmm, counter_name="matmul")
 
 
 def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
