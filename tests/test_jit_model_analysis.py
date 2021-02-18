@@ -138,13 +138,14 @@ class UnusedNet(nn.Module):
         self.fc1 = nn.Linear(in_features=fc1_in, out_features=fc1_out)
         self.fc2 = nn.Linear(in_features=fc2_in, out_features=fc2_out)
         self.unused = nn.Linear(in_features=unused_in, out_features=unused_out)
+        self.act = nn.ReLU()  # type: nn.Module
 
         self.fc1_flops = fc1_in * fc1_out  # type: int
         self.fc2_flops = fc2_in * fc2_out  # type: int
         self.unused_flops = unused_in * unused_out  # type: int # If it were applied
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.fc2(self.fc1(x))
+        return self.fc2(self.act(self.fc1(x)))
 
 
 class RepeatedNet(nn.Module):
@@ -376,7 +377,9 @@ class TestJitModelAnalysis(unittest.TestCase):
     def test_unused_module(self) -> None:
         """
         Tests that unused modules return 0 count for operator sums and
-        and empty Counter() for per-operator results.
+        and empty Counter() for per-operator results. Also tests that
+        unused modules are reported by .uncalled_modules(), but that
+        modules that simply have zero flops (like ReLU) are not.
         """
 
         model = UnusedNet()
@@ -394,6 +397,9 @@ class TestJitModelAnalysis(unittest.TestCase):
         self.assertEqual(analyzer.total("unused"), unused_count)
         self.assertEqual(analyzer.by_operator("unused"), unused_per_operator)
         self.assertEqual(analyzer.total(""), model_count)
+
+        # The unused mod is recognized as never called
+        self.assertEqual(analyzer.uncalled_modules(), {"unused"})
 
     def test_repeated_module(self) -> None:
         """
@@ -419,10 +425,14 @@ class TestJitModelAnalysis(unittest.TestCase):
         self.assertEqual(analyzer.total(""), total_count)
         self.assertEqual(analyzer.by_operator("fc1"), fc1_per_operator)
 
+        # Tests no uncalled mods
+        self.assertEqual(analyzer.uncalled_modules(), set())
+
     def test_non_forward_func_call(self) -> None:
         """
         Tests that calls to a submodule's non-forward function attribute
-        resulting counts to the calling module.
+        resulting counts to the calling module. Also tests that the
+        intermediate module is correctly identified as a skipped module.
         """
 
         model = NonForwardNet()
@@ -440,6 +450,9 @@ class TestJitModelAnalysis(unittest.TestCase):
         self.assertEqual(analyzer.total("submod"), submod_count)
         self.assertEqual(analyzer.total("submod.fc"), inner_fc_count)
         self.assertEqual(analyzer.total(""), total_count)
+
+        # The mod not directly called is registered as such
+        self.assertEqual(analyzer.uncalled_modules(), {"submod"})
 
     def test_shared_module(self) -> None:
         """
@@ -493,6 +506,9 @@ class TestJitModelAnalysis(unittest.TestCase):
             analyzer.canonical_module_name("submod1.submod"), "submod1.submod"
         )
 
+        # Tests no uncalled modules
+        self.assertEqual(analyzer.uncalled_modules(), set())
+
     def test_recursive_scope(self) -> None:
         """
         Tests that an op is only counted once per module, even if it is
@@ -505,6 +521,9 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         self.assertEqual(analyzer.total(), model.flops)
         self.assertEqual(analyzer.total("fc"), model.flops)
+
+        # Tests no uncalled modules
+        self.assertEqual(analyzer.uncalled_modules(), set())
 
     def test_data_parallel(self) -> None:
         """
@@ -538,6 +557,9 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         # Output as dictionary
         self.assertEqual(analyzer.by_module_and_operator(), flops)
+
+        # Test no uncalled modules
+        self.assertEqual(analyzer.uncalled_modules(), set())
 
     def test_skipped_ops(self) -> None:
         """
@@ -659,12 +681,20 @@ class TestJitModelAnalysis(unittest.TestCase):
         )
 
         # Settings match
-        self.assertEqual(analyzer._warn_skipped, analyzer_copy._warn_skipped)
+        self.assertEqual(
+            analyzer._enable_warn_skipped_ops, analyzer_copy._enable_warn_skipped_ops
+        )
+        self.assertEqual(
+            analyzer._enable_warn_uncalled_mods,
+            analyzer_copy._enable_warn_uncalled_mods,
+        )
         self.assertEqual(analyzer._warn_trace, analyzer_copy._warn_trace)
 
         # Changing copy does not change original
         analyzer_copy.skipped_ops_warnings(enabled=True)
-        self.assertNotEqual(analyzer._warn_skipped, analyzer_copy._warn_skipped)
+        self.assertNotEqual(
+            analyzer._enable_warn_skipped_ops, analyzer_copy._enable_warn_skipped_ops
+        )
 
         # Copy with new model and inputs
         new_model = NonForwardNet()
@@ -681,7 +711,9 @@ class TestJitModelAnalysis(unittest.TestCase):
         self.assertEqual(analyzer.total(), repeated_net_flops)
 
         # Settings match
-        self.assertEqual(analyzer._warn_skipped, analyzer_new._warn_skipped)
+        self.assertEqual(
+            analyzer._enable_warn_skipped_ops, analyzer_new._enable_warn_skipped_ops
+        )
         self.assertEqual(analyzer._warn_trace, analyzer_new._warn_trace)
 
     def test_disable_warnings(self) -> None:
@@ -698,13 +730,13 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         # Tracer warnings
         analyzer.tracer_warnings(mode="all")
-        analyzer._counts = None  # Manually clear cache so trace is rerun
+        analyzer._stats = None  # Manually clear cache so trace is rerun
         self.assertWarns(torch.jit._trace.TracerWarning, analyzer.total)
-        analyzer._counts = None  # Manually clear cache so trace is rerun
+        analyzer._stats = None  # Manually clear cache so trace is rerun
         self.assertWarns(RuntimeWarning, analyzer.total)
 
         analyzer.tracer_warnings(mode="none")
-        analyzer._counts = None  # Manually clear cache so trace is rerun
+        analyzer._stats = None  # Manually clear cache so trace is rerun
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             _ = analyzer.total()
@@ -714,9 +746,9 @@ class TestJitModelAnalysis(unittest.TestCase):
                 self.assertFalse(RuntimeWarning in warning_types)
 
         analyzer.tracer_warnings(mode="no_tracer_warning")
-        analyzer._counts = None  # Manually clear cache so trace is rerun
+        analyzer._stats = None  # Manually clear cache so trace is rerun
         self.assertWarns(RuntimeWarning, analyzer.total)
-        analyzer._counts = None  # Manually clear cache so trace is rerun
+        analyzer._stats = None  # Manually clear cache so trace is rerun
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             _ = analyzer.total()
@@ -724,20 +756,25 @@ class TestJitModelAnalysis(unittest.TestCase):
                 warning_types = [s.category for s in w]
                 self.assertFalse(torch.jit._trace.TracerWarning in warning_types)
 
-        # Skipped ops warnings
+        # Skipped ops and uncalled modules warnings
 
         logger = logging.getLogger()
         skipped_string = "Skipped operation aten::add 1 time(s)"
+        uncalled_string = "Module never called: fc1"
 
+        analyzer.uncalled_modules_warnings(enabled=False)
         analyzer.skipped_ops_warnings(enabled=False)
-        analyzer._counts = None  # Manually clear cache so trace is rerun
+        analyzer._stats = None  # Manually clear cache so trace is rerun
         with self.assertLogs(logger, logging.WARN) as cm:
             logger.warning("Dummy warning.")
             _ = analyzer.total()
-        self.assertTrue(cm.output == ["WARNING:root:Dummy warning."])
+        self.assertFalse(any(skipped_string in s for s in cm.output))
+        self.assertFalse(any(uncalled_string in s for s in cm.output))
 
         analyzer.skipped_ops_warnings(enabled=True)
-        analyzer._counts = None  # Manually clear cache so trace is rerun
+        analyzer.uncalled_modules_warnings(enabled=True)
+        analyzer._stats = None  # Manually clear cache so trace is rerun
         with self.assertLogs(logger, logging.WARN) as cm:
             _ = analyzer.total()
-        self.assertTrue(skipped_string in cm.output[0])
+        self.assertTrue(any(skipped_string in s for s in cm.output))
+        self.assertTrue(any(uncalled_string in s for s in cm.output))
