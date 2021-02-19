@@ -7,8 +7,8 @@ from typing import Any, Dict
 
 import torch
 import torch.nn as nn
-from fvcore.nn.flop_count import Handle, flop_count
-from fvcore.nn.jit_handles import batchnorm_flop_jit
+from fvcore.nn.flop_count import FlopCountAnalysis, flop_count
+from fvcore.nn.jit_handles import Handle, batchnorm_flop_jit
 
 
 class ThreeNet(nn.Module):
@@ -141,7 +141,7 @@ class CustomNet(nn.Module):
         return x
 
 
-class TestFlopCount(unittest.TestCase):
+class TestFlopCountAnalysis(unittest.TestCase):
     """
     Unittest for flop_count.
     """
@@ -637,3 +637,30 @@ class TestFlopCount(unittest.TestCase):
             gt_dict,
             "The three-layer network failed to pass the flop count test.",
         )
+
+    def test_flop_counter_class(self) -> None:
+        """
+        Test FlopCountAnalysis.
+        """
+        batch_size = 4
+        input_dim = 2
+        conv_dim = 5
+        spatial_dim = 10
+        linear_dim = 3
+        x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
+        threeNet = ThreeNet(input_dim, conv_dim, linear_dim)
+        flop1 = batch_size * conv_dim * input_dim * spatial_dim * spatial_dim
+        flop_linear1 = batch_size * conv_dim * linear_dim
+        flop_linear2 = batch_size * linear_dim * 1
+        flop2 = flop_linear1 + flop_linear2
+        flop_counter = FlopCountAnalysis(threeNet, (x,))
+        gt_dict = Counter(
+            {
+                "": flop1 + flop2,
+                "conv": flop1,
+                "linear1": flop_linear1,
+                "linear2": flop_linear2,
+                "pool": 0,
+            }
+        )
+        self.assertEqual(flop_counter.by_module(), gt_dict)
