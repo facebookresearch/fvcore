@@ -51,6 +51,7 @@ setup(
         "Pillow",
         "tabulate",
         "iopath>=0.1.2",
+        "dataclasses; python_version<'3.7'",
     ],
     extras_require={"all": ["shapely"]},
     packages=find_packages(exclude=("tests",)),
