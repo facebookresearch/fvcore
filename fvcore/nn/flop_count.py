@@ -13,6 +13,7 @@ from .jit_handles import (
     bmm_flop_jit,
     conv_flop_jit,
     einsum_flop_jit,
+    linear_flop_jit,
     matmul_flop_jit,
 )
 
@@ -24,6 +25,7 @@ _DEFAULT_SUPPORTED_OPS: Dict[str, Handle] = {
     "aten::_convolution": conv_flop_jit,
     "aten::einsum": einsum_flop_jit,
     "aten::matmul": matmul_flop_jit,
+    "aten::linear": linear_flop_jit,
 }
 
 

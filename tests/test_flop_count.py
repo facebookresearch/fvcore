@@ -146,6 +146,19 @@ class TestFlopCountAnalysis(unittest.TestCase):
     Unittest for flop_count.
     """
 
+    def setUp(self) -> None:
+        # nn.Linear uses a different operator based on version, so make sure
+        # we are testing the right thing.
+        lin = nn.Linear(10, 10)
+        lin_x: torch.Tensor = torch.randn(10, 10)
+        trace = torch.jit.trace(lin, (lin_x,))
+        node_kinds = [node.kind() for node in trace.graph.nodes()]
+        assert "aten::addmm" in node_kinds or "aten::linear" in node_kinds
+        if "aten::addmm" in node_kinds:
+            self.lin_op = "addmm"
+        else:
+            self.lin_op = "linear"
+
     def test_customized_ops(self) -> None:
         """
         Test the use of customized operation handles. The first test checks the
@@ -190,14 +203,16 @@ class TestFlopCountAnalysis(unittest.TestCase):
             flop count. This is used for test only.
             """
             flop_dict = Counter()
-            flop_dict["addmm"] = 400000
+            flop_dict[self.lin_op] = 400000
             return flop_dict
 
-        custom_ops2: Dict[str, Handle] = {"aten::addmm": addmm_dummy_flop_jit}
+        custom_ops2: Dict[str, Handle] = {
+            "aten::{}".format(self.lin_op): addmm_dummy_flop_jit
+        }
         flop_dict2, _ = flop_count(customNet, (x,), supported_ops=custom_ops2)
         flop = 400000 / 1e9
         self.assertEqual(
-            flop_dict2["addmm"],
+            flop_dict2[self.lin_op],
             flop,
             "Customized operation handle failed to pass the flop count test.",
         )
@@ -214,7 +229,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
         flop_dict, _ = flop_count(nn.Linear(input_dim, output_dim), (x,))
         gt_flop = batch_size * input_dim * output_dim / 1e9
         gt_dict = defaultdict(float)
-        gt_dict["addmm"] = gt_flop
+        gt_dict[self.lin_op] = gt_flop
         self.assertDictEqual(
             flop_dict, gt_dict, "nn.Linear failed to pass the flop count test."
         )
@@ -247,7 +262,25 @@ class TestFlopCountAnalysis(unittest.TestCase):
         flop_dict, _ = flop_count(linearNet, (x,))
         gt_flop = batch_size * input_dim * output_dim / 1e9
         gt_dict = defaultdict(float)
-        gt_dict["addmm"] = gt_flop
+        gt_dict[self.lin_op] = gt_flop
+        self.assertDictEqual(
+            flop_dict,
+            gt_dict,
+            "Fully connected layer failed to pass the flop count test.",
+        )
+
+        # Test with #input_dims>2
+        if self.lin_op != "linear":
+            # Skip this test if nn.Linear doesn't use aten::linear
+            # TODO: Stop skipping when multidimension aten::matmul
+            # flop counting is implemented
+            return
+        extra_dim = 5
+        x = torch.randn(batch_size, extra_dim, input_dim)
+        flop_dict, _ = flop_count(linearNet, (x,))
+        gt_flop = batch_size * input_dim * extra_dim * output_dim / 1e9
+        gt_dict = defaultdict(float)
+        gt_dict[self.lin_op] = gt_flop
         self.assertDictEqual(
             flop_dict,
             gt_dict,
@@ -603,7 +636,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
         flop_dict, _ = flop_count(threeNet, (x,))
         gt_dict = defaultdict(float)
         gt_dict["conv"] = flop1
-        gt_dict["addmm"] = flop2
+        gt_dict[self.lin_op] = flop2
         self.assertDictEqual(
             flop_dict,
             gt_dict,

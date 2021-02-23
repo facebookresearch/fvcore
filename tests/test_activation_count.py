@@ -49,6 +49,19 @@ class TestActivationCountAnalysis(unittest.TestCase):
     Unittest for activation_count.
     """
 
+    def setUp(self) -> None:
+        # nn.Linear uses a different operator based on version, so make sure
+        # we are testing the right thing.
+        lin = nn.Linear(10, 10)
+        lin_x: torch.Tensor = torch.randn(10, 10)
+        trace = torch.jit.trace(lin, (lin_x,))
+        node_kinds = [node.kind() for node in trace.graph.nodes()]
+        assert "aten::addmm" in node_kinds or "aten::linear" in node_kinds
+        if "aten::addmm" in node_kinds:
+            self.lin_op = "addmm"
+        else:
+            self.lin_op = "linear"
+
     def test_conv2d(self) -> None:
         """
         Test the activation count for convolutions.
@@ -81,7 +94,7 @@ class TestActivationCountAnalysis(unittest.TestCase):
         ac_dict, _ = activation_count(netLinear, (x,))
         gt_count = batch_size * output_dim
         gt_dict = defaultdict(float)
-        gt_dict["addmm"] = gt_count / 1e6
+        gt_dict[self.lin_op] = gt_count / 1e6
         self.assertEquals(
             gt_dict, ac_dict, "FC layer failed to pass the activation count test."
         )

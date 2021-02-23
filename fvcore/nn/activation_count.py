@@ -14,6 +14,7 @@ from .jit_handles import Handle, generic_activation_jit
 _DEFAULT_SUPPORTED_OPS: Dict[str, Handle] = {
     "aten::_convolution": generic_activation_jit("conv"),
     "aten::addmm": generic_activation_jit("addmm"),
+    "aten::linear": generic_activation_jit("linear"),
 }
 
 

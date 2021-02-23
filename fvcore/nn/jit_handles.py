@@ -89,6 +89,31 @@ def addmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]
     return flop_counter
 
 
+def linear_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
+    """
+    This method counts the flops for the aten::linear operator with torch script.
+
+    Args:
+        inputs (list(torch._C.Value)): The input shape in the form of a list of
+            jit object.
+        outputs (list(torch._C.Value)): The output shape in the form of a list
+            of jit object.
+
+    Returns:
+        Counter: A Counter dictionary that records the number of flops for each
+            operation.
+    """
+    # Inputs is a list of length 3; unlike aten::addmm, it is the first
+    # two elements that are relevant.
+    input_shapes = [get_shape(v) for v in inputs[0:2]]
+    # input_shapes[0]: [dim0, dim1, ..., input_feature_dim]
+    # input_shapes[1]: [output_feature_dim, input_feature_dim]
+    assert input_shapes[0][-1] == input_shapes[1][-1]
+    flops = prod(input_shapes[0]) * input_shapes[1][0]
+    flop_counter = Counter({"linear": flops})
+    return flop_counter
+
+
 def bmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
     This method counts the flops for the bmm operation.

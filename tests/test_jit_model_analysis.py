@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 from fvcore.nn.flop_count import FlopCountAnalysis
 from fvcore.nn.jit_analysis import JitModelAnalysis
-from fvcore.nn.jit_handles import Handle, addmm_flop_jit, conv_flop_jit
+from fvcore.nn.jit_handles import Handle, addmm_flop_jit, conv_flop_jit, linear_flop_jit
 
 
 class NestedNetInnerModule(nn.Module):
@@ -20,7 +20,7 @@ class NestedNetInnerModule(nn.Module):
     A submodule for the nested net test module below.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, lin_op: str = "addmm") -> None:
         super().__init__()
         conv_input_size = (2, 5)
         conv_in = 2
@@ -39,7 +39,7 @@ class NestedNetInnerModule(nn.Module):
         self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
 
         fc_flops = fc_in * fc_out
-        fc_flops = Counter({"addmm": fc_flops})
+        fc_flops = Counter({lin_op: fc_flops})
         spatial_pos = (conv_input_size[1] + 2 * padding) - 2 * (kernel_size // 2)
         conv_flops = spatial_pos * kernel_size * conv_in * conv_out
         conv_flops = Counter({"conv": conv_flops})
@@ -70,7 +70,7 @@ class NestedNet(nn.Module):
     capture scope information.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, lin_op: str = "addmm") -> None:
         super().__init__()
         self.input_size = (4, 5)
 
@@ -81,7 +81,7 @@ class NestedNet(nn.Module):
         fc_in = 20
         fc_out = 10
 
-        self.submod = NestedNetInnerModule()
+        self.submod = NestedNetInnerModule(lin_op)
         self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
         self.conv = nn.Conv1d(
             in_channels=conv_in,
@@ -91,7 +91,7 @@ class NestedNet(nn.Module):
         )
 
         fc_flops = fc_in * fc_out
-        fc_flops = Counter({"addmm": fc_flops})
+        fc_flops = Counter({lin_op: fc_flops})
         spatial_pos = (self.input_size[1] + 2 * padding) - 2 * (kernel_size // 2)
         conv_flops = spatial_pos * kernel_size * conv_in * conv_out
         conv_flops = Counter({"conv": conv_flops})
@@ -309,13 +309,26 @@ class TestJitModelAnalysis(unittest.TestCase):
     covered in test_flop_count.py and test_activation_count.py.
     """
 
+    def setUp(self) -> None:
+        # nn.Linear uses a different operator based on version, so make sure
+        # we are testing the right thing.
+        lin = nn.Linear(10, 10)
+        lin_x: torch.Tensor = torch.randn(10, 10)
+        trace = torch.jit.trace(lin, (lin_x,))
+        node_kinds = [node.kind() for node in trace.graph.nodes()]
+        assert "aten::addmm" in node_kinds or "aten::linear" in node_kinds
+        if "aten::addmm" in node_kinds:
+            self.lin_op = "addmm"
+        else:
+            self.lin_op = "linear"
+
     def test_total(self) -> None:
         """
         Tests that JitModelAnalysis.total(module) returns the correct
         counts for string and module inputs.
         """
 
-        model = NestedNet()
+        model = NestedNet(lin_op=self.lin_op)
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
@@ -333,7 +346,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         counts in the correctly structured dictionary.
         """
 
-        model = NestedNet()
+        model = NestedNet(lin_op=self.lin_op)
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
@@ -349,7 +362,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         counts for string and module inputs.
         """
 
-        model = NestedNet()
+        model = NestedNet(lin_op=self.lin_op)
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
@@ -366,7 +379,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         the correct counts in the correct structure.
         """
 
-        model = NestedNet()
+        model = NestedNet(lin_op=self.lin_op)
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
@@ -386,6 +399,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         inputs = (torch.randn((1, *model.input_size)),)
         op_handles = {
             "aten::addmm": addmm_flop_jit,
+            "aten::linear": linear_flop_jit,
         }  # type: Dict[str, Handle]
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
@@ -411,6 +425,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         inputs = (torch.randn((1, *model.input_size)),)
         op_handles = {
             "aten::addmm": addmm_flop_jit,
+            "aten::linear": linear_flop_jit,
         }  # type: Dict[str, Handle]
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
@@ -418,7 +433,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         fc1_count = model.fc1_num * model.fc1_flops
         fc2_count = model.fc2_num * model.fc2_flops
         total_count = fc1_count + fc2_count
-        fc1_per_operator = Counter({"addmm": fc1_count})
+        fc1_per_operator = Counter({self.lin_op: fc1_count})
 
         self.assertEqual(analyzer.total("fc1"), fc1_count)
         self.assertEqual(analyzer.total("fc2"), fc2_count)
@@ -439,6 +454,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         inputs = (torch.randn((1, 10)),)
         op_handles = {
             "aten::addmm": addmm_flop_jit,
+            "aten::linear": linear_flop_jit,
         }  # type: Dict[str, Handle]
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
@@ -464,6 +480,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         inputs = (torch.randn((1, *model.input_size)),)
         op_handles = {
             "aten::addmm": addmm_flop_jit,
+            "aten::linear": linear_flop_jit,
         }  # type: Dict[str, Handle]
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
@@ -530,7 +547,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         Tests that a model wrapped in DataParallel still returns results
         labeled by the correct scopes.
         """
-        model = NestedNet()
+        model = NestedNet(lin_op=self.lin_op)
         inputs = (torch.randn((1, *model.input_size)),)
 
         # Find flops for wrapper
@@ -566,10 +583,11 @@ class TestJitModelAnalysis(unittest.TestCase):
         Tests per-module recording of skipped operations.
         """
 
-        model = NestedNet()
+        model = NestedNet(lin_op=self.lin_op)
         inputs = (torch.randn((1, *model.input_size)),)
         op_handles = {
             "aten::addmm": addmm_flop_jit,
+            "aten::linear": linear_flop_jit,
         }  # type: Dict[str, Handle]
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
@@ -605,10 +623,11 @@ class TestJitModelAnalysis(unittest.TestCase):
         """
         Tests .set_op_handle(), .clear_op_handles()
         """
-        model = NestedNet()
+        model = NestedNet(lin_op=self.lin_op)
         inputs = (torch.randn((1, *model.input_size)),)
         op_handles = {
             "aten::addmm": addmm_flop_jit,
+            "aten::linear": linear_flop_jit,
         }  # type: Dict[str, Handle]
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
@@ -633,12 +652,14 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         dummy_name = "dummy_op"
         dummy_out = 1000
-        analyzer.set_op_handle("aten::addmm", make_dummy_op(dummy_name, dummy_out))
+        analyzer.set_op_handle(
+            "aten::{}".format(self.lin_op), make_dummy_op(dummy_name, dummy_out)
+        )
 
         dummy_flops = {}
         for name, counts in model.flops.items():
             dummy_flops[name] = Counter(
-                {op: flop for op, flop in counts.items() if op != "addmm"}
+                {op: flop for op, flop in counts.items() if op != self.lin_op}
             )
         dummy_flops[""][dummy_name] = 2 * dummy_out
         dummy_flops["fc"][dummy_name] = dummy_out
@@ -663,6 +684,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         inputs = (torch.randn((1, *model.input_size)),)
         op_handles = {
             "aten::addmm": addmm_flop_jit,
+            "aten::linear": linear_flop_jit,
         }  # type: Dict[str, Handle]
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
@@ -724,6 +746,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         inputs = (torch.randn((1, *model.input_size)),)
         op_handles = {
             "aten::addmm": addmm_flop_jit,
+            "aten::linear": linear_flop_jit,
         }  # type: Dict[str, Handle]
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
