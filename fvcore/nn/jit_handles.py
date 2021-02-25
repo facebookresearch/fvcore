@@ -253,11 +253,8 @@ def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str
     # Inputs contains the shapes of two matrices.
     input_shapes = [get_shape(v) for v in inputs]
     assert len(input_shapes) == 2, input_shapes
-    assert len(input_shapes[1]) == 2, input_shapes
-    assert input_shapes[0][-1] == input_shapes[1][0], input_shapes
-    batch_dim = input_shapes[0][0]
-    m1_dim, m2_dim = input_shapes[1]
-    flop = m1_dim * m2_dim * batch_dim
+    assert input_shapes[0][-1] == input_shapes[1][-2], input_shapes
+    flop = prod(input_shapes[0]) * input_shapes[-1][-1]
     flop_counter = Counter({"matmul": flop})
     return flop_counter
 
