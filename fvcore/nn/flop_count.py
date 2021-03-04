@@ -2,7 +2,7 @@
 # pyre-ignore-all-errors[2,33]
 
 from collections import defaultdict
-from typing import Any, Counter, DefaultDict, Dict, Optional, Tuple, Union
+from typing import Any, Counter, DefaultDict, Dict, Optional, Tuple
 
 import torch.nn as nn
 
@@ -33,68 +33,25 @@ class FlopCountAnalysis(JitModelAnalysis):
     """
     Provides access to per-submodule model flop count obtained by
     tracing a model with pytorch's jit tracing functionality. By default,
-    comes with standard flop counters for five operators, which count one
-    Multiply-Add as one FLOP:
-
-    aten::addmm, used by linear layers
-    aten::_convolution, used by convolutional layers
-    aten::bmm, batch matrix multiply
-    aten::matmul, matrix multiplication
-    aten::einsum, Einstein notation summation
+    comes with standard flop counters for convolutional and dot-product operators.
+    Note that we count one Multiply-Add as one FLOP.
 
     Handles for additional operators may be added, or the default ones
-    overwritten, using the 'additional_ops' input at initialization or the
-    .set_op_handle(name, func) method. The function must take the inputs
-    and outputs of the op, each as a list(torch._C.Value), and returns a
-    counter of the form {op_name : number}.All handles may be cleared with
-    .clear_op_handles().
+    overwritten, using the ``.set_op_handle(name, func)`` method.
+    See the method documentation for details.
 
     Flop counts can be obtained as:
 
-    .total(module_name="") : total flop count for the module
-    .by_operator(module_name="") : flop counts for the module, as a Counter
-        over different operator types
-    .by_module() : Counter of flop counts for all descendants
-        of the model,
-    .by_module_and_operator() : dictionary indexed by descendant of Counters
-        over different operator types
+    * ``.total(module_name="")``: total flop count for the module
+    * ``.by_operator(module_name="")``: flop counts for the module, as a Counter
+      over different operator types
+    * ``.by_module()``: Counter of flop counts for all submodules
+    * ``.by_module_and_operator()``: dictionary indexed by descendant of Counters
+      over different operator types
 
-    Submodules may be referred to using the module's name. The input model has
-    name "", while its descendants have names of the form
-    "child.grandchild.grandgrandchild...". For submodules that may have multiple
-    names, any may be used to access the module.
-
-    An operator is treated as within the scope of a module if calling that
-    module directly resulted in that operator being run. In particular,
-    this means that calls to other functions owned by a module or explicit
-    calls to module.forward(...) will not register resulting operators as
-    contributing flops to that module.
-
-    Additional methods include:
-
-    .skipped_ops(module_name="") : get the number of times each non-trivial
-        op that didn't have a handle was skipped for the specified module.
-        Returns a Counter over operator names. Operators considered trivial
-        and not reported here are listed in .ignored_ops.
-
-    .canonical_module_name(name) : gets the name that will be used for the
-        module in .by_module() and .by_module_and_operator()
-
-    .copy(new_model=None, new_inputs=None) : copies the analyzer for use on
-        a new model and/or new inputs, keeping all operator handles and
-        warning settings the same.
-
-    .skipped_ops_warnings(enabled) : enables or disables warnings for
-        skipped operators when analysis is first run. The number of
-        skipped operators can be obtained from .skipped_ops() in either
-        case. Defaults to enabled.
-
-    .tracer_warnings(mode) : enables or disables warnings raised by the
-        jit tracer when performing the analysis. 'mode' may be 'none',
-        'no_tracer_warning', or 'all' to show no warnings, only warnings
-        that aren't the TracerWarning type, or all warnings. Defaults to
-        'no_tracer_warning'.
-
+    An operator is treated as within a module if it is executed inside the
+    module's ``__call__`` method. Note that this does not include calls to
+    other methods of the module or explicit calls to ``module.forward(...)``.
 
     Example usage:
 
@@ -134,29 +91,20 @@ class FlopCountAnalysis(JitModelAnalysis):
         self,
         model: nn.Module,
         inputs: Tuple[Any, ...],
-        additional_ops: Optional[Dict[str, Handle]] = None,
+        op_handles: Optional[Dict[str, Handle]] = None,
     ) -> None:
-        """
-        Args:
-            model (nn.Module) : The model to analyze
-            inputs (tuple) : The inputs to the model for analysis.
-            additional_ops (dict(str,Callable) : Map an operator name in the
-                trace graph to a function used to calculate the flop.
-                The function must take the inputs and outputs of the op,
-                each as a list(torch._C.Value), and returns a counter of
-                the form {op_name : number}. This adds to or overwrites
-                the default flop  handles.
-        """
-        op_handles = {**_DEFAULT_SUPPORTED_OPS, **(additional_ops or {})}
+        op_handles = {**_DEFAULT_SUPPORTED_OPS, **(op_handles or {})}
         super(FlopCountAnalysis, self).__init__(
             model=model, inputs=inputs, op_handles=op_handles
         )
+
+    __init__.__doc__ = JitModelAnalysis.__init__.__doc__
 
 
 def flop_count(
     model: nn.Module,
     inputs: Tuple[Any, ...],
-    supported_ops: Union[Dict[str, Handle], None] = None,
+    supported_ops: Optional[Dict[str, Handle]] = None,
 ) -> Tuple[DefaultDict[str, float], Counter[str]]:
     """
     Given a model and an input to the model, compute the Gflops of the given
@@ -175,11 +123,11 @@ def flop_count(
     Returns:
         tuple[defaultdict, Counter]: A dictionary that records the number of
             gflops for each operation and a Counter that records the number of
-            skipped operations.
+            unsupported operations.
     """
 
     flop_counter = FlopCountAnalysis(model, inputs, supported_ops)
     giga_flops = defaultdict(float)
     for op, flop in flop_counter.by_operator().items():
         giga_flops[op] = flop / 1e9
-    return giga_flops, flop_counter.skipped_ops()
+    return giga_flops, flop_counter.unsupported_ops()

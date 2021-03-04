@@ -382,7 +382,7 @@ def flop_count_str(
     params = dict(parameter_count(model))
 
     flop_count = FlopCountAnalysis(model=model, inputs=inputs)
-    flop_count.skipped_ops_warnings(False)
+    flop_count.unsupported_ops_warnings(False)
     flop_count.uncalled_modules_warnings(False)
     flop_count.tracer_warnings("none")
     flops = dict(flop_count.by_module())
@@ -390,7 +390,7 @@ def flop_count_str(
 
     if activations:
         act_count = ActivationCountAnalysis(model=model, inputs=inputs)
-        act_count.skipped_ops_warnings(False)
+        act_count.unsupported_ops_warnings(False)
         act_count.uncalled_modules_warnings(False)
         act_count.tracer_warnings("none")
         acts = dict(act_count.by_module())
@@ -596,7 +596,7 @@ def flop_count_table(
     params_name = "#parameters" + (" or shape" if show_param_shapes else "")
 
     flop_count = FlopCountAnalysis(model=model, inputs=inputs)
-    flop_count.skipped_ops_warnings(False)
+    flop_count.unsupported_ops_warnings(False)
     flop_count.uncalled_modules_warnings(False)
     flop_count.tracer_warnings("none")
     flops = dict(flop_count.by_module())
@@ -607,7 +607,7 @@ def flop_count_table(
 
     if activations:
         act_count = ActivationCountAnalysis(model=model, inputs=inputs)
-        act_count.skipped_ops_warnings(False)
+        act_count.unsupported_ops_warnings(False)
         act_count.uncalled_modules_warnings(False)
         act_count.tracer_warnings("none")
         acts = dict(act_count.by_module())

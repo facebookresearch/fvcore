@@ -5,6 +5,7 @@ import logging
 import typing
 import warnings
 from collections import Counter
+from copy import copy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
@@ -81,7 +82,7 @@ class Statistics:
     """
 
     counts: "Dict[str, Counter[str]]"
-    skipped_ops: "Dict[str, Counter[str]]"
+    unsupported_ops: "Dict[str, Counter[str]]"
     uncalled_mods: "Set[str]"
 
 
@@ -195,8 +196,6 @@ class JitModelAnalysis(object):
     contributing statistics to that module.
     """
 
-    ignored_ops = _IGNORED_OPS  # type: Set[str]
-
     def __init__(
         self,
         model: nn.Module,
@@ -205,26 +204,26 @@ class JitModelAnalysis(object):
     ) -> None:
         """
         Args:
-            model (nn.Module) : The model to analyze
-            inputs (tuple) : The inputs to the model for analysis.
-            op_handles (dict(str,Callable) : Map an operator name in the
-                trace graph to a function used to calculate the desire
-                statistic. The function must take the inputs and outputs
-                of the op, each as a list(torch._C.Value), and returns
-                a counter of the form {op_name : number}.
+            model (nn.Module): The model to analyze
+            inputs (tuple): The inputs to the model for analysis.
+            op_handles (dict(str,Callable): Add these handles with
+                :meth:`set_op_handle`.
         """
         self._model = model
         self._inputs = inputs
-        self._op_handles = (
-            op_handles if op_handles is not None else {}
-        )  # type: Dict[str, Handle]
+        self._op_handles: Dict[str, Handle] = {}
         self._aliases = self._get_aliases(
             model
         )  # type: Dict[Union[nn.Module, str], str]
         self._stats = None  # type: Optional[Statistics]
-        self._enable_warn_skipped_ops = True
+        self._enable_warn_unsupported_ops = True
         self._enable_warn_uncalled_mods = True
         self._warn_trace = "no_tracer_warning"
+        self._ignored_ops: Set[str] = copy(_IGNORED_OPS)
+
+        if op_handles is not None:
+            for k, v in op_handles.items():
+                self.set_op_handle(k, v)
 
     def total(self, module_name: str = "") -> int:
         """
@@ -244,9 +243,9 @@ class JitModelAnalysis(object):
 
     def by_operator(self, module_name: str = "") -> typing.Counter[str]:
         """
-        Returns the statistics for a requested module, separated out by
-        operator type. The operator handle determines the name associated
-        with each operator type.
+        Returns the statistics for a requested module, grouped by operator
+        type. The operator handle determines the name associated with each
+        operator type.
 
         Args:
             module_name (str) : The submodule to get data for. Defaults
@@ -265,9 +264,9 @@ class JitModelAnalysis(object):
         the name associated with each operator type.
 
         Returns:
-            dict(str, Counter(str)) : The statistics for each submodule
-                and each operator. Organized per-module, labeled
-                by the submodule's name, then by operator name.
+            dict(str, Counter(str)):
+                The statistics for each submodule and each operator.
+                Grouped by submodule names, then by operator name.
         """
         stats = self._analyze()
         return stats.counts
@@ -275,12 +274,10 @@ class JitModelAnalysis(object):
     def by_module(self) -> typing.Counter[str]:
         """
         Returns the statistics for all submodules, aggregated over
-            all operators.
+        all operators.
 
         Returns:
-            Counter(str) : The statistics for each submodule
-                and each operator. Organized per-module, labeled
-                by the submodule's name.
+            Counter(str): statistics counter grouped by submodule names
         """
         stats = self._analyze()
         summed_counts = Counter()
@@ -288,21 +285,26 @@ class JitModelAnalysis(object):
             summed_counts[mod] = sum(results.values())
         return summed_counts
 
-    def skipped_ops(self, module_name: str = "") -> typing.Counter[str]:
+    def unsupported_ops(self, module_name: str = "") -> typing.Counter[str]:
         """
-        Lists the number of operators that were skipped because no
-        operator handle existed for them. Does not include operators
-        listed in _IGNORED_OPS.
+        Lists the number of operators that were encountered but unsupported
+        because no operator handle is available for them. Does not include
+        operators that are explicitly ignored.
 
         Args:
-            module_name (str) : The submodule to skipped ops for. Defaults to
-                the entire model.
+            module_name (str) : The submodule to list unsupported ops.
+                Defaults to the entire model.
+
         Returns:
-            Counter(str) : The number of each type of operator skipped.
+            Counter(str) : The number of occurences each unsupported operator.
         """
-        stats = self._analyze()
+        if self._stats is None:
+            raise RuntimeError(
+                "Analysis results should be computed "
+                "before calling unsupported_ops()"
+            )
         module_name = self.canonical_module_name(module_name)
-        return stats.skipped_ops[module_name]
+        return self._stats.unsupported_ops[module_name]  # pyre-fixme
 
     def uncalled_modules(self) -> Set[str]:
         """
@@ -320,34 +322,40 @@ class JitModelAnalysis(object):
         stats = self._analyze()
         return stats.uncalled_mods
 
-    def set_op_handle(self, name: str, func: Handle) -> None:
+    def set_op_handle(self, name: str, func: Optional[Handle]) -> "JitModelAnalysis":
         """
         Sets an additional operator handle, or replacing an existing one.
 
         Args:
-            name (str) : The operator's name
-            func (Callable) : Function that calculates the desirable
-                statistic from an operator. Must take two arguments,
-                which are the inputs and outputs of the operator, in the
-                form of list(torch._C.Value).
+            name: The operator's name
+            func: Function that calculates the desirable statistic from an operator.
+                Must take two arguments, which are the inputs and outputs of the operator,
+                in the form of ``list(torch._C.Value)``. The function should return a counter
+                object with per-operator statistics. If ``func`` is None, the op will be
+                explicitly ignored.
         """
-        self._op_handles[name] = func
         self._stats = None
+        if func is None:
+            self._ignored_ops.add(name)
+        else:
+            self._op_handles[name] = func
+        return self
 
-    def clear_op_handles(self) -> None:
+    def clear_op_handles(self) -> "JitModelAnalysis":
         """
-        Clears all set operator handles.
+        Clears all operator handles currently set.
         """
         self._op_handles = {}
+        self._ignored_ops = copy(_IGNORED_OPS)
         self._stats = None
+        return self
 
     def canonical_module_name(self, name: str) -> str:
         """
-        Returns the canonical module name of the module or module name.
+        Returns the canonical module name of the given ``name``, which might be
+        different from the given ``name`` if the module is shared.
         This is the name that will be used as a key when statistics are
-        output using .by_module() and .by_module_and_operator(). It is
-        the first name encountered for a module when walking the descendants
-        of the model.
+        output using .by_module() and .by_module_and_operator().
 
         Args:
             name (str) : The name of the module to find the canonical name for.
@@ -370,8 +378,8 @@ class JitModelAnalysis(object):
         new_inputs: Optional[Tuple[object, ...]] = None,
     ) -> "JitModelAnalysis":
         """
-        Returns a copy of the JitModelAnalysis object, keeping all
-        settings, but potentially on a new model or new inputs.
+        Returns a copy of the :class:`JitModelAnalysis` object, keeping all
+        settings, but on a new model or new inputs.
 
         Args:
             new_model (nn.Module or None) : a new model for the new
@@ -387,7 +395,7 @@ class JitModelAnalysis(object):
         analyzer = JitModelAnalysis(
             model=model, inputs=inputs, op_handles=self._op_handles
         )
-        analyzer._enable_warn_skipped_ops = self._enable_warn_skipped_ops
+        analyzer._enable_warn_unsupported_ops = self._enable_warn_unsupported_ops
         analyzer._enable_warn_uncalled_mods = self._enable_warn_uncalled_mods
         analyzer._warn_trace = self._warn_trace
 
@@ -397,14 +405,14 @@ class JitModelAnalysis(object):
         """
         Sets which warnings to print when tracing the graph to calculate
         statistics. There are three modes. Defaults to 'no_tracer_warning'.
+        Allowed values are:
 
-        Modes:
-        'all' : keeps all warnings raised while tracing
-        'no_tracer_warning' : suppress torch.jit.TracerWarning only
-        'none' : suppress all warnings raised while tracing
+        * 'all' : keeps all warnings raised while tracing
+        * 'no_tracer_warning' : suppress torch.jit.TracerWarning only
+        * 'none' : suppress all warnings raised while tracing
 
         Args:
-            mode (str) : warning mode. In ['all', 'no_tracer_warning', 'none'].
+            mode (str) : warning mode in one of the above values.
         """
         assert mode in [
             "all",
@@ -413,39 +421,42 @@ class JitModelAnalysis(object):
         ], "Unrecognized trace warning mode."
         self._warn_trace = mode
 
-    def skipped_ops_warnings(self, enabled: bool) -> None:
+    def unsupported_ops_warnings(self, enabled: bool) -> "JitModelAnalysis":
         """
-        Sets if warnings from skipped operators are shown. Defaults
-        to True. Counts of skipped operators may be obtained from
-        .skipped_ops(module) regardless of this setting.
+        Sets if warnings for unsupported operators are shown. Defaults
+        to True. Counts of unsupported operators may be obtained from
+        :meth:`unsupported_ops` regardless of this setting.
 
         Args:
-            enabled (bool) : Set to 'True' to show skipped operator
+            enabled (bool) : Set to 'True' to show unsupported operator
                 warnings.
         """
-        self._enable_warn_skipped_ops = enabled
+        self._enable_warn_unsupported_ops = enabled
+        return self
 
-    def uncalled_modules_warnings(self, enabled: bool) -> None:
+    def uncalled_modules_warnings(self, enabled: bool) -> "JitModelAnalysis":
         """
-        Sets if warnings from skipped submodules are shown. Defaults to
-        true. A submodule is skipped if it is never called during the
-        trace of the graph. This may be because it is unused, or because
-        it is accessed via direct calls to .forward() or other python
-        methods owned by the module. The set of skipped modules may be
-        obtained from .uncalled_modules() regardless of this setting.
+        Sets if warnings from uncalled submodules are shown. Defaults to true.
+        A submodule is considered "uncalled" if it is never called during
+        tracing. This may be because it is actually unused, or because it is
+        accessed via calls to ``.forward()`` or other methods of the module.
+        The set of uncalled modules may be obtained from
+        :meth:`uncalled_modules` regardless of this setting.
 
         Args:
-            enabled (bool) : Set to 'True' to show skipped module
-                warnings.
+            enabled (bool) : Set to 'True' to show warnings.
         """
         self._enable_warn_uncalled_mods = enabled
+        return self
 
-    def _warn_skipped_ops(self, skipped_ops: typing.Counter[str]) -> None:
-        if not self._enable_warn_skipped_ops:
+    def _warn_unsupported_ops(self, ops: typing.Counter[str]) -> None:
+        if not self._enable_warn_unsupported_ops:
             return
         logger = logging.getLogger(__name__)
-        for op, freq in skipped_ops.items():
-            logger.warning("Skipped operation {} {} time(s)".format(op, freq))
+        for op, freq in ops.items():
+            logger.warning(
+                "Unsupported operator {} encountered {} time(s)".format(op, freq)
+            )
 
     def _warn_uncalled_mods(self, uncalled_mods: Set[str]) -> None:
         if not self._enable_warn_uncalled_mods or not uncalled_mods:
@@ -486,13 +497,13 @@ class JitModelAnalysis(object):
 
         # Assures even modules not in the trace graph are initialized to zero count
         counts = {}
-        skipped_ops = {}
+        unsupported_ops = {}
         # We don't need the duplication here, but self._model.named_modules()
         # gives slightly different results for some wrapped models.
         for _, mod in _named_modules_with_dup(self._model):
             name = self._aliases[mod]
             counts[name] = Counter()
-            skipped_ops[name] = Counter()
+            unsupported_ops[name] = Counter()
 
         all_seen = set()
         for node in graph.nodes():
@@ -500,13 +511,13 @@ class JitModelAnalysis(object):
             scope_names = node.scopeName().split("/")
             all_seen.update(scope_names)
             if kind not in self._op_handles:
-                if kind in self.ignored_ops:
+                if kind in self._ignored_ops:
                     continue
 
                 seen = set()
                 for name in scope_names:
                     if name not in seen:
-                        skipped_ops[name][kind] += 1
+                        unsupported_ops[name][kind] += 1
                         seen.add(name)
             else:
                 inputs, outputs = list(node.inputs()), list(node.outputs())
@@ -521,9 +532,9 @@ class JitModelAnalysis(object):
         uncalled_mods = set(self._aliases.values()) - all_seen
 
         stats = Statistics(
-            counts=counts, skipped_ops=skipped_ops, uncalled_mods=uncalled_mods
+            counts=counts, unsupported_ops=unsupported_ops, uncalled_mods=uncalled_mods
         )
         self._stats = stats
-        self._warn_skipped_ops(skipped_ops[""])
+        self._warn_unsupported_ops(unsupported_ops[""])
         self._warn_uncalled_mods(uncalled_mods)
         return stats

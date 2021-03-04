@@ -332,7 +332,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
-        analyzer.skipped_ops_warnings(enabled=False)
+        analyzer.unsupported_ops_warnings(enabled=False)
 
         # Using a string input
         for name in model.flops:
@@ -350,7 +350,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
-        analyzer.skipped_ops_warnings(enabled=False)
+        analyzer.unsupported_ops_warnings(enabled=False)
 
         flops = {name: sum(counts.values()) for name, counts in model.flops.items()}
 
@@ -366,7 +366,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
-        analyzer.skipped_ops_warnings(enabled=False)
+        analyzer.unsupported_ops_warnings(enabled=False)
 
         # Using a string input
         for name in model.flops:
@@ -383,7 +383,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
-        analyzer.skipped_ops_warnings(enabled=False)
+        analyzer.unsupported_ops_warnings(enabled=False)
 
         self.assertEqual(analyzer.by_module_and_operator(), model.flops)
 
@@ -484,7 +484,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         }  # type: Dict[str, Handle]
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
-        analyzer.skipped_ops_warnings(enabled=False)
+        analyzer.unsupported_ops_warnings(enabled=False)
 
         # The names `submod2.submod` and `multiname2` are not included,
         # since only the first name of a module is made the canonical one.
@@ -564,7 +564,7 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         model = torch.nn.DataParallel(model)
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
-        analyzer.skipped_ops_warnings(enabled=False)
+        analyzer.unsupported_ops_warnings(enabled=False)
 
         # Using a string input
         for name in flops:
@@ -591,6 +591,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         }  # type: Dict[str, Handle]
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
+        analyzer.total()
 
         skipped_inner_conv = Counter({"aten::_convolution": 1})
         skipped_inner_fc = Counter()
@@ -617,7 +618,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         # Access by string
         for name in skipped:
             with self.subTest(name=name):
-                self.assertEqual(analyzer.skipped_ops(name), skipped[name])
+                self.assertEqual(analyzer.unsupported_ops(name), skipped[name])
 
     def test_changing_handles(self) -> None:
         """
@@ -631,7 +632,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         }  # type: Dict[str, Handle]
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
-        analyzer.skipped_ops_warnings(enabled=False)
+        analyzer.unsupported_ops_warnings(enabled=False)
 
         # Request a result once to cache flop counts
         _ = analyzer.total("")
@@ -688,7 +689,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         }  # type: Dict[str, Handle]
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
-        analyzer.skipped_ops_warnings(enabled=False)
+        analyzer.unsupported_ops_warnings(enabled=False)
         analyzer.tracer_warnings(mode="none")
 
         repeated_net_flops = model.fc1_num * model.fc1_flops
@@ -704,7 +705,8 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         # Settings match
         self.assertEqual(
-            analyzer._enable_warn_skipped_ops, analyzer_copy._enable_warn_skipped_ops
+            analyzer._enable_warn_unsupported_ops,
+            analyzer_copy._enable_warn_unsupported_ops,
         )
         self.assertEqual(
             analyzer._enable_warn_uncalled_mods,
@@ -713,9 +715,10 @@ class TestJitModelAnalysis(unittest.TestCase):
         self.assertEqual(analyzer._warn_trace, analyzer_copy._warn_trace)
 
         # Changing copy does not change original
-        analyzer_copy.skipped_ops_warnings(enabled=True)
+        analyzer_copy.unsupported_ops_warnings(enabled=True)
         self.assertNotEqual(
-            analyzer._enable_warn_skipped_ops, analyzer_copy._enable_warn_skipped_ops
+            analyzer._enable_warn_unsupported_ops,
+            analyzer_copy._enable_warn_unsupported_ops,
         )
 
         # Copy with new model and inputs
@@ -734,13 +737,14 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         # Settings match
         self.assertEqual(
-            analyzer._enable_warn_skipped_ops, analyzer_new._enable_warn_skipped_ops
+            analyzer._enable_warn_unsupported_ops,
+            analyzer_new._enable_warn_unsupported_ops,
         )
         self.assertEqual(analyzer._warn_trace, analyzer_new._warn_trace)
 
     def test_disable_warnings(self) -> None:
         """
-        Tests .skipped_ops_warnings(...) and .tracer_warnings(...)
+        Tests .unsupported_ops_warnings(...) and .tracer_warnings(...)
         """
         model = TraceWarningNet()
         inputs = (torch.randn((1, *model.input_size)),)
@@ -779,14 +783,14 @@ class TestJitModelAnalysis(unittest.TestCase):
                 warning_types = [s.category for s in w]
                 self.assertFalse(torch.jit._trace.TracerWarning in warning_types)
 
-        # Skipped ops and uncalled modules warnings
+        # Unsupported ops and uncalled modules warnings
 
         logger = logging.getLogger()
-        skipped_string = "Skipped operation aten::add 1 time(s)"
+        skipped_string = "Unsupported operator aten::add encountered 1 time(s)"
         uncalled_string = "Module never called: fc1"
 
         analyzer.uncalled_modules_warnings(enabled=False)
-        analyzer.skipped_ops_warnings(enabled=False)
+        analyzer.unsupported_ops_warnings(enabled=False)
         analyzer._stats = None  # Manually clear cache so trace is rerun
         with self.assertLogs(logger, logging.WARN) as cm:
             logger.warning("Dummy warning.")
@@ -794,7 +798,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         self.assertFalse(any(skipped_string in s for s in cm.output))
         self.assertFalse(any(uncalled_string in s for s in cm.output))
 
-        analyzer.skipped_ops_warnings(enabled=True)
+        analyzer.unsupported_ops_warnings(enabled=True)
         analyzer.uncalled_modules_warnings(enabled=True)
         analyzer._stats = None  # Manually clear cache so trace is rerun
         with self.assertLogs(logger, logging.WARN) as cm:
