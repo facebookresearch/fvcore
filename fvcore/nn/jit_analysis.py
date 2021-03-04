@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 import torch
 import torch.nn as nn
 from fvcore.common.checkpoint import _named_modules_with_dup
+from torch import Tensor
 from torch.jit import TracerWarning, _get_trace_graph
 
 from .jit_handles import Handle
@@ -88,7 +89,7 @@ class Statistics:
 
 def _get_scoped_trace_graph(
     module: nn.Module,
-    inputs: Tuple[object, ...],
+    inputs: Union[Tensor, Tuple[Tensor, ...]],
     aliases: Dict[Union[str, nn.Module], str],
 ) -> torch._C.Graph:  # pyre-ignore[11]
     """
@@ -109,32 +110,25 @@ def _get_scoped_trace_graph(
         graph (torch._C.Graph) : The pytorch JIT trace of the model
     """
 
-    class ScopePushHook(object):
+    class ScopePushHook:
         def __init__(self, name: str) -> None:
             self.name = name
 
-        def __call__(
-            self, module: nn.Module, inputs: Tuple[object, ...]
-        ) -> Tuple[object, ...]:
+        def __call__(self, module: nn.Module, inputs: Any) -> Any:
             tracing_state = torch._C._get_tracing_state()
             if tracing_state:
                 tracing_state.push_scope(self.name)
             return inputs
 
-    class ScopePopHook(object):
-        def __call__(
-            self,
-            module: nn.Module,
-            inputs: Tuple[object, ...],
-            outputs: Tuple[object, ...],
-        ) -> Tuple[object, ...]:
+    class ScopePopHook:
+        def __call__(self, module: nn.Module, inputs: Any, outputs: Any) -> Any:
             tracing_state = torch._C._get_tracing_state()
             if tracing_state:
                 tracing_state.pop_scope()
             return outputs
 
     seen = set()
-    hook_handles = []  # type: List[Any]
+    hook_handles: List[Any] = []
 
     def register_hooks(mod: nn.Module, name: str) -> None:
         prehook = mod.register_forward_pre_hook(ScopePushHook(name))  # pyre-ignore[16]
@@ -174,7 +168,7 @@ def _get_scoped_trace_graph(
     return graph
 
 
-class JitModelAnalysis(object):
+class JitModelAnalysis:
     """
     Provides access to per-submodule model statistics obtained by
     tracing a model with pytorch's jit tracing functionality. Calculates
@@ -199,31 +193,22 @@ class JitModelAnalysis(object):
     def __init__(
         self,
         model: nn.Module,
-        inputs: Tuple[object, ...],
-        op_handles: Optional[Dict[str, Handle]] = None,
+        inputs: Union[Tensor, Tuple[Tensor, ...]],
     ) -> None:
         """
         Args:
-            model (nn.Module): The model to analyze
-            inputs (tuple): The inputs to the model for analysis.
-            op_handles (dict(str,Callable): Add these handles with
-                :meth:`set_op_handle`.
+            model: The model to analyze
+            inputs: The inputs to the model for analysis.
         """
         self._model = model
         self._inputs = inputs
         self._op_handles: Dict[str, Handle] = {}
-        self._aliases = self._get_aliases(
-            model
-        )  # type: Dict[Union[nn.Module, str], str]
-        self._stats = None  # type: Optional[Statistics]
+        self._aliases: Dict[Union[nn.Module, str], str] = self._get_aliases(model)
+        self._stats: Optional[Statistics] = None
         self._enable_warn_unsupported_ops = True
         self._enable_warn_uncalled_mods = True
         self._warn_trace = "no_tracer_warning"
         self._ignored_ops: Set[str] = copy(_IGNORED_OPS)
-
-        if op_handles is not None:
-            for k, v in op_handles.items():
-                self.set_op_handle(k, v)
 
     def total(self, module_name: str = "") -> int:
         """
@@ -322,23 +307,38 @@ class JitModelAnalysis(object):
         stats = self._analyze()
         return stats.uncalled_mods
 
-    def set_op_handle(self, name: str, func: Optional[Handle]) -> "JitModelAnalysis":
+    def set_op_handle(self, *args, **kwargs: Optional[Handle]) -> "JitModelAnalysis":
         """
-        Sets an additional operator handle, or replacing an existing one.
+        Sets additional operator handles, or replaces existing ones.
 
         Args:
-            name: The operator's name
-            func: Function that calculates the desirable statistic from an operator.
-                Must take two arguments, which are the inputs and outputs of the operator,
-                in the form of ``list(torch._C.Value)``. The function should return a counter
-                object with per-operator statistics. If ``func`` is None, the op will be
-                explicitly ignored.
+            args: (str, Handle) pairs of operator names and handles.
+            kwargs: mapping from operator names to handles.
+
+        If a handle is ``None``, the op will be explicitly ignored. Otherwise,
+        handle should be a function that calculates the desirable statistic
+        from an operator. The function must take two arguments, which are the
+        inputs and outputs of the operator, in the form of ``list(torch._C.Value)``.
+        The function should return a counter object with per-operator statistics.
+
+        Examples
+        ::
+            handlers = {"aten::linear": my_handler}
+            counter.set_op_handle("aten::matmul", None, "aten::bmm", my_handler2)
+                   .set_op_handle(**handlers)
         """
         self._stats = None
-        if func is None:
-            self._ignored_ops.add(name)
-        else:
-            self._op_handles[name] = func
+        if len(args) % 2 != 0:
+            raise TypeError(
+                "set_op_handle should be called with pairs of names and handles!"
+            )
+        for name, handle in zip(args[::2], args[1::2]):
+            kwargs[name] = handle
+        for name, handle in kwargs.items():
+            if handle is None:
+                self._ignored_ops.add(name)
+            else:
+                self._op_handles[name] = handle
         return self
 
     def clear_op_handles(self) -> "JitModelAnalysis":
@@ -375,7 +375,7 @@ class JitModelAnalysis(object):
     def copy(
         self,
         new_model: Optional[nn.Module] = None,
-        new_inputs: Optional[Tuple[object, ...]] = None,
+        new_inputs: Union[None, Tensor, Tuple[Tensor, ...]] = None,
     ) -> "JitModelAnalysis":
         """
         Returns a copy of the :class:`JitModelAnalysis` object, keeping all
@@ -392,16 +392,15 @@ class JitModelAnalysis(object):
         """
         model = self._model if new_model is None else new_model
         inputs = self._inputs if new_inputs is None else new_inputs
-        analyzer = JitModelAnalysis(
-            model=model, inputs=inputs, op_handles=self._op_handles
+        return (
+            JitModelAnalysis(model=model, inputs=inputs)
+            .set_op_handle(**self._op_handles)
+            .unsupported_ops_warnings(self._enable_warn_unsupported_ops)
+            .uncalled_modules_warnings(self._enable_warn_uncalled_mods)
+            .tracer_warnings(self._warn_trace)
         )
-        analyzer._enable_warn_unsupported_ops = self._enable_warn_unsupported_ops
-        analyzer._enable_warn_uncalled_mods = self._enable_warn_uncalled_mods
-        analyzer._warn_trace = self._warn_trace
 
-        return analyzer
-
-    def tracer_warnings(self, mode: str) -> None:
+    def tracer_warnings(self, mode: str) -> "JitModelAnalysis":
         """
         Sets which warnings to print when tracing the graph to calculate
         statistics. There are three modes. Defaults to 'no_tracer_warning'.
@@ -420,6 +419,7 @@ class JitModelAnalysis(object):
             "none",
         ], "Unrecognized trace warning mode."
         self._warn_trace = mode
+        return self
 
     def unsupported_ops_warnings(self, enabled: bool) -> "JitModelAnalysis":
         """

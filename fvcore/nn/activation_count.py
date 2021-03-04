@@ -2,9 +2,10 @@
 # pyre-ignore-all-errors[2,33]
 
 from collections import defaultdict
-from typing import Any, Counter, DefaultDict, Dict, Optional, Tuple
+from typing import Any, Counter, DefaultDict, Dict, Optional, Tuple, Union
 
 import torch.nn as nn
+from torch import Tensor
 
 from .jit_analysis import JitModelAnalysis
 from .jit_handles import Handle, generic_activation_jit
@@ -82,13 +83,10 @@ class ActivationCountAnalysis(JitModelAnalysis):
     def __init__(
         self,
         model: nn.Module,
-        inputs: Tuple[Any, ...],
-        additional_ops: Optional[Dict[str, Handle]] = None,
+        inputs: Union[Tensor, Tuple[Tensor, ...]],
     ) -> None:
-        op_handles = {**_DEFAULT_SUPPORTED_OPS, **(additional_ops or {})}
-        super(ActivationCountAnalysis, self).__init__(
-            model=model, inputs=inputs, op_handles=op_handles
-        )
+        super().__init__(model=model, inputs=inputs)
+        self.set_op_handle(**_DEFAULT_SUPPORTED_OPS)
 
     __init__.__doc__ = JitModelAnalysis.__init__.__doc__
 
@@ -116,8 +114,9 @@ def activation_count(
             activation (mega) for each operation and a Counter that records the
             number of unsupported operations.
     """
-
-    act_counter = ActivationCountAnalysis(model, inputs, supported_ops)
+    if supported_ops is None:
+        supported_ops = {}
+    act_counter = ActivationCountAnalysis(model, inputs).set_op_handle(**supported_ops)
     mega_acts = defaultdict(float)
     for op, act in act_counter.by_operator().items():
         mega_acts[op] = act / 1e6

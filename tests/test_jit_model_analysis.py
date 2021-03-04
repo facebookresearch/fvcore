@@ -397,12 +397,7 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         model = UnusedNet()
         inputs = (torch.randn((1, *model.input_size)),)
-        op_handles = {
-            "aten::addmm": addmm_flop_jit,
-            "aten::linear": linear_flop_jit,
-        }  # type: Dict[str, Handle]
-
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
+        analyzer = FlopCountAnalysis(model=model, inputs=inputs)
 
         unused_count = 0
         unused_per_operator = Counter()
@@ -423,13 +418,8 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         model = RepeatedNet()
         inputs = (torch.randn((1, *model.input_size)),)
-        op_handles = {
-            "aten::addmm": addmm_flop_jit,
-            "aten::linear": linear_flop_jit,
-        }  # type: Dict[str, Handle]
 
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
-
+        analyzer = FlopCountAnalysis(model=model, inputs=inputs)
         fc1_count = model.fc1_num * model.fc1_flops
         fc2_count = model.fc2_num * model.fc2_flops
         total_count = fc1_count + fc2_count
@@ -452,12 +442,7 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         model = NonForwardNet()
         inputs = (torch.randn((1, 10)),)
-        op_handles = {
-            "aten::addmm": addmm_flop_jit,
-            "aten::linear": linear_flop_jit,
-        }  # type: Dict[str, Handle]
-
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
+        analyzer = FlopCountAnalysis(model=model, inputs=inputs)
 
         submod_count = 0
         inner_fc_count = model.submod.fc_flops
@@ -478,13 +463,10 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         model = SharedModuleNet()
         inputs = (torch.randn((1, *model.input_size)),)
-        op_handles = {
-            "aten::addmm": addmm_flop_jit,
-            "aten::linear": linear_flop_jit,
-        }  # type: Dict[str, Handle]
 
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
-        analyzer.unsupported_ops_warnings(enabled=False)
+        analyzer = FlopCountAnalysis(
+            model=model, inputs=inputs
+        ).unsupported_ops_warnings(enabled=False)
 
         # The names `submod2.submod` and `multiname2` are not included,
         # since only the first name of a module is made the canonical one.
@@ -578,19 +560,20 @@ class TestJitModelAnalysis(unittest.TestCase):
         # Test no uncalled modules
         self.assertEqual(analyzer.uncalled_modules(), set())
 
-    def test_skipped_ops(self) -> None:
+    def test_unsupported_ops(self) -> None:
         """
-        Tests per-module recording of skipped operations.
+        Tests per-module recording of unsupported operations.
         """
 
         model = NestedNet(lin_op=self.lin_op)
         inputs = (torch.randn((1, *model.input_size)),)
-        op_handles = {
-            "aten::addmm": addmm_flop_jit,
-            "aten::linear": linear_flop_jit,
-        }  # type: Dict[str, Handle]
 
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
+        analyzer = JitModelAnalysis(model=model, inputs=inputs).set_op_handle(
+            "aten::addmm",
+            addmm_flop_jit,
+            "aten::linear",
+            linear_flop_jit,
+        )
         analyzer.total()
 
         skipped_inner_conv = Counter({"aten::_convolution": 1})
@@ -631,7 +614,9 @@ class TestJitModelAnalysis(unittest.TestCase):
             "aten::linear": linear_flop_jit,
         }  # type: Dict[str, Handle]
 
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
+        analyzer = JitModelAnalysis(model=model, inputs=inputs).set_op_handle(
+            **op_handles
+        )
         analyzer.unsupported_ops_warnings(enabled=False)
 
         # Request a result once to cache flop counts
@@ -683,14 +668,18 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         model = RepeatedNet()
         inputs = (torch.randn((1, *model.input_size)),)
-        op_handles = {
-            "aten::addmm": addmm_flop_jit,
-            "aten::linear": linear_flop_jit,
-        }  # type: Dict[str, Handle]
 
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
-        analyzer.unsupported_ops_warnings(enabled=False)
-        analyzer.tracer_warnings(mode="none")
+        analyzer = (
+            JitModelAnalysis(model=model, inputs=inputs)
+            .set_op_handle(
+                "aten::addmm",
+                addmm_flop_jit,
+                "aten::linear",
+                linear_flop_jit,
+            )
+            .unsupported_ops_warnings(enabled=False)
+            .tracer_warnings(mode="none")
+        )
 
         repeated_net_flops = model.fc1_num * model.fc1_flops
         repeated_net_flops += model.fc2_num * model.fc2_flops
@@ -748,12 +737,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         """
         model = TraceWarningNet()
         inputs = (torch.randn((1, *model.input_size)),)
-        op_handles = {
-            "aten::addmm": addmm_flop_jit,
-            "aten::linear": linear_flop_jit,
-        }  # type: Dict[str, Handle]
-
-        analyzer = JitModelAnalysis(model=model, inputs=inputs, op_handles=op_handles)
+        analyzer = FlopCountAnalysis(model=model, inputs=inputs)
 
         # Tracer warnings
         analyzer.tracer_warnings(mode="all")
