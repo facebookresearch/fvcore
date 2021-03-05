@@ -300,7 +300,7 @@ def _get_input_sizes(iterable: Iterable[Any]) -> List[Any]:  # pyre-ignore[2,3]
 
 
 def flop_count_str(
-    model: nn.Module, inputs: Tuple[Any], activations: bool = False  # pyre-ignore[2]
+    flops: FlopCountAnalysis, activations: Optional[ActivationCountAnalysis] = None
 ) -> str:
     """
     Calculates the parameters and flops of the model with the given inputs
@@ -342,7 +342,7 @@ def flop_count_str(
     ...         return self.fc1(self.fc2(self.inner(x)))
 
     >>> inputs = torch.randn((1,10))
-    >>> print(model_flops_str(model, inputs))
+    >>> print(flop_count_str(FlopCountAnalysis(model, inputs)))
     TestNet(
       n_params: 0.44K, n_flops: 0.4K
       (fc1): Linear(
@@ -368,48 +368,44 @@ def flop_count_str(
 
 
     Args:
-        model (nn.Module) : the torch model that will be analyzed and
-            returned in a string representation.
-        inputs (tuple): The inputs to the model used to calculate flops.
-        activations (bool) : If True, the activations of each layer will
+        flops (FlopCountAnalysis): the flop counting object
+        activations (bool) : If given, the activations of each layer will
             also be calculated and included in the representation.
 
     Returns:
-        str : a string representation of the model with the number of
+        str:
+            a string representation of the model with the number of
             parameters and flops included.
     """
     # cast to dict since pyre doesn't like the implicit defaultdict->dict
+    model = flops._model
     params = dict(parameter_count(model))
 
-    flop_count = FlopCountAnalysis(model=model, inputs=inputs)
-    flop_count.unsupported_ops_warnings(False)
-    flop_count.uncalled_modules_warnings(False)
-    flop_count.tracer_warnings("none")
-    flops = dict(flop_count.by_module())
-    stats = {"n_params": params, "n_flops": flops}
+    flops.unsupported_ops_warnings(False)
+    flops.uncalled_modules_warnings(False)
+    flops.tracer_warnings("none")
+    stats = {"n_params": params, "n_flops": flops.by_module()}
 
-    if activations:
-        act_count = ActivationCountAnalysis(model=model, inputs=inputs)
-        act_count.unsupported_ops_warnings(False)
-        act_count.uncalled_modules_warnings(False)
-        act_count.tracer_warnings("none")
-        acts = dict(act_count.by_module())
-        stats["n_acts"] = acts
+    if activations is not None:
+        activations.unsupported_ops_warnings(False)
+        activations.uncalled_modules_warnings(False)
+        activations.tracer_warnings("none")
+        stats["n_acts"] = activations.by_module()
 
-    all_uncalled = flop_count.uncalled_modules() | (
-        act_count.uncalled_modules() if activations else set()
+    all_uncalled = flops.uncalled_modules() | (
+        activations.uncalled_modules() if activations is not None else set()
     )
     stats = _fill_missing_statistics(model, stats)
     stats = _group_by_module(stats)
     stats = _remove_zero_statistics(stats, force_keep=all_uncalled)
     stats = _pretty_statistics(stats)
-    stats = _indicate_uncalled_modules(stats, "n_flops", flop_count.uncalled_modules())
-    if activations:
+    stats = _indicate_uncalled_modules(stats, "n_flops", flops.uncalled_modules())
+    if activations is not None:
         stats = _indicate_uncalled_modules(
-            stats, "n_acts", act_count.uncalled_modules()
+            stats, "n_acts", activations.uncalled_modules()
         )
 
-    input_sizes = _get_input_sizes(inputs)
+    input_sizes = _get_input_sizes(flops._inputs)
     model_string = "Input sizes (torch.Tensor only): {}\n".format(input_sizes)
     if all_uncalled:
         model_string += (
@@ -527,10 +523,9 @@ def _model_stats_table(
 
 
 def flop_count_table(
-    model: nn.Module,
-    inputs: Tuple[Any],  # pyre-ignore[2]
+    flops: FlopCountAnalysis,
     max_depth: int = 3,
-    activations: bool = False,
+    activations: Optional[ActivationCountAnalysis] = None,
     show_param_shapes: bool = True,
 ) -> str:
     """
@@ -538,7 +533,6 @@ def flop_count_table(
     It looks like this:
 
     ::
-
         | model                            | #parameters or shape   | #flops    |
         |:---------------------------------|:-----------------------|:----------|
         | model                            | 34.6M                  | 65.7G     |
@@ -577,56 +571,54 @@ def flop_count_table(
         |    ............................. |    ......              |    ...... |
 
     Args:
-        model (nn.Module) : The model to produce statistics for
-        inputs (tuple) : Sample inputs to the model used to compute flops
+        flops (FlopCountAnalysis): the flop counting object
         max_depth (int) : The max depth of submodules to include in the
             table. Defaults to 3.
-        activations (bool) : If true, include a count of activations as
-            an additional column in the table. Defaults to False.
+        activations (ActivationCountAnalysis or None) : If given, include
+            activation counts as an additional column in the table.
         show_param_shapes (bool) : If true, shapes for parameters will be
             included in the table. Defaults to True.
 
     Returns:
         str : The formatted table.
 
+    Examples:
+    ::
+        print(flop_count_table(model, FlopCountAnalysis(model, inputs)))
     """
+    params_header = "#parameters" + (" or shape" if show_param_shapes else "")
+    flops_header, acts_header = "#flops", "#activations"
 
+    model = flops._model
     # cast to dict since pyre doesn't like the implicit defaultdict->dict
     params = dict(parameter_count(model))
-    params_name = "#parameters" + (" or shape" if show_param_shapes else "")
 
-    flop_count = FlopCountAnalysis(model=model, inputs=inputs)
-    flop_count.unsupported_ops_warnings(False)
-    flop_count.uncalled_modules_warnings(False)
-    flop_count.tracer_warnings("none")
-    flops = dict(flop_count.by_module())
-    flops_name = "#flops"
+    flops.unsupported_ops_warnings(False)
+    flops.uncalled_modules_warnings(False)
+    flops.tracer_warnings("none")
 
-    stats = {params_name: params, flops_name: flops}
-    stat_columns = [params_name, flops_name]
+    stats = {params_header: params, flops_header: flops.by_module()}
+    stat_columns = [params_header, flops_header]
 
-    if activations:
-        act_count = ActivationCountAnalysis(model=model, inputs=inputs)
-        act_count.unsupported_ops_warnings(False)
-        act_count.uncalled_modules_warnings(False)
-        act_count.tracer_warnings("none")
-        acts = dict(act_count.by_module())
-        acts_name = "#activations"
-        stats[acts_name] = acts
-        stat_columns += [acts_name]
+    if activations is not None:
+        activations.unsupported_ops_warnings(False)
+        activations.uncalled_modules_warnings(False)
+        activations.tracer_warnings("none")
+        stats[acts_header] = activations.by_module()
+        stat_columns += [acts_header]
 
-    all_uncalled = flop_count.uncalled_modules() | (
-        act_count.uncalled_modules() if activations else set()
+    all_uncalled = flops.uncalled_modules() | (
+        activations.uncalled_modules() if activations is not None else set()
     )
     stats = _group_by_module(stats)
     stats = _remove_zero_statistics(
         stats, force_keep=all_uncalled, require_trivial_children=True
     )
     stats = _pretty_statistics(stats, hide_zero=True)
-    stats = _indicate_uncalled_modules(stats, flops_name, flop_count.uncalled_modules())
+    stats = _indicate_uncalled_modules(stats, flops_header, flops.uncalled_modules())
     if activations:
         stats = _indicate_uncalled_modules(
-            stats, acts_name, act_count.uncalled_modules()
+            stats, acts_header, activations.uncalled_modules()
         )
 
     # Swap in shapes for parameters or delete shapes from dict
@@ -637,7 +629,7 @@ def flop_count_table(
     for mod in stats:
         if mod in param_shapes:
             if show_param_shapes:
-                stats[mod][params_name] = str(param_shapes[mod])
+                stats[mod][params_header] = str(param_shapes[mod])
             else:
                 to_delete.append(mod)
     for mod in to_delete:

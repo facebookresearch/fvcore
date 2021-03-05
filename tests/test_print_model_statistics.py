@@ -5,6 +5,7 @@ from typing import Dict
 
 import torch
 import torch.nn as nn
+from fvcore.nn import ActivationCountAnalysis, FlopCountAnalysis
 from fvcore.nn.print_model_statistics import (
     _fill_missing_statistics,
     _group_by_module,
@@ -377,7 +378,7 @@ class TestPrintModelStatistics(unittest.TestCase):
         model = TestNet()
         inputs = (torch.randn((1, 10)),)
 
-        table = flop_count_table(model, inputs)
+        table = flop_count_table(FlopCountAnalysis(model, inputs))
 
         self.assertFalse(" a1 " in table)  # Wrapper skipping successful
         self.assertFalse("a1.b1.c1.d1.bias" in table)  # Didn't go to depth 4
@@ -408,7 +409,9 @@ class TestPrintModelStatistics(unittest.TestCase):
 
         # Test activations and no parameter shapes
         table = flop_count_table(
-            model, inputs, activations=True, show_param_shapes=False
+            flops=FlopCountAnalysis(model, inputs),
+            activations=ActivationCountAnalysis(model, inputs),
+            show_param_shapes=False,
         )
 
         self.assertTrue("#activations" in table)  # Activation header
@@ -438,7 +441,7 @@ class TestPrintModelStatistics(unittest.TestCase):
 
         model = TestNet()
         inputs = (torch.randn((1, 10)),)
-        model_str = flop_count_str(model, inputs)
+        model_str = flop_count_str(FlopCountAnalysis(model, inputs))
 
         self.assertTrue("N/A indicates a possibly missing statistic" in model_str)
         self.assertTrue("n_params: 0.11K, n_flops: 100" in model_str)
@@ -485,7 +488,10 @@ class TestPrintModelStatistics(unittest.TestCase):
         # ")"
 
         # Test with activations
-        model_str = flop_count_str(model, inputs, activations=True)
+        model_str = flop_count_str(
+            FlopCountAnalysis(model, inputs),
+            activations=ActivationCountAnalysis(model, inputs),
+        )
 
         self.assertTrue("n_params: 0.33K, n_flops: 0.3K, n_acts: 30" in model_str)
         self.assertTrue("n_params: 0.11K, n_flops: N/A, n_acts: N/A" in model_str)

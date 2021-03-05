@@ -90,6 +90,8 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
     table: typing.List[typing.Tuple] = []
 
     def format_size(x: int) -> str:
+        if x > 1e8:
+            return "{:.1f}G".format(x / 1e9)
         if x > 1e5:
             return "{:.1f}M".format(x / 1e6)
         if x > 1e2:
