@@ -18,6 +18,8 @@ from torch.jit import TracerWarning, _get_trace_graph
 from .jit_handles import Handle
 
 
+# Only ignore ops that are technically truly 0 flops:
+# shape-manipulation ops, integer ops, memory copy ops
 _IGNORED_OPS: Set[str] = {
     "aten::Int",
     "aten::ScalarImplicit",
@@ -56,6 +58,9 @@ _IGNORED_OPS: Set[str] = {
     "aten::split",
     "aten::split_with_sizes",
     "aten::squeeze",
+    "aten::narrow",
+    "aten::unbind",
+    "aten::full_like",
     "aten::stack",
     "aten::t",
     "aten::to",
@@ -65,13 +70,6 @@ _IGNORED_OPS: Set[str] = {
     "aten::view",
     "aten::zeros",
     "aten::zeros_like",
-    "prim::Constant",
-    "prim::ImplicitTensorToNum",
-    "prim::Int",
-    "prim::ListConstruct",
-    "prim::ListUnpack",
-    "prim::NumToTensor",
-    "prim::TupleConstruct",
 }
 
 
@@ -511,7 +509,8 @@ class JitModelAnalysis:
             scope_names = node.scopeName().split("/")
             all_seen.update(scope_names)
             if kind not in self._op_handles:
-                if kind in self._ignored_ops:
+                # ignore all prim:: operators
+                if kind in self._ignored_ops or kind.startswith("prim::"):
                     continue
 
                 seen = set()
