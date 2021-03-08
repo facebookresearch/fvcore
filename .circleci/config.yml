@@ -135,7 +135,7 @@ jobs:
           name: Install fvcore
           command: |
             docker cp ~/fvcore fvcore:/fvcore
-            docker exec -it fvcore pip install -e /fvcore
+            docker exec -it fvcore pip install -e "/fvcore[all]"
 
       - run:
           name: Run Unit Tests
