@@ -713,7 +713,8 @@ class CropTransform(Transform):
         for polygon in polygons:
             polygon = geometry.Polygon(polygon).buffer(0.0)
             # polygon must be valid to perform intersection.
-            assert polygon.is_valid, polygon
+            if not polygon.is_valid:
+                continue
             cropped = polygon.intersection(crop_box)
             if cropped.is_empty:
                 continue

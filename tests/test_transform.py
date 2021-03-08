@@ -560,6 +560,25 @@ class TestTransforms(unittest.TestCase):
         coords = np.asarray(g.exterior.coords)
         self.assertEqual(coords[0].tolist(), coords[-1].tolist())
 
+    def test_crop_invalid_polygons(self):
+        # Ensure that invalid polygons are skipped.
+        transform = T.CropTransform(3, 4, 20, 20)
+        polygon = [
+            (0, 0),
+            (0, 3),
+            (3, 3),
+            (3, 0),
+            (2, 0),
+            (2, 2),
+            (1, 2),
+            (1, 1),
+            (2, 1),
+            (2, 0),
+            (0, 0),
+        ]
+        cropped_polygons = transform.apply_polygons([polygon])
+        self.assertEqual(0, len(cropped_polygons))
+
     @staticmethod
     def _coords_provider(
         num_coords: int = 5,
