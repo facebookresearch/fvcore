@@ -789,3 +789,22 @@ class TestJitModelAnalysis(unittest.TestCase):
             _ = analyzer.total()
         self.assertTrue(any(skipped_string in s for s in cm.output))
         self.assertTrue(any(uncalled_string in s for s in cm.output))
+
+    def test_skip_uncalled_containers_warnings(self) -> None:
+        # uncalled containers should not warn
+
+        class A(nn.Module):
+            def forward(self, x):
+                return self.submod[0](x) + 1
+
+        mod = A()
+        mod.submod = nn.ModuleList([nn.Linear(3, 3)])  # pyre-ignore
+        analyzer = FlopCountAnalysis(model=mod, inputs=torch.rand(1, 3))
+        analyzer.unsupported_ops_warnings(enabled=False)
+
+        logger = logging.getLogger()
+        with self.assertLogs(logger, logging.WARN) as cm:
+            logger.warning("Dummy warning.")
+            _ = analyzer.total()
+        uncalled_string = "Module never called: submod"
+        self.assertFalse(any(uncalled_string in s for s in cm.output))

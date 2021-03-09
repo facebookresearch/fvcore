@@ -201,6 +201,9 @@ class JitModelAnalysis:
         self._model = model
         self._inputs = inputs
         self._op_handles: Dict[str, Handle] = {}
+        # Mapping from names to submodules
+        self._named_modules: Dict[str, nn.Module] = dict(_named_modules_with_dup(model))
+        # Mapping from submodules and their aliases to the canonical name of each submodule
         self._aliases: Dict[Union[nn.Module, str], str] = self._get_aliases(model)
         self._stats: Optional[Statistics] = None
         self._enable_warn_unsupported_ops = True
@@ -459,6 +462,7 @@ class JitModelAnalysis:
     def _warn_uncalled_mods(self, uncalled_mods: Set[str]) -> None:
         if not self._enable_warn_uncalled_mods or not uncalled_mods:
             return
+
         logger = logging.getLogger(__name__)
         logger.warning(
             "The following submodules of the model were never "
@@ -513,22 +517,29 @@ class JitModelAnalysis:
                 if kind in self._ignored_ops or kind.startswith("prim::"):
                     continue
 
-                seen = set()
-                for name in scope_names:
-                    if name not in seen:
-                        unsupported_ops[name][kind] += 1
-                        seen.add(name)
+                for name in set(scope_names):
+                    unsupported_ops[name][kind] += 1
             else:
                 inputs, outputs = list(node.inputs()), list(node.outputs())
                 op_counts = self._op_handles[kind](inputs, outputs)
 
-                seen = set()  # Assures an op contributes at most once to a module
-                for name in scope_names:
-                    if name not in seen:
-                        counts[name] += op_counts
-                        seen.add(name)
+                # Assures an op contributes at most once to a module
+                for name in set(scope_names):
+                    counts[name] += op_counts
 
         uncalled_mods = set(self._aliases.values()) - all_seen
+
+        def has_forward(module_type) -> bool:
+            # Containers are not meant to be called anyway (they don't have forward)
+            no_forward_mods = {nn.ModuleList, nn.ModuleDict, nn.Module}
+            for mod in no_forward_mods:
+                if module_type.forward is mod.forward:
+                    return False
+            return True
+
+        uncalled_mods = {
+            m for m in uncalled_mods if has_forward(type(self._named_modules.get(m)))
+        }
 
         stats = Statistics(
             counts=counts, unsupported_ops=unsupported_ops, uncalled_mods=uncalled_mods
