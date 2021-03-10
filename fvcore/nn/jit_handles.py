@@ -1,10 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-# pyre-ignore-all-errors[2,3,33]
+# pyre-ignore-all-errors[2,3,16,33,6,23]
 # NOTE: most Any type in this file should be torch._C.Value - which was not yet annotated.
+# pyre also doesn't work well with many Optional in this file
 
 import typing
 from collections import Counter, OrderedDict
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Optional
 
 from numpy import prod
 
@@ -45,7 +46,7 @@ def generic_activation_jit(
     return lambda inputs, outputs: Counter({op_name: _generic_activation_jit(outputs)})
 
 
-def get_shape(val: Any) -> List[int]:
+def get_shape(val: Any) -> Optional[List[int]]:
     """
     Get the shapes from a jit value object.
 
@@ -58,22 +59,24 @@ def get_shape(val: Any) -> List[int]:
     if val.isCompleteTensor():
         return val.type().sizes()
     else:
-        raise ValueError()
+        return None
+
+
+"""
+Below are flop counters for various ops. Every counter has the following signature:
+
+Args:
+    inputs (list(torch._C.Value)): The inputs of the op in the form of a list of jit object.
+    outputs (list(torch._C.Value)): The outputs of the op in the form of a list of jit object.
+
+Returns:
+    Counter: A Counter dictionary that records the number of flops for each operation.
+"""
 
 
 def addmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
-    This method counts the flops for fully connected layers with torch script.
-
-    Args:
-        inputs (list(torch._C.Value)): The input shape in the form of a list of
-            jit object.
-        outputs (list(torch._C.Value)): The output shape in the form of a list
-            of jit object.
-
-    Returns:
-        Counter: A Counter dictionary that records the number of flops for each
-            operation.
+    Count flops for fully connected layers.
     """
     # Count flop for nn.Linear
     # inputs is a list of length 3.
@@ -91,17 +94,7 @@ def addmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]
 
 def linear_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
-    This method counts the flops for the aten::linear operator with torch script.
-
-    Args:
-        inputs (list(torch._C.Value)): The input shape in the form of a list of
-            jit object.
-        outputs (list(torch._C.Value)): The output shape in the form of a list
-            of jit object.
-
-    Returns:
-        Counter: A Counter dictionary that records the number of flops for each
-            operation.
+    Count flops for the aten::linear operator.
     """
     # Inputs is a list of length 3; unlike aten::addmm, it is the first
     # two elements that are relevant.
@@ -116,17 +109,7 @@ def linear_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str
 
 def bmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
-    This method counts the flops for the bmm operation.
-
-    Args:
-        inputs (list(torch._C.Value)): The input shape in the form of a list of
-            jit object before bmm.
-        outputs (list(torch._C.Value)): The output shape in the form of a list
-            of jit object after bmm.
-
-    Returns:
-        Counter: A Counter dictionary that records the number of flops for each
-            operation.
+    Count flops for the bmm operation.
     """
     # Inputs should be a list of length 2.
     # Inputs contains the shapes of two tensor.
@@ -143,7 +126,7 @@ def conv_flop_count(
     x_shape: List[int], w_shape: List[int], out_shape: List[int]
 ) -> typing.Counter[str]:
     """
-    This method counts the flops for convolution. Note only multiplication is
+    Count flops for convolution. Note only multiplication is
     counted. Computation for addition and bias is ignored.
 
     Args:
@@ -164,17 +147,7 @@ def conv_flop_count(
 
 def conv_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
-    This method counts the flops for convolution using torch script.
-
-    Args:
-        inputs (list(torch._C.Value)): The input shape in the form of a list of
-            jit object before convolution.
-        outputs (list(torch._C.Value)): The output shape in the form of a list
-            of jit object after convolution.
-
-    Returns:
-        Counter: A Counter dictionary that records the number of flops for each
-            operation.
+    Count flops for convolution.
     """
     # Inputs of Convolution should be a list of length 12 or 13. They represent:
     # 0) input tensor, 1) convolution filter, 2) bias, 3) stride, 4) padding,
@@ -189,18 +162,8 @@ def conv_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
 
 def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
-    This method counts the flops for the einsum operation. We currently support
+    Count flops for the einsum operation. We currently support
     two einsum operations: "nct,ncp->ntp" and "ntg,ncg->nct".
-
-    Args:
-        inputs (list(torch._C.Value)): The input shape in the form of a list of
-            jit object before einsum.
-        outputs (list(torch._C.Value)): The output shape in the form of a list
-            of jit object after einsum.
-
-    Returns:
-        Counter: A Counter dictionary that records the number of flops for each
-            operation.
     """
     # Inputs of einsum should be a list of length 2.
     # Inputs[0] stores the equation used for einsum.
@@ -237,17 +200,7 @@ def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str
 
 def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     """
-    This method counts the flops for matmul.
-
-    Args:
-        inputs (list(torch._C.Value)): The input shape in the form of a list of
-            jit object before matmul.
-        outputs (list(torch._C.Value)): The output shape in the form of a list
-            of jit object after matmul.
-
-    Returns:
-        Counter: A Counter dictionary that records the number of flops for each
-            operation.
+    Count flops for matmul.
     """
     # Inputs should be a list of length 2.
     # Inputs contains the shapes of two matrices.
@@ -259,23 +212,49 @@ def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str
     return flop_counter
 
 
-def batchnorm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
+def norm_flop_counter(name: str, affine_arg_index: int) -> Handle:
     """
-    This method counts the flops for batch norm.
+    Args:
+        name: name to return in the counter
+        affine_arg_index: index of the affine argument in inputs
+    """
+
+    def norm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
+        """
+        Count flops for norm layers.
+        """
+        # Inputs[0] contains the shape of the input.
+        input_shape = get_shape(inputs[0])
+        has_affine = get_shape(inputs[affine_arg_index]) is not None
+        assert 2 <= len(input_shape) <= 5, input_shape
+        # 5 is just a rough estimate
+        flop = prod(input_shape) * (5 if has_affine else 4)
+        return Counter({name: flop})
+
+    return norm_flop_jit
+
+
+def elementwise_flop_counter(
+    name: str, input_scale: float = 1, output_scale: float = 0
+) -> Handle:
+    """
+    Count flops by
+        input_tensor.numel() * input_scale + output_tensor.numel() * output_scale
 
     Args:
-        inputs (list(torch._C.Value)): The input shape in the form of a list of
-            jit object before batch norm.
-        outputs (list(torch._C.Value)): The output shape in the form of a list
-            of jit object after batch norm.
-
-    Returns:
-        Counter: A Counter dictionary that records the number of flops for each
-            operation.
+        name: name to return in the counter
+        input_scale: scale of the input tensor (first argument)
+        output_scale: scale of the output tensor (first element in outputs)
     """
-    # Inputs[0] contains the shape of the input.
-    input_shape = get_shape(inputs[0])
-    assert 2 <= len(input_shape) <= 5, input_shape
-    flop = prod(input_shape) * 4
-    flop_counter = Counter({"batchnorm": flop})
-    return flop_counter
+
+    def elementwise_flop(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
+        ret = 0
+        if input_scale != 0:
+            shape = get_shape(inputs[0])
+            ret += input_scale * prod(shape)
+        if output_scale != 0:
+            shape = get_shape(outputs[0])
+            ret += output_scale * prod(shape)
+        return Counter({name: ret})
+
+    return elementwise_flop

@@ -1,14 +1,15 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-# pyre-ignore-all-errors[2]
+# pyre-ignore-all-errors[2,3,53]
 import typing
 import unittest
 from collections import Counter, defaultdict
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import torch
 import torch.nn as nn
-from fvcore.nn.flop_count import FlopCountAnalysis, flop_count
-from fvcore.nn.jit_handles import Handle, batchnorm_flop_jit
+from fvcore.nn.flop_count import _DEFAULT_SUPPORTED_OPS, FlopCountAnalysis, flop_count
+from fvcore.nn.jit_handles import Handle
+from torch.nn import functional as F
 
 
 class ThreeNet(nn.Module):
@@ -611,15 +612,14 @@ class TestFlopCountAnalysis(unittest.TestCase):
         BatchNorm1d, BatchNorm2d and BatchNorm3d.
         """
         # Test for BatchNorm1d.
-        supported_ops: Dict[str, Handle] = {"aten::batch_norm": batchnorm_flop_jit}
         batch_size = 10
         input_dim = 10
         batch_1d = nn.BatchNorm1d(input_dim, affine=False)
         x = torch.randn(batch_size, input_dim)
-        flop_dict, _ = flop_count(batch_1d, (x,), supported_ops)
+        flop_dict, _ = flop_count(batch_1d, (x,))
         gt_flop = 4 * batch_size * input_dim / 1e9
         gt_dict = defaultdict(float)
-        gt_dict["batchnorm"] = gt_flop
+        gt_dict["batch_norm"] = gt_flop
         self.assertDictEqual(
             flop_dict, gt_dict, "BatchNorm1d failed to pass the flop count test."
         )
@@ -631,10 +631,10 @@ class TestFlopCountAnalysis(unittest.TestCase):
         spatial_dim_y = 5
         batch_2d = nn.BatchNorm2d(input_dim, affine=False)
         x = torch.randn(batch_size, input_dim, spatial_dim_x, spatial_dim_y)
-        flop_dict, _ = flop_count(batch_2d, (x,), supported_ops)
+        flop_dict, _ = flop_count(batch_2d, (x,))
         gt_flop = 4 * batch_size * input_dim * spatial_dim_x * spatial_dim_y / 1e9
         gt_dict = defaultdict(float)
-        gt_dict["batchnorm"] = gt_flop
+        gt_dict["batch_norm"] = gt_flop
         self.assertDictEqual(
             flop_dict, gt_dict, "BatchNorm2d failed to pass the flop count test."
         )
@@ -649,7 +649,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
         x = torch.randn(
             batch_size, input_dim, spatial_dim_x, spatial_dim_y, spatial_dim_z
         )
-        flop_dict, _ = flop_count(batch_3d, (x,), supported_ops)
+        flop_dict, _ = flop_count(batch_3d, (x,))
         gt_flop = (
             4
             * batch_size
@@ -660,7 +660,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
             / 1e9
         )
         gt_dict = defaultdict(float)
-        gt_dict["batchnorm"] = gt_flop
+        gt_dict["batch_norm"] = gt_flop
         self.assertDictEqual(
             flop_dict, gt_dict, "BatchNorm3d failed to pass the flop count test."
         )
@@ -685,6 +685,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
         gt_dict = defaultdict(float)
         gt_dict["conv"] = flop1
         gt_dict[self.lin_op] = flop2
+        gt_dict["adaptive_avg_pool2d"] = 2e-6
         self.assertDictEqual(
             flop_dict,
             gt_dict,
@@ -705,15 +706,69 @@ class TestFlopCountAnalysis(unittest.TestCase):
         flop1 = batch_size * conv_dim * input_dim * spatial_dim * spatial_dim
         flop_linear1 = batch_size * conv_dim * linear_dim
         flop_linear2 = batch_size * linear_dim * 1
-        flop2 = flop_linear1 + flop_linear2
         flop_counter = FlopCountAnalysis(threeNet, (x,))
         gt_dict = Counter(
             {
-                "": flop1 + flop2,
                 "conv": flop1,
                 "linear1": flop_linear1,
                 "linear2": flop_linear2,
-                "pool": 0,
+                "pool": flop1 // input_dim,
             }
         )
+        gt_dict[""] = sum(gt_dict.values())
         self.assertEqual(flop_counter.by_module(), gt_dict)
+
+
+class TestFlopCountHandles(unittest.TestCase):
+    def _count_function(self, func, inputs, name) -> Tuple[Any, Any]:
+        tensor_inputs = [x for x in inputs if isinstance(x, torch.Tensor)]
+
+        def f(*args):
+            return func(*inputs)
+
+        graph = torch.jit.trace(f, tuple(tensor_inputs), check_trace=False).graph
+        nodes = [k for k in graph.nodes() if k.kind() == name]
+        self.assertEqual(len(nodes), 1)
+        node = nodes[0]
+        return list(node.inputs()), list(node.outputs())
+
+    def test_batch_norm(self):
+        op_name = "aten::batch_norm"
+        counter = _DEFAULT_SUPPORTED_OPS[op_name]
+
+        vec = torch.rand(2)
+        shapes = self._count_function(
+            F.batch_norm, (torch.rand(2, 2, 2, 2), vec, vec, vec, vec), op_name
+        )
+        self.assertEqual(sum(counter(*shapes).values()), 80)
+
+        shapes = self._count_function(
+            F.batch_norm,
+            (torch.rand(2, 2, 2, 2), vec, vec, None, None),
+            op_name,
+        )
+        self.assertEqual(sum(counter(*shapes).values()), 64)
+
+    def test_group_norm(self):
+        op_name = "aten::group_norm"
+        counter = _DEFAULT_SUPPORTED_OPS[op_name]
+
+        vec = torch.rand(2)
+        shapes = self._count_function(
+            F.group_norm, (torch.rand(2, 2, 2, 2), 2, vec, vec), op_name
+        )
+        self.assertEqual(sum(counter(*shapes).values()), 80)
+
+        shapes = self._count_function(
+            F.group_norm, (torch.rand(2, 2, 2, 2), 2, None, None), op_name
+        )
+        self.assertEqual(sum(counter(*shapes).values()), 64)
+
+    def test_upsample(self):
+        op_name = "aten::upsample_bilinear2d"
+        counter = _DEFAULT_SUPPORTED_OPS[op_name]
+
+        shapes = self._count_function(
+            F.interpolate, (torch.rand(2, 2, 2, 2), None, 2, "bilinear", False), op_name
+        )
+        self.assertEqual(sum(counter(*shapes).values()), 2 ** 4 * 4 * 4)

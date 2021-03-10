@@ -14,8 +14,10 @@ from .jit_handles import (
     bmm_flop_jit,
     conv_flop_jit,
     einsum_flop_jit,
+    elementwise_flop_counter,
     linear_flop_jit,
     matmul_flop_jit,
+    norm_flop_counter,
 )
 
 
@@ -27,6 +29,18 @@ _DEFAULT_SUPPORTED_OPS: Dict[str, Handle] = {
     "aten::einsum": einsum_flop_jit,
     "aten::matmul": matmul_flop_jit,
     "aten::linear": linear_flop_jit,
+    # You might want to ignore BN flops due to inference-time fusion.
+    # Use `set_op_handle("aten::batch_norm", None)
+    "aten::batch_norm": norm_flop_counter("batch_norm", 1),
+    "aten::group_norm": norm_flop_counter("group_norm", 2),
+    "aten::layer_norm": norm_flop_counter("layer_norm", 2),
+    "aten::instance_norm": norm_flop_counter("instance_norm", 1),
+    "aten::upsample_nearest2d": elementwise_flop_counter("upsample_nearest2d", 0, 1),
+    "aten::upsample_bilinear2d": elementwise_flop_counter("upsample_bilinear2d", 0, 4),
+    "aten::adaptive_avg_pool2d": elementwise_flop_counter("adaptive_avg_pool2d", 1, 0),
+    "aten::grid_sampler": elementwise_flop_counter(
+        "grid_sampler", 0, 4
+    ),  # assume bilinear
 }
 
 
@@ -34,8 +48,11 @@ class FlopCountAnalysis(JitModelAnalysis):
     """
     Provides access to per-submodule model flop count obtained by
     tracing a model with pytorch's jit tracing functionality. By default,
-    comes with standard flop counters for convolutional and dot-product operators.
-    Note that we count one Multiply-Add as one FLOP.
+    comes with standard flop counters for a few common operators.
+    Note that:
+
+        1. Flop is not a well-defined concept. We just produce our best estimate.
+        2. We count one fused multiply-add as one flop.
 
     Handles for additional operators may be added, or the default ones
     overwritten, using the ``.set_op_handle(name, func)`` method.
