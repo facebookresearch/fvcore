@@ -31,16 +31,14 @@ _DEFAULT_SUPPORTED_OPS: Dict[str, Handle] = {
     "aten::linear": linear_flop_jit,
     # You might want to ignore BN flops due to inference-time fusion.
     # Use `set_op_handle("aten::batch_norm", None)
-    "aten::batch_norm": norm_flop_counter("batch_norm", 1),
-    "aten::group_norm": norm_flop_counter("group_norm", 2),
-    "aten::layer_norm": norm_flop_counter("layer_norm", 2),
-    "aten::instance_norm": norm_flop_counter("instance_norm", 1),
-    "aten::upsample_nearest2d": elementwise_flop_counter("upsample_nearest2d", 0, 1),
-    "aten::upsample_bilinear2d": elementwise_flop_counter("upsample_bilinear2d", 0, 4),
-    "aten::adaptive_avg_pool2d": elementwise_flop_counter("adaptive_avg_pool2d", 1, 0),
-    "aten::grid_sampler": elementwise_flop_counter(
-        "grid_sampler", 0, 4
-    ),  # assume bilinear
+    "aten::batch_norm": norm_flop_counter(1),
+    "aten::group_norm": norm_flop_counter(2),
+    "aten::layer_norm": norm_flop_counter(2),
+    "aten::instance_norm": norm_flop_counter(1),
+    "aten::upsample_nearest2d": elementwise_flop_counter(0, 1),
+    "aten::upsample_bilinear2d": elementwise_flop_counter(0, 4),
+    "aten::adaptive_avg_pool2d": elementwise_flop_counter(1, 0),
+    "aten::grid_sampler": elementwise_flop_counter(0, 4),  # assume bilinear
 }
 
 

@@ -7,6 +7,7 @@ import warnings
 from collections import Counter
 from copy import copy
 from dataclasses import dataclass
+from numbers import Number
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import torch
@@ -522,6 +523,8 @@ class JitModelAnalysis:
             else:
                 inputs, outputs = list(node.inputs()), list(node.outputs())
                 op_counts = self._op_handles[kind](inputs, outputs)
+                if isinstance(op_counts, Number):
+                    op_counts = Counter({self._simplify_op_name(kind): op_counts})
 
                 # Assures an op contributes at most once to a module
                 for name in set(scope_names):
@@ -548,3 +551,14 @@ class JitModelAnalysis:
         self._warn_unsupported_ops(unsupported_ops[""])
         self._warn_uncalled_mods(uncalled_mods)
         return stats
+
+    def _simplify_op_name(self, full_op_name: str) -> str:
+        """
+        Get simplified name of the op without the preceding namespace, e.g.
+        aten::batch_norm -> batch_norm
+        """
+        p = full_op_name.find("::")
+        if p != -1:
+            return full_op_name[p + 2 :]
+        else:
+            return full_op_name

@@ -5,45 +5,13 @@
 
 import typing
 from collections import Counter, OrderedDict
-from typing import Any, Callable, List, Optional
+from numbers import Number
+from typing import Any, Callable, List, Optional, Union
 
 from numpy import prod
 
 
-Handle = Callable[[List[Any], List[Any]], typing.Counter[str]]
-
-
-def generic_activation_jit(
-    op_name: str,
-) -> Callable[[List[Any], List[Any]], typing.Counter[str]]:
-    """
-    This method return a handle that counts the number of activation from the
-    output shape for the specified operation.
-
-    Args:
-        op_name (str): The name of the operation.
-
-    Returns:
-        Callable: An activation handle for the given operation.
-    """
-
-    def _generic_activation_jit(outputs: List[Any]) -> int:
-        """
-        This is a generic jit handle that counts the number of activations for any
-        operation given the output shape.
-
-        Args:
-            outputs (list(torch._C.Value)): The output shape in the form of a list
-                of jit object.
-
-        Returns:
-            int: Total number of activations for each operation.
-        """
-        out_shape = get_shape(outputs[0])
-        ac_count = prod(out_shape)
-        return ac_count
-
-    return lambda inputs, outputs: Counter({op_name: _generic_activation_jit(outputs)})
+Handle = Callable[[List[Any], List[Any]], Union[typing.Counter[str], Number]]
 
 
 def get_shape(val: Any) -> Optional[List[int]]:
@@ -63,18 +31,49 @@ def get_shape(val: Any) -> Optional[List[int]]:
 
 
 """
-Below are flop counters for various ops. Every counter has the following signature:
+Below are flop/activation counters for various ops. Every counter has the following signature:
 
 Args:
     inputs (list(torch._C.Value)): The inputs of the op in the form of a list of jit object.
     outputs (list(torch._C.Value)): The outputs of the op in the form of a list of jit object.
 
 Returns:
-    Counter: A Counter dictionary that records the number of flops for each operation.
+    number: The number of flops/activations for the operation.
+    or Counter[str]
 """
 
 
-def addmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
+def generic_activation_jit(op_name: Optional[str] = None) -> Handle:
+    """
+    This method return a handle that counts the number of activation from the
+    output shape for the specified operation.
+
+    Args:
+        op_name (str): The name of the operation. If given, the handle will
+            return a counter using this name.
+
+    Returns:
+        Callable: An activation handle for the given operation.
+    """
+
+    def _generic_activation_jit(
+        i: Any, outputs: List[Any]
+    ) -> Union[typing.Counter[str], Number]:
+        """
+        This is a generic jit handle that counts the number of activations for any
+        operation given the output shape.
+        """
+        out_shape = get_shape(outputs[0])
+        ac_count = prod(out_shape)
+        if op_name is None:
+            return ac_count
+        else:
+            return Counter({op_name: ac_count})
+
+    return _generic_activation_jit
+
+
+def addmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     """
     Count flops for fully connected layers.
     """
@@ -87,12 +86,11 @@ def addmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]
     assert len(input_shapes[1]) == 2, input_shapes[1]
     batch_size, input_dim = input_shapes[0]
     output_dim = input_shapes[1][1]
-    flop = batch_size * input_dim * output_dim
-    flop_counter = Counter({"addmm": flop})
-    return flop_counter
+    flops = batch_size * input_dim * output_dim
+    return flops
 
 
-def linear_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
+def linear_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     """
     Count flops for the aten::linear operator.
     """
@@ -103,11 +101,10 @@ def linear_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str
     # input_shapes[1]: [output_feature_dim, input_feature_dim]
     assert input_shapes[0][-1] == input_shapes[1][-1]
     flops = prod(input_shapes[0]) * input_shapes[1][0]
-    flop_counter = Counter({"linear": flops})
-    return flop_counter
+    return flops
 
 
-def bmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
+def bmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     """
     Count flops for the bmm operation.
     """
@@ -118,13 +115,12 @@ def bmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     n, c, t = input_shapes[0]
     d = input_shapes[-1][-1]
     flop = n * c * t * d
-    flop_counter = Counter({"bmm": flop})
-    return flop_counter
+    return flop
 
 
 def conv_flop_count(
     x_shape: List[int], w_shape: List[int], out_shape: List[int]
-) -> typing.Counter[str]:
+) -> Number:
     """
     Count flops for convolution. Note only multiplication is
     counted. Computation for addition and bias is ignored.
@@ -134,15 +130,13 @@ def conv_flop_count(
         w_shape (list(int)): The filter shape.
         out_shape (list(int)): The output shape after convolution.
     Returns:
-        Counter: A Counter dictionary that records the number of flops for each
-            operation.
+        int: the number of flops
     """
     batch_size, Cin_dim, Cout_dim = x_shape[0], w_shape[1], out_shape[1]
     out_size = prod(out_shape[2:])
     kernel_size = prod(w_shape[2:])
     flop = batch_size * out_size * Cout_dim * Cin_dim * kernel_size
-    flop_counter = Counter({"conv": flop})
-    return flop_counter
+    return flop
 
 
 def conv_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
@@ -157,10 +151,12 @@ def conv_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     assert len(inputs) == 12 or len(inputs) == 13, len(inputs)
     x, w = inputs[:2]
     x_shape, w_shape, out_shape = (get_shape(x), get_shape(w), get_shape(outputs[0]))
-    return conv_flop_count(x_shape, w_shape, out_shape)
+
+    # use a custom name instead of "_convolution"
+    return Counter({"conv": conv_flop_count(x_shape, w_shape, out_shape)})
 
 
-def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
+def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     """
     Count flops for the einsum operation. We currently support
     two einsum operations: "nct,ncp->ntp" and "ntg,ncg->nct".
@@ -184,21 +180,19 @@ def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str
         n, c, t = input_shapes[0]
         p = input_shapes[-1][-1]
         flop = n * c * t * p
-        flop_counter = Counter({"einsum": flop})
-        return flop_counter
+        return flop
 
     elif equation == "abc,adc->adb":
         n, t, g = input_shapes[0]
         c = input_shapes[-1][1]
         flop = n * t * g * c
-        flop_counter = Counter({"einsum": flop})
-        return flop_counter
+        return flop
 
     else:
         raise NotImplementedError("Unsupported einsum operation.")
 
 
-def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
+def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     """
     Count flops for matmul.
     """
@@ -208,18 +202,16 @@ def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str
     assert len(input_shapes) == 2, input_shapes
     assert input_shapes[0][-1] == input_shapes[1][-2], input_shapes
     flop = prod(input_shapes[0]) * input_shapes[-1][-1]
-    flop_counter = Counter({"matmul": flop})
-    return flop_counter
+    return flop
 
 
-def norm_flop_counter(name: str, affine_arg_index: int) -> Handle:
+def norm_flop_counter(affine_arg_index: int) -> Handle:
     """
     Args:
-        name: name to return in the counter
         affine_arg_index: index of the affine argument in inputs
     """
 
-    def norm_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
+    def norm_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
         """
         Count flops for norm layers.
         """
@@ -229,25 +221,22 @@ def norm_flop_counter(name: str, affine_arg_index: int) -> Handle:
         assert 2 <= len(input_shape) <= 5, input_shape
         # 5 is just a rough estimate
         flop = prod(input_shape) * (5 if has_affine else 4)
-        return Counter({name: flop})
+        return flop
 
     return norm_flop_jit
 
 
-def elementwise_flop_counter(
-    name: str, input_scale: float = 1, output_scale: float = 0
-) -> Handle:
+def elementwise_flop_counter(input_scale: float = 1, output_scale: float = 0) -> Handle:
     """
     Count flops by
         input_tensor.numel() * input_scale + output_tensor.numel() * output_scale
 
     Args:
-        name: name to return in the counter
         input_scale: scale of the input tensor (first argument)
         output_scale: scale of the output tensor (first element in outputs)
     """
 
-    def elementwise_flop(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
+    def elementwise_flop(inputs: List[Any], outputs: List[Any]) -> Number:
         ret = 0
         if input_scale != 0:
             shape = get_shape(inputs[0])
@@ -255,6 +244,6 @@ def elementwise_flop_counter(
         if output_scale != 0:
             shape = get_shape(outputs[0])
             ret += output_scale * prod(shape)
-        return Counter({name: ret})
+        return ret
 
     return elementwise_flop

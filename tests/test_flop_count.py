@@ -740,14 +740,14 @@ class TestFlopCountHandles(unittest.TestCase):
         shapes = self._count_function(
             F.batch_norm, (torch.rand(2, 2, 2, 2), vec, vec, vec, vec), op_name
         )
-        self.assertEqual(sum(counter(*shapes).values()), 80)
+        self.assertEqual(counter(*shapes), 80)
 
         shapes = self._count_function(
             F.batch_norm,
             (torch.rand(2, 2, 2, 2), vec, vec, None, None),
             op_name,
         )
-        self.assertEqual(sum(counter(*shapes).values()), 64)
+        self.assertEqual(counter(*shapes), 64)
 
     def test_group_norm(self):
         op_name = "aten::group_norm"
@@ -757,12 +757,12 @@ class TestFlopCountHandles(unittest.TestCase):
         shapes = self._count_function(
             F.group_norm, (torch.rand(2, 2, 2, 2), 2, vec, vec), op_name
         )
-        self.assertEqual(sum(counter(*shapes).values()), 80)
+        self.assertEqual(counter(*shapes), 80)
 
         shapes = self._count_function(
             F.group_norm, (torch.rand(2, 2, 2, 2), 2, None, None), op_name
         )
-        self.assertEqual(sum(counter(*shapes).values()), 64)
+        self.assertEqual(counter(*shapes), 64)
 
     def test_upsample(self):
         op_name = "aten::upsample_bilinear2d"
@@ -771,4 +771,4 @@ class TestFlopCountHandles(unittest.TestCase):
         shapes = self._count_function(
             F.interpolate, (torch.rand(2, 2, 2, 2), None, 2, "bilinear", False), op_name
         )
-        self.assertEqual(sum(counter(*shapes).values()), 2 ** 4 * 4 * 4)
+        self.assertEqual(counter(*shapes), 2 ** 4 * 4 * 4)

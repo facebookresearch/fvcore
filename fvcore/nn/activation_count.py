@@ -14,11 +14,11 @@ from .jit_handles import Handle, generic_activation_jit
 # A dictionary that maps supported operations to their activation count handles.
 _DEFAULT_SUPPORTED_OPS: Dict[str, Handle] = {
     "aten::_convolution": generic_activation_jit("conv"),
-    "aten::addmm": generic_activation_jit("addmm"),
-    "aten::bmm": generic_activation_jit("bmm"),
-    "aten::einsum": generic_activation_jit("einsum"),
-    "aten::matmul": generic_activation_jit("matmul"),
-    "aten::linear": generic_activation_jit("linear"),
+    "aten::addmm": generic_activation_jit(),
+    "aten::bmm": generic_activation_jit(),
+    "aten::einsum": generic_activation_jit(),
+    "aten::matmul": generic_activation_jit(),
+    "aten::linear": generic_activation_jit(),
 }
 
 
