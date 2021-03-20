@@ -44,7 +44,7 @@ class ParamScheduler:
 
 class ConstantParamScheduler(ParamScheduler):
     """
-    Returns a constant value for a optimizer param.
+    Returns a constant value for a param.
     """
 
     def __init__(self, value: float) -> None:

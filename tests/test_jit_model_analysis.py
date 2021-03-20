@@ -1,5 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-# pyre-ignore-all-errors[2]
+# pyre-ignore-all-errors[2,56]
 
 import logging
 import typing
@@ -544,7 +544,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         }
         name_to_module[""] = model.name_to_module[""]
 
-        model = torch.nn.DataParallel(model)
+        model = torch.nn.DataParallel(model).cpu()
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
         analyzer.unsupported_ops_warnings(enabled=False)
 
@@ -770,8 +770,9 @@ class TestJitModelAnalysis(unittest.TestCase):
         # Unsupported ops and uncalled modules warnings
 
         logger = logging.getLogger()
-        skipped_string = "Unsupported operator aten::add encountered 1 time(s)"
-        uncalled_string = "Module never called: fc1"
+        skipeed_msg = "Unsupported operator aten::add encountered 1 time(s)"
+        uncalled_msg = "never called"
+        uncalled_modules = "fc1, fc2"
 
         analyzer.uncalled_modules_warnings(enabled=False)
         analyzer.unsupported_ops_warnings(enabled=False)
@@ -779,16 +780,17 @@ class TestJitModelAnalysis(unittest.TestCase):
         with self.assertLogs(logger, logging.WARN) as cm:
             logger.warning("Dummy warning.")
             _ = analyzer.total()
-        self.assertFalse(any(skipped_string in s for s in cm.output))
-        self.assertFalse(any(uncalled_string in s for s in cm.output))
+        self.assertFalse(any(skipeed_msg in s for s in cm.output))
+        self.assertFalse(any(uncalled_msg in s for s in cm.output))
 
         analyzer.unsupported_ops_warnings(enabled=True)
         analyzer.uncalled_modules_warnings(enabled=True)
         analyzer._stats = None  # Manually clear cache so trace is rerun
         with self.assertLogs(logger, logging.WARN) as cm:
             _ = analyzer.total()
-        self.assertTrue(any(skipped_string in s for s in cm.output))
-        self.assertTrue(any(uncalled_string in s for s in cm.output))
+        self.assertTrue(any(skipeed_msg in s for s in cm.output))
+        self.assertTrue(any(uncalled_msg in s for s in cm.output))
+        self.assertTrue(any(uncalled_modules in s for s in cm.output))
 
     def test_skip_uncalled_containers_warnings(self) -> None:
         # uncalled containers should not warn

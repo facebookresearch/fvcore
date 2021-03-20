@@ -65,6 +65,7 @@ _IGNORED_OPS: Set[str] = {
     "aten::stack",
     "aten::t",
     "aten::to",
+    "aten::type_as",
     "aten::transpose",
     "aten::unsqueeze",
     "aten::unsqueeze_",
@@ -463,6 +464,7 @@ class JitModelAnalysis:
     def _warn_uncalled_mods(self, uncalled_mods: Set[str]) -> None:
         if not self._enable_warn_uncalled_mods or not uncalled_mods:
             return
+        uncalled_mods = {x for x in uncalled_mods if self._has_forward(x)}
 
         logger = logging.getLogger(__name__)
         logger.warning(
@@ -472,10 +474,8 @@ class JitModelAnalysis:
             ".forward() or via other python methods. In the latter "
             "case they will have zeros for statistics, though their "
             "statistics will still contribute to their parent calling "
-            "module."
+            "module.\n" + ", ".join(sorted(uncalled_mods))
         )
-        for mod in uncalled_mods:
-            logger.warning("Module never called: {}".format(mod))
 
     def _get_aliases(self, model: nn.Module) -> Dict[Union[str, nn.Module], str]:
         aliases = {}
@@ -531,19 +531,6 @@ class JitModelAnalysis:
                     counts[name] += op_counts
 
         uncalled_mods = set(self._aliases.values()) - all_seen
-
-        def has_forward(module_type) -> bool:
-            # Containers are not meant to be called anyway (they don't have forward)
-            no_forward_mods = {nn.ModuleList, nn.ModuleDict, nn.Module}
-            for mod in no_forward_mods:
-                if module_type.forward is mod.forward:
-                    return False
-            return True
-
-        uncalled_mods = {
-            m for m in uncalled_mods if has_forward(type(self._named_modules.get(m)))
-        }
-
         stats = Statistics(
             counts=counts, unsupported_ops=unsupported_ops, uncalled_mods=uncalled_mods
         )
@@ -562,3 +549,18 @@ class JitModelAnalysis:
             return full_op_name[p + 2 :]
         else:
             return full_op_name
+
+    def _has_forward(self, mod_name: str) -> bool:
+        # Whether the module has a valid forward method.
+        # Modules without forward are not expected to get called
+        # and therefore should not produce "uncalled" warnings
+        module = self._named_modules.get(mod_name)
+        if module is None:
+            return False
+        module_type = type(module)
+        # Containers are not meant to be called anyway (they don't have forward)
+        no_forward_mods = {nn.ModuleList, nn.ModuleDict, nn.Module}
+        for mod in no_forward_mods:
+            if module_type.forward is mod.forward:  # pyre-ignore[16]
+                return False
+        return True

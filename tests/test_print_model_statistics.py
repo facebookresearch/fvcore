@@ -33,10 +33,10 @@ test_statistics = {
 }
 
 string_statistics = {
-    "": {"stat1": "4.0K", "stat2": "0.6M", "stat3": "0"},
-    "a1": {"stat1": "20", "stat2": "3.0K"},
-    "a1.b1": {"stat1": "20", "stat2": "3.0K"},
-    "a1.b1.c1": {"stat1": "20", "stat2": "3.0K"},
+    "": {"stat1": "4K", "stat2": "0.6M", "stat3": "0"},
+    "a1": {"stat1": "20", "stat2": "3K"},
+    "a1.b1": {"stat1": "20", "stat2": "3K"},
+    "a1.b1.c1": {"stat1": "20", "stat2": "3K"},
     "a1.b1.c1.d1": {"stat1": "0", "stat2": "0"},
     "a1.b1.c1.d2": {"stat1": "100"},
     "a2": {"stat1": "0.123M", "stat2": "0.654M"},
@@ -140,6 +140,8 @@ class TestPrintModelStatistics(unittest.TestCase):
     """
     Unittest for printing model statistics.
     """
+
+    maxDiff = 1000
 
     def test_pretty_statistics(self) -> None:
         """
@@ -289,7 +291,7 @@ class TestPrintModelStatistics(unittest.TestCase):
         model = TestNet()
         model_str = _model_stats_str(model, string_statistics)
 
-        self.assertTrue("stat1: 4.0K, stat2: 0.6M, stat3: 0" in model_str)
+        self.assertTrue("stat1: 4K, stat2: 0.6M, stat3: 0" in model_str)
         self.assertTrue("ReLU(stat1: 100)" in model_str)  # Inline
         self.assertTrue("stat1: 0\n" in model_str)  # Single stat
         self.assertTrue("      (c1): A1B1C1(\n" in model_str)  # submod with indent
@@ -297,13 +299,13 @@ class TestPrintModelStatistics(unittest.TestCase):
         # Expected:
 
         # "TestNet(\n"
-        # "  stat1: 4.0K, stat2: 0.6M, stat3: 0\n"
+        # "  stat1: 4K, stat2: 0.6M, stat3: 0\n"
         # "  (a1): A1(\n"
-        # "    stat1: 20, stat2: 3.0K\n"
+        # "    stat1: 20, stat2: 3K\n"
         # "    (b1): A1B1(\n"
-        # "      stat1: 20, stat2: 3.0K\n"
+        # "      stat1: 20, stat2: 3K\n"
         # "      (c1): A1B1C1(\n"
-        # "        stat1: 20, stat2: 3.0K\n"
+        # "        stat1: 20, stat2: 3K\n"
         # "        (d1): Linear(\n"
         # "          in_features=10, out_features=10, bias=True\n"
         # "          stat1: 0, stat2: 0\n"

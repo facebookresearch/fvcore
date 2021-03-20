@@ -32,17 +32,21 @@ def _format_size(x: int, sig_figs: int = 3, hide_zero: bool = False) -> str:
     """
     if hide_zero and x == 0:
         return str("")
-    frmt = "{{:.{}}}".format(sig_figs)
+
+    def fmt(x: float) -> str:
+        # use fixed point to avoid scientific notation
+        return "{{:.{}f}}".format(sig_figs).format(x).rstrip("0").rstrip(".")
+
     if abs(x) > 1e14:
-        return (frmt + "P").format(x / 1e15)
+        return fmt(x / 1e15) + "P"
     if abs(x) > 1e11:
-        return (frmt + "T").format(x / 1e12)
+        return fmt(x / 1e12) + "T"
     if abs(x) > 1e8:
-        return (frmt + "G").format(x / 1e9)
+        return fmt(x / 1e9) + "G"
     if abs(x) > 1e5:
-        return (frmt + "M").format(x / 1e6)
+        return fmt(x / 1e6) + "M"
     if abs(x) > 1e2:
-        return (frmt + "K").format(x / 1e3)
+        return fmt(x / 1e3) + "K"
     return str(x)
 
 
@@ -398,7 +402,7 @@ def flop_count_str(
     stats = _fill_missing_statistics(model, stats)
     stats = _group_by_module(stats)
     stats = _remove_zero_statistics(stats, force_keep=all_uncalled)
-    stats = _pretty_statistics(stats)
+    stats = _pretty_statistics(stats, sig_figs=2)
     stats = _indicate_uncalled_modules(stats, "n_flops", flops.uncalled_modules())
     if activations is not None:
         stats = _indicate_uncalled_modules(
@@ -457,7 +461,6 @@ def _model_stats_table(
     statistics: Dict[str, Dict[str, str]],
     max_depth: int = 3,
     stat_columns: Optional[List[str]] = None,
-    missing_indicator: Optional[str] = None,
 ) -> str:
     """
     Formats the statistics obtained from a model in a nice table.
@@ -471,11 +474,6 @@ def _model_stats_table(
         stat_columns (list(str)) : Specify the order of the columns to print.
             If None, columns are found automatically from the provided
             statistics.
-        missing_indicator (str or None) : If set, statistics with the
-            specified string will be considered missing, and will count
-            as matching a child or parent's statistics for the sake of
-            skipping wrappers. When a wrapper is skipped the printed
-            statistics will consist of all known non-missing statistics.
 
     Return:
         str : The formatted table.
@@ -531,7 +529,6 @@ def flop_count_table(
     """
     Format the per-module parameters and flops of a model in a table.
     It looks like this:
-
     ::
         | model                            | #parameters or shape   | #flops    |
         |:---------------------------------|:-----------------------|:----------|
@@ -607,18 +604,21 @@ def flop_count_table(
         stats[acts_header] = activations.by_module()
         stat_columns += [acts_header]
 
-    all_uncalled = flops.uncalled_modules() | (
-        activations.uncalled_modules() if activations is not None else set()
-    )
     stats = _group_by_module(stats)
-    stats = _remove_zero_statistics(
-        stats, force_keep=all_uncalled, require_trivial_children=True
+    stats = _remove_zero_statistics(stats, require_trivial_children=True)
+    stats = _pretty_statistics(stats, hide_zero=False)
+    stats = _indicate_uncalled_modules(
+        stats,
+        flops_header,
+        flops.uncalled_modules() & stats.keys(),
+        uncalled_indicator="",
     )
-    stats = _pretty_statistics(stats, hide_zero=True)
-    stats = _indicate_uncalled_modules(stats, flops_header, flops.uncalled_modules())
     if activations:
         stats = _indicate_uncalled_modules(
-            stats, acts_header, activations.uncalled_modules()
+            stats,
+            acts_header,
+            activations.uncalled_modules() & stats.keys(),
+            uncalled_indicator="",
         )
 
     # Swap in shapes for parameters or delete shapes from dict
@@ -639,5 +639,4 @@ def flop_count_table(
         statistics=stats,
         max_depth=max_depth,
         stat_columns=stat_columns,
-        missing_indicator="N/A",
     )
