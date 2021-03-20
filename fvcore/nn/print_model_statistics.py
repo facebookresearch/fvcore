@@ -443,17 +443,43 @@ def _get_single_child(
     return child
 
 
-def _fastforward(name: str, statistics: Dict[str, Dict[str, str]]) -> str:
+def _try_combine(
+    stats1: Dict[str, str], stats2: Dict[str, str]
+) -> Optional[Dict[str, str]]:
+    """
+    Try combine two statistics dict to display in one row. If they conflict,
+    returns None.
+    """
+    ret = {}
+    if set(stats1.keys()) != set(stats2.keys()):
+        return None
+    for k, v1 in stats1.items():
+        v2 = stats2[k]
+        if v1 != v2 and len(v1) and len(v2):
+            return None
+        ret[k] = v1 if len(v1) else v2
+    return ret
+
+
+def _fastforward(
+    name: str, statistics: Dict[str, Dict[str, str]]
+) -> Tuple[str, Dict[str, str]]:
     """
     If the given module has only a single child and matches statistics
-    with that child, get the child and the combined statistics. Then
-    repeat until the condition isn't met.
+    with that child, merge statistics and their names into one row.
+    Then repeat until the condition isn't met.
+
+    Returns:
+        str: the new name
+        dict: the combined statistics of this row
     """
     single_child = _get_single_child(name, statistics)
     if single_child is None:
-        return name
-    if statistics[name] != statistics[single_child]:
-        return name
+        return name, statistics[name]
+    combined = _try_combine(statistics[name], statistics[single_child])
+    if combined is None:
+        return name, statistics[name]
+    statistics[single_child] = combined
     return _fastforward(single_child, statistics)
 
 
@@ -498,17 +524,25 @@ def _model_stats_table(
     def fill(indent_lvl: int, prefix: str) -> None:
         if indent_lvl > max_depth:
             return
-        for mod in statistics:
+        for mod_name in statistics:
             # 'if mod' excludes root = '', which is never a child
-            if mod and mod.count(".") == prefix.count(".") and mod.startswith(prefix):
-                mod = _fastforward(mod, statistics)
-                row = build_row(mod, statistics[mod], indent_lvl)
+            if (
+                mod_name
+                and mod_name.count(".") == prefix.count(".")
+                and mod_name.startswith(prefix)
+            ):
+                mod_name, curr_stats = _fastforward(mod_name, statistics)
+                if root_prefix and mod_name.startswith(root_prefix):
+                    # Skip the root_prefix shared by all submodules as it carries 0 information
+                    pretty_mod_name = mod_name[len(root_prefix) :]
+                else:
+                    pretty_mod_name = mod_name
+                row = build_row(pretty_mod_name, curr_stats, indent_lvl)
                 table.append(row)
-                fill(indent_lvl + 1, mod + ".")
+                fill(indent_lvl + 1, mod_name + ".")
 
-    root_name = _fastforward("", statistics)
-    table_name = "model" + (("." + root_name) if root_name else "")
-    row = build_row(table_name, statistics[root_name], indent_lvl=0)
+    root_name, curr_stats = _fastforward("", statistics)
+    row = build_row(root_name or "model", curr_stats, indent_lvl=0)
     table.append(row)
     root_prefix = root_name + ("." if root_name else "")
     fill(indent_lvl=1, prefix=root_prefix)

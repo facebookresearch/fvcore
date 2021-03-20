@@ -383,9 +383,7 @@ class TestPrintModelStatistics(unittest.TestCase):
         table = flop_count_table(FlopCountAnalysis(model, inputs))
 
         self.assertFalse(" a1 " in table)  # Wrapper skipping successful
-        self.assertFalse("a1.b1.c1.d1.bias" in table)  # Didn't go to depth 4
-        self.assertTrue("a1.b1.c1.d1" in table)  # Did go to depth 3
-        self.assertTrue(" a1.b1 " in table)  # Didn't skip different stats
+        self.assertTrue("a1.b1.c1.d1.bias" in table)  # this is depth 2
         self.assertTrue("a2.b1.c1.weight" in table)  # Weights incuded
         self.assertTrue("(10, 10)" in table)  # Shapes included
         self.assertTrue(" a2.b1 " in table)  # Didn't skip through mod with >1 child
@@ -395,19 +393,19 @@ class TestPrintModelStatistics(unittest.TestCase):
         self.assertTrue("#parameters or shape" in table)  # Correct header
 
         # Expected:
-        # | module            | #parameters or shape   | #flops   |
-        # |:-------------------|:-----------------------|:---------|
-        # | model              | 0.33K                  | 0.3K     |
-        # |  a1.b1             |  0.11K                 |  100     |
-        # |   a1.b1.c1         |   0.11K                |   N/A    |
-        # |    a1.b1.c1.d1     |    0.11K               |    100   |
-        # |  a2.b1             |  0.22K                 |  0.2K    |
-        # |   a2.b1.c1         |   0.11K                |   100    |
-        # |    a2.b1.c1.weight |    (10, 10)            |          |
-        # |    a2.b1.c1.bias   |    (10,)               |          |
-        # |   a2.b1.c2         |   0.11K                |   100    |
-        # |    a2.b1.c2.weight |    (10, 10)            |          |
-        # |    a2.b1.c2.bias   |    (10,)               |          |
+        # | module               | #parameters or shape   | #flops   |
+        # |:-------------------  |:-----------------------|:---------|
+        # | model                | 0.33K                  | 0.3K     |
+        # |  a1.b1.c1.d1         |  0.11K                 |  100     |
+        # |   a1.b1.c1.d1.weight |   (10, 10)             |          |
+        # |   a1.b1.c1.d1.bias   |   (10,)                |          |
+        # |  a2.b1               |  0.22K                 |  0.2K    |
+        # |   a2.b1.c1           |   0.11K                |   100    |
+        # |    a2.b1.c1.weight   |    (10, 10)            |          |
+        # |    a2.b1.c1.bias     |    (10,)               |          |
+        # |   a2.b1.c2           |   0.11K                |   100    |
+        # |    a2.b1.c2.weight   |    (10, 10)            |          |
+        # |    a2.b1.c2.bias     |    (10,)               |          |
 
         # Test activations and no parameter shapes
         table = flop_count_table(
