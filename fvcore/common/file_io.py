@@ -137,7 +137,7 @@ class PathManagerBase:
             src_path, dst_path, overwrite, **kwargs
         )
 
-    def get_local_path(self, path: str, **kwargs: Any) -> str:
+    def get_local_path(self, path: str, force: bool = False, **kwargs: Any) -> str:
         """
         Get a filepath which is compatible with native Python I/O such as `open`
         and `os.path`.
@@ -147,13 +147,14 @@ class PathManagerBase:
 
         Args:
             path (str): A URI supported by this PathHandler
+            force(bool): Forces a download from backend if set to True.
 
         Returns:
             local_path (str): a file path which exists on the local file system
         """
         path = os.fspath(path)
         return self.__get_path_handler(path)._get_local_path(  # type: ignore
-            path, **kwargs
+            path, force=force, **kwargs
         )
 
     def copy_from_local(
