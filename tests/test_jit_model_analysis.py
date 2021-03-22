@@ -772,7 +772,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         logger = logging.getLogger()
         skipeed_msg = "Unsupported operator aten::add encountered 1 time(s)"
         uncalled_msg = "never called"
-        uncalled_modules = "fc1, fc2"
+        uncalled_modules = "fc1"  # fc2 is called by chance
 
         analyzer.uncalled_modules_warnings(enabled=False)
         analyzer.unsupported_ops_warnings(enabled=False)
