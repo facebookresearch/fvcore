@@ -4,7 +4,7 @@ import unittest
 from typing import Iterable
 
 import torch
-from fvcore.layers.squeeze_excitation import (
+from fvcore.nn.squeeze_excitation import (
     ChannelSpatialSqueezeExcitation,
     SpatialSqueezeExcitation,
     SqueezeExcitation,
