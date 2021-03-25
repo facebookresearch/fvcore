@@ -5,17 +5,10 @@ import shutil
 import tempfile
 import unittest
 import uuid
-from contextlib import contextmanager
-from typing import Generator, Optional
-from unittest.mock import MagicMock, patch
+from typing import Optional
+from unittest.mock import MagicMock
 
-from fvcore.common.file_io import (
-    HTTPURLHandler,
-    LazyPath,
-    PathManager,
-    PathManagerBase,
-    get_cache_dir,
-)
+from fvcore.common.file_io import LazyPath, PathManager, get_cache_dir
 
 
 class TestNativeIO(unittest.TestCase):
@@ -187,55 +180,16 @@ class TestHTTPIO(unittest.TestCase):
     _filename = "facebook.html"
     _cache_dir: str = os.path.join(get_cache_dir(), __name__)
 
-    @contextmanager
-    def _patch_download(self) -> Generator[None, None, None]:
-        def fake_download(url: str, dir: str, *, filename: str) -> str:
-            dest = os.path.join(dir, filename)
-            with open(dest, "w") as f:
-                f.write("test")
-            return dest
-
-        from iopath.common import file_io
-
-        with patch.object(
-            file_io, "get_cache_dir", return_value=self._cache_dir
-        ), patch.object(file_io, "download", side_effect=fake_download):
-            yield
-
     def setUp(self) -> None:
         if os.path.exists(self._cache_dir):
             shutil.rmtree(self._cache_dir)
         os.makedirs(self._cache_dir, exist_ok=True)
-
-    def test_get_local_path(self) -> None:
-        with self._patch_download():
-            local_path = PathManager.get_local_path(self._remote_uri)
-            self.assertTrue(os.path.exists(local_path))
-            self.assertTrue(os.path.isfile(local_path))
-
-    def test_open(self) -> None:
-        with self._patch_download():
-            with PathManager.open(self._remote_uri, "rb") as f:
-                self.assertTrue(os.path.exists(f.name))
-                self.assertTrue(os.path.isfile(f.name))
-                self.assertTrue(f.read() != "")
 
     def test_open_writes(self) -> None:
         # HTTPURLHandler does not support writing, only reading.
         with self.assertRaises(AssertionError):
             with PathManager.open(self._remote_uri, "w") as f:
                 f.write("foobar")  # pyre-ignore
-
-    def test_open_new_path_manager(self) -> None:
-        with self._patch_download():
-            path_manager = PathManagerBase()
-            with self.assertRaises(OSError):  # no handler registered
-                f = path_manager.open(self._remote_uri, "rb")
-
-            path_manager.register_handler(HTTPURLHandler())
-            with path_manager.open(self._remote_uri, "rb") as f:
-                self.assertTrue(os.path.isfile(f.name))
-                self.assertTrue(f.read() != "")
 
     def test_bad_args(self) -> None:
         with self.assertRaises(NotImplementedError):

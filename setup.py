@@ -50,7 +50,7 @@ setup(
         "termcolor>=1.1",
         "Pillow",
         "tabulate",
-        "iopath>=0.1.7,<0.1.8",
+        "iopath>=0.1.7",
         "dataclasses; python_version<'3.7'",
     ],
     extras_require={"all": ["shapely"]},
