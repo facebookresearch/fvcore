@@ -7,6 +7,7 @@ __all__ = [
     "ParamScheduler",
     "ConstantParamScheduler",
     "CosineParamScheduler",
+    "ExponentialParamScheduler",
     "LinearParamScheduler",
     "CompositeParamScheduler",
     "MultiStepParamScheduler",
@@ -83,6 +84,33 @@ class CosineParamScheduler(ParamScheduler):
         return self._end_value + 0.5 * (self._start_value - self._end_value) * (
             1 + math.cos(math.pi * where)
         )
+
+
+class ExponentialParamScheduler(ParamScheduler):
+    """
+    Exponetial schedule parameterized by a start value and decay.
+    The schedule is updated based on the fraction of training
+    progress, `where`, with the formula
+    `param_t = start_value * (decay ** where)`.
+
+    Example:
+
+        .. code-block:: python
+            ExponentialParamScheduler(start_value=2.0, decay=0.02)
+
+    Corresponds to a decreasing schedule with values in [2.0, 0.04).
+    """
+
+    def __init__(
+        self,
+        start_value: float,
+        decay: float,
+    ) -> None:
+        self._start_value = start_value
+        self._decay = decay
+
+    def __call__(self, where: float) -> float:
+        return self._start_value * (self._decay ** where)
 
 
 class LinearParamScheduler(ParamScheduler):
