@@ -1,10 +1,11 @@
-from typing import Tuple, List
-
-# pyre-ignore-all-errors[2,14,16]
+from typing import List, Tuple
 
 import torch
 import torch.distributed as dist
 from torch.autograd.function import Function
+
+
+# pyre-ignore-all-errors[2,14,16]
 
 
 class _AllReduce(Function):

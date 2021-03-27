@@ -441,7 +441,9 @@ class TestPrintModelStatistics(unittest.TestCase):
 
         model = TestNet()
         inputs = (torch.randn((1, 10)),)
-        model_str = flop_count_str(FlopCountAnalysis(model, inputs))
+        model_str = flop_count_str(
+            FlopCountAnalysis(model, inputs).ancestor_mode("caller")
+        )
 
         self.assertTrue("N/A indicates a possibly missing statistic" in model_str)
         self.assertTrue("n_params: 0.11K, n_flops: 100" in model_str)
@@ -489,8 +491,8 @@ class TestPrintModelStatistics(unittest.TestCase):
 
         # Test with activations
         model_str = flop_count_str(
-            FlopCountAnalysis(model, inputs),
-            activations=ActivationCountAnalysis(model, inputs),
+            FlopCountAnalysis(model, inputs).ancestor_mode("caller"),
+            activations=ActivationCountAnalysis(model, inputs).ancestor_mode("caller"),
         )
 
         self.assertTrue("n_params: 0.33K, n_flops: 0.3K, n_acts: 30" in model_str)

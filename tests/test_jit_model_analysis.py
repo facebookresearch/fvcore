@@ -435,25 +435,29 @@ class TestJitModelAnalysis(unittest.TestCase):
 
     def test_non_forward_func_call(self) -> None:
         """
-        Tests that calls to a submodule's non-forward function attribute
-        resulting counts to the calling module. Also tests that the
-        intermediate module is correctly identified as a skipped module.
+        Tests calls to a submodule's non-forward function.
+        Also tests that the intermediate module is correctly identified as a skipped module.
         """
 
         model = NonForwardNet()
         inputs = (torch.randn((1, 10)),)
-        analyzer = FlopCountAnalysis(model=model, inputs=inputs)
+        analyzer = FlopCountAnalysis(model=model, inputs=inputs).ancestor_mode("caller")
 
-        submod_count = 0
         inner_fc_count = model.submod.fc_flops
         total_count = model.fc_flops + inner_fc_count
 
-        self.assertEqual(analyzer.total("submod"), submod_count)
+        self.assertEqual(analyzer.total("submod"), 0)
         self.assertEqual(analyzer.total("submod.fc"), inner_fc_count)
         self.assertEqual(analyzer.total(""), total_count)
 
         # The mod not directly called is registered as such
         self.assertEqual(analyzer.uncalled_modules(), {"submod"})
+
+        analyzer = FlopCountAnalysis(model=model, inputs=inputs).ancestor_mode("owner")
+        self.assertEqual(analyzer.total("submod"), inner_fc_count)
+        self.assertEqual(analyzer.total("submod.fc"), inner_fc_count)
+        self.assertEqual(analyzer.total(""), total_count)
+        self.assertEqual(analyzer.uncalled_modules(), set())
 
     def test_shared_module(self) -> None:
         """
@@ -464,9 +468,11 @@ class TestJitModelAnalysis(unittest.TestCase):
         model = SharedModuleNet()
         inputs = (torch.randn((1, *model.input_size)),)
 
-        analyzer = FlopCountAnalysis(
-            model=model, inputs=inputs
-        ).unsupported_ops_warnings(enabled=False)
+        analyzer = (
+            FlopCountAnalysis(model=model, inputs=inputs)
+            .unsupported_ops_warnings(enabled=False)
+            .ancestor_mode("caller")
+        )
 
         # The names `submod2.submod` and `multiname2` are not included,
         # since only the first name of a module is made the canonical one.

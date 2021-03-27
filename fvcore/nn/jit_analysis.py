@@ -8,7 +8,7 @@ from collections import Counter
 from copy import copy
 from dataclasses import dataclass
 from numbers import Number
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union
 
 import torch
 import torch.nn as nn
@@ -17,6 +17,9 @@ from torch import Tensor
 from torch.jit import TracerWarning, _get_trace_graph
 
 from .jit_handles import Handle
+
+
+T = TypeVar("T", bound="JitModelAnalysis")
 
 
 # Only ignore ops that are technically truly 0 flops:
@@ -208,10 +211,12 @@ class JitModelAnalysis:
         # Mapping from submodules and their aliases to the canonical name of each submodule
         self._aliases: Dict[Union[nn.Module, str], str] = self._get_aliases(model)
         self._stats: Optional[Statistics] = None
-        self._enable_warn_unsupported_ops = True
-        self._enable_warn_uncalled_mods = True
-        self._warn_trace = "no_tracer_warning"
+
         self._ignored_ops: Set[str] = copy(_IGNORED_OPS)
+        self.unsupported_ops_warnings(True)
+        self.uncalled_modules_warnings(True)
+        self.tracer_warnings("no_tracer_warning")
+        self.ancestor_mode("owner")
 
     def total(self, module_name: str = "") -> int:
         """
@@ -403,7 +408,7 @@ class JitModelAnalysis:
             .tracer_warnings(self._warn_trace)
         )
 
-    def tracer_warnings(self, mode: str) -> "JitModelAnalysis":
+    def tracer_warnings(self: T, mode: str) -> T:
         """
         Sets which warnings to print when tracing the graph to calculate
         statistics. There are three modes. Defaults to 'no_tracer_warning'.
@@ -416,15 +421,33 @@ class JitModelAnalysis:
         Args:
             mode (str) : warning mode in one of the above values.
         """
-        assert mode in [
-            "all",
-            "no_tracer_warning",
-            "none",
-        ], "Unrecognized trace warning mode."
+        if mode not in ["all", "no_tracer_warning", "none"]:
+            raise ValueError(f"Unrecognized tracer warning mode {mode}.")
         self._warn_trace = mode
         return self
 
-    def unsupported_ops_warnings(self, enabled: bool) -> "JitModelAnalysis":
+    def ancestor_mode(self: T, mode: str) -> T:
+        """
+        Sets how to determine the ancestor modules of an operator. Must be one of
+        "owner" or "caller".
+
+        * "caller": an operator belongs to all modules that is currently executing
+          `forward()` at the time the operator is called.
+        * "owner": an operator belongs to the last module that's executing
+          `forward()` at the time the operator is called, plus this module's recursive
+          parents.  If an module has multiple parents (e.g. a shared module), only one
+          will be picked.
+
+        For most cases, a module only calls submodules it owns, so both options would
+        work identically. In certain edge cases, this option will affect the hierarchy
+        of results, but won't affect the total count.
+        """
+        if mode not in ["owner", "caller"]:
+            raise ValueError(f"Unrecognized ancestor mode: {mode}")
+        self._ancestor_mode = mode
+        return self
+
+    def unsupported_ops_warnings(self: T, enabled: bool) -> T:
         """
         Sets if warnings for unsupported operators are shown. Defaults
         to True. Counts of unsupported operators may be obtained from
@@ -437,7 +460,7 @@ class JitModelAnalysis:
         self._enable_warn_unsupported_ops = enabled
         return self
 
-    def uncalled_modules_warnings(self, enabled: bool) -> "JitModelAnalysis":
+    def uncalled_modules_warnings(self: T, enabled: bool) -> T:
         """
         Sets if warnings from uncalled submodules are shown. Defaults to true.
         A submodule is considered "uncalled" if it is never called during
@@ -485,6 +508,17 @@ class JitModelAnalysis:
             aliases[name] = aliases[module]
         return aliases
 
+    def _get_all_ancestors(self, module_name: str) -> Set[str]:
+        """
+        Get all ancestors of the given module, defined by ownership.
+        If the given module has multiple owners, use its canonical name.
+        """
+        parts = self.canonical_module_name(module_name).split(".")
+        res = {""}
+        for k in range(len(parts) + 1):
+            res.add(".".join(parts[:k]))
+        return res
+
     def _analyze(self) -> "Statistics":
         # Don't calculate if results are already stored.
         stats = self._stats
@@ -513,12 +547,17 @@ class JitModelAnalysis:
             kind = node.kind()
             scope_names = node.scopeName().split("/")
             all_seen.update(scope_names)
+            if self._ancestor_mode == "caller":
+                ancestors = set(scope_names)
+            else:
+                ancestors = self._get_all_ancestors(scope_names[-1])
+                all_seen.update(ancestors)
             if kind not in self._op_handles:
                 # ignore all prim:: operators
                 if kind in self._ignored_ops or kind.startswith("prim::"):
                     continue
 
-                for name in set(scope_names):
+                for name in ancestors:
                     unsupported_ops[name][kind] += 1
             else:
                 inputs, outputs = list(node.inputs()), list(node.outputs())
@@ -527,7 +566,7 @@ class JitModelAnalysis:
                     op_counts = Counter({self._simplify_op_name(kind): op_counts})
 
                 # Assures an op contributes at most once to a module
-                for name in set(scope_names):
+                for name in ancestors:
                     counts[name] += op_counts
 
         uncalled_mods = set(self._aliases.values()) - all_seen
