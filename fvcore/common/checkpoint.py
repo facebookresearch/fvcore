@@ -3,6 +3,7 @@
 
 import logging
 import os
+import io
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Tuple
 
@@ -136,7 +137,7 @@ class Checkpointer:
             self.logger.info("No checkpoint found. Initializing model from scratch")
             return {}
         self.logger.info("Loading checkpoint from {}".format(path))
-        if not os.path.isfile(path):
+        if not os.path.isfile(path) and not isinstance(path, io.BytesIO):
             path = self.path_manager.get_local_path(path)
             assert os.path.isfile(path), "Checkpoint {} not found!".format(path)
 
