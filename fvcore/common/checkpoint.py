@@ -1,9 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 # pyre-ignore-all-errors[2,3]
 
+import io
 import logging
 import os
-import io
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Tuple
 
