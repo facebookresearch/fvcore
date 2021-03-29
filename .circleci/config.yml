@@ -220,7 +220,8 @@ workflows:
             - DOCKERHUB_TOKEN
     triggers:
       - schedule:
-          cron: "0 0 * * *"
+          # runs at 8am UTC, being 12am or 1am MPK
+          cron: "0 8 * * *"
           filters:
             branches:
               only:
