@@ -805,7 +805,9 @@ class BlendTransform(Transform):
         ``src_weight * src_image + dst_weight * dst_image``
 
         Args:
-            src_image (ndarray): Input image is blended with this image
+            src_image (ndarray): Input image is blended with this image.
+                The two images must have the same shape, range, channel order
+                and dtype.
             src_weight (float): Blend weighting of src_image
             dst_weight (float): Blend weighting of dst_image
         """

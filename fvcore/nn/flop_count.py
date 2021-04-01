@@ -120,8 +120,8 @@ def flop_count(
     supported_ops: Optional[Dict[str, Handle]] = None,
 ) -> Tuple[DefaultDict[str, float], Counter[str]]:
     """
-    Given a model and an input to the model, compute the Gflops of the given
-    model.
+    Given a model and an input to the model, compute the per-operator Gflops
+    of the given model.
 
     Args:
         model (nn.Module): The model to compute flop counts.

@@ -202,6 +202,12 @@ class JitModelAnalysis:
         Args:
             model: The model to analyze
             inputs: The inputs to the model for analysis.
+
+        We will trace the execution of `model.forward(inputs)`. This means
+        inputs have to be tensors or tuple of tensors (see
+        https://pytorch.org/docs/stable/generated/torch.jit.trace.html#torch.jit.trace).
+        In order to trace other methods or unsupported input types, you may need
+        to implement a wrapper module.
         """
         self._model = model
         self._inputs = inputs
