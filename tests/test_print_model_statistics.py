@@ -446,9 +446,9 @@ class TestPrintModelStatistics(unittest.TestCase):
         )
 
         self.assertTrue("N/A indicates a possibly missing statistic" in model_str)
-        self.assertTrue("n_params: 0.11K, n_flops: 100" in model_str)
+        self.assertTrue("#params: 0.11K, #flops: 100" in model_str)
         self.assertTrue("ReLU()" in model_str)  # Suppress trivial statistics
-        self.assertTrue("n_params: 0.11K, n_flops: N/A" in model_str)  # Uncalled stats
+        self.assertTrue("#params: 0.11K, #flops: N/A" in model_str)  # Uncalled stats
         self.assertTrue("[[1, 10]]")  # Input sizes
 
         # Expected:
@@ -458,32 +458,32 @@ class TestPrintModelStatistics(unittest.TestCase):
         # "module was called. Missing values are still included in the "
         # "parent's total.\n"
         # "TestNet(\n"
-        # "  n_params: 0.33K, n_flops: 0.3K\n"
+        # "  #params: 0.33K, #flops: 0.3K\n"
         # "  (a1): A1(\n"
-        # "    n_params: 0.11K, n_flops: 100\n"
+        # "    #params: 0.11K, #flops: 100\n"
         # "    (b1): A1B1(\n"
-        # "      n_params: 0.11K, n_flops: 100\n"
+        # "      #params: 0.11K, #flops: 100\n"
         # "      (c1): A1B1C1(\n"
-        # "        n_params: 0.11K, n_flops: N/A\n"
+        # "        #params: 0.11K, #flops: N/A\n"
         # "        (d1): Linear(\n"
         # "          in_features=10, out_features=10, bias=True\n"
-        # "          n_params: 0.11K, n_flops: 100\n"
+        # "          #params: 0.11K, #flops: 100\n"
         # "        )\n"
         # "        (d2): ReLU()\n"
         # "      )\n"
         # "    )\n"
         # "  )\n"
         # "  (a2): A2(\n"
-        # "    n_params: 0.22K, n_flops: 0.2K\n"
+        # "    #params: 0.22K, #flops: 0.2K\n"
         # "    (b1): A2B1(\n"
-        # "      n_params: 0.22K, n_flops: 0.2K\n"
+        # "      #params: 0.22K, #flops: 0.2K\n"
         # "      (c1): Linear(\n"
         # "        in_features=10, out_features=10, bias=True\n"
-        # "        n_params: 0.11K, n_flops: 100\n"
+        # "        #params: 0.11K, #flops: 100\n"
         # "      )\n"
         # "      (c2): Linear(\n"
         # "        in_features=10, out_features=10, bias=True\n"
-        # "        n_params: 0.11K, n_flops: 100\n"
+        # "        #params: 0.11K, #flops: 100\n"
         # "      )\n"
         # "    )\n"
         # "  )\n"
@@ -495,8 +495,8 @@ class TestPrintModelStatistics(unittest.TestCase):
             activations=ActivationCountAnalysis(model, inputs).ancestor_mode("caller"),
         )
 
-        self.assertTrue("n_params: 0.33K, n_flops: 0.3K, n_acts: 30" in model_str)
-        self.assertTrue("n_params: 0.11K, n_flops: N/A, n_acts: N/A" in model_str)
+        self.assertTrue("#params: 0.33K, #flops: 0.3K, #acts: 30" in model_str)
+        self.assertTrue("#params: 0.11K, #flops: N/A, #acts: N/A" in model_str)
 
         # Expected:
 
@@ -505,32 +505,32 @@ class TestPrintModelStatistics(unittest.TestCase):
         # "module was called. Missing values are still included in the "
         # "parent's total.\n"
         # "TestNet(\n"
-        # "  n_params: 0.33K, n_flops: 0.3K, n_acts: 30\n"
+        # "  #params: 0.33K, #flops: 0.3K, #acts: 30\n"
         # "  (a1): A1(\n"
-        # "    n_params: 0.11K, n_flops: 100, n_acts: 10\n"
+        # "    #params: 0.11K, #flops: 100, #acts: 10\n"
         # "    (b1): A1B1(\n"
-        # "      n_params: 0.11K, n_flops: 100, n_acts: 10\n"
+        # "      #params: 0.11K, #flops: 100, #acts: 10\n"
         # "      (c1): A1B1C1(\n"
-        # "        n_params: 0.11K, n_flops: N/A, n_acts: N/A\n"
+        # "        #params: 0.11K, #flops: N/A, #acts: N/A\n"
         # "        (d1): Linear(\n"
         # "          in_features=10, out_features=10, bias=True\n"
-        # "          n_params: 0.11K, n_flops: 100, n_acts: 10\n"
+        # "          #params: 0.11K, #flops: 100, #acts: 10\n"
         # "        )\n"
         # "        (d2): ReLU()\n"
         # "      )\n"
         # "    )\n"
         # "  )\n"
         # "  (a2): A2(\n"
-        # "    n_params: 0.22K, n_flops: 0.2K, n_acts: 20\n"
+        # "    #params: 0.22K, #flops: 0.2K, #acts: 20\n"
         # "    (b1): A2B1(\n"
-        # "      n_params: 0.22K, n_flops: 0.2K, n_acts: 20\n"
+        # "      #params: 0.22K, #flops: 0.2K, #acts: 20\n"
         # "      (c1): Linear(\n"
         # "        in_features=10, out_features=10, bias=True\n"
-        # "        n_params: 0.11K, n_flops: 100, n_acts: 10\n"
+        # "        #params: 0.11K, #flops: 100, #acts: 10\n"
         # "      )\n"
         # "      (c2): Linear(\n"
         # "        in_features=10, out_features=10, bias=True\n"
-        # "        n_params: 0.11K, n_flops: 100, n_acts: 10\n"
+        # "        #params: 0.11K, #flops: 100, #acts: 10\n"
         # "      )\n"
         # "    )\n"
         # "  )\n"

@@ -348,24 +348,24 @@ def flop_count_str(
     >>> inputs = torch.randn((1,10))
     >>> print(flop_count_str(FlopCountAnalysis(model, inputs)))
     TestNet(
-      n_params: 0.44K, n_flops: 0.4K
+      #params: 0.44K, #flops: 0.4K
       (fc1): Linear(
         in_features=10, out_features=10, bias=True
-        n_params: 0.11K, n_flops: 100
+        #params: 0.11K, #flops: 100
       )
       (fc2): Linear(
         in_features=10, out_features=10, bias=True
-        n_params: 0.11K, n_flops: 100
+        #params: 0.11K, #flops: 100
       )
       (inner): InnerNet(
-        n_params: 0.22K, n_flops: 0.2K
+        #params: 0.22K, #flops: 0.2K
         (fc1): Linear(
           in_features=10, out_features=10, bias=True
-          n_params: 0.11K, n_flops: 100
+          #params: 0.11K, #flops: 100
         )
         (fc2): Linear(
           in_features=10, out_features=10, bias=True
-          n_params: 0.11K, n_flops: 100
+          #params: 0.11K, #flops: 100
         )
       )
     )
@@ -388,13 +388,13 @@ def flop_count_str(
     flops.unsupported_ops_warnings(False)
     flops.uncalled_modules_warnings(False)
     flops.tracer_warnings("none")
-    stats = {"n_params": params, "n_flops": flops.by_module()}
+    stats = {"#params": params, "#flops": flops.by_module()}
 
     if activations is not None:
         activations.unsupported_ops_warnings(False)
         activations.uncalled_modules_warnings(False)
         activations.tracer_warnings("none")
-        stats["n_acts"] = activations.by_module()
+        stats["#acts"] = activations.by_module()
 
     all_uncalled = flops.uncalled_modules() | (
         activations.uncalled_modules() if activations is not None else set()
@@ -403,14 +403,13 @@ def flop_count_str(
     stats = _group_by_module(stats)
     stats = _remove_zero_statistics(stats, force_keep=all_uncalled)
     stats = _pretty_statistics(stats, sig_figs=2)
-    stats = _indicate_uncalled_modules(stats, "n_flops", flops.uncalled_modules())
+    stats = _indicate_uncalled_modules(stats, "#flops", flops.uncalled_modules())
     if activations is not None:
         stats = _indicate_uncalled_modules(
-            stats, "n_acts", activations.uncalled_modules()
+            stats, "#acts", activations.uncalled_modules()
         )
 
-    input_sizes = _get_input_sizes(flops._inputs)
-    model_string = "Input sizes (torch.Tensor only): {}\n".format(input_sizes)
+    model_string = ""
     if all_uncalled:
         model_string += (
             "N/A indicates a possibly missing statistic due to how "
