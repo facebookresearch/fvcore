@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 # pyre-ignore-all-errors[2,3]
 
+import io
 import logging
 import os
 from collections import defaultdict
@@ -136,7 +137,7 @@ class Checkpointer:
             self.logger.info("No checkpoint found. Initializing model from scratch")
             return {}
         self.logger.info("Loading checkpoint from {}".format(path))
-        if not os.path.isfile(path):
+        if not os.path.isfile(path) and not isinstance(path, io.BytesIO):
             path = self.path_manager.get_local_path(path)
             assert os.path.isfile(path), "Checkpoint {} not found!".format(path)
 
