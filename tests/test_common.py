@@ -10,6 +10,7 @@ from fvcore.common.config import CfgNode
 from fvcore.common.history_buffer import HistoryBuffer
 from fvcore.common.registry import Registry
 from fvcore.common.timer import Timer
+from yaml.constructor import ConstructorError
 
 
 class TestHistoryBuffer(unittest.TestCase):
@@ -145,7 +146,7 @@ class TestCfgNode(unittest.TestCase):
 
         cfg = TestCfgNode.gen_default_cfg()
 
-        with self.assertRaises(Exception):
+        with self.assertRaisesRegex(ConstructorError, "python/object/apply:eval"):
             # config.yaml contains unsafe yaml tags,
             # test if an exception is thrown
             cfg.merge_from_file(config_yaml)
@@ -208,7 +209,7 @@ class TestRegistry(unittest.TestCase):
         class Object1:
             pass
 
-        with self.assertRaises(Exception) as err:
+        with self.assertRaises(AssertionError) as err:
             OBJECT_REGISTRY.register(Object1)
         self.assertTrue(
             "An object named 'Object1' was already registered in 'OBJECT' registry!"
