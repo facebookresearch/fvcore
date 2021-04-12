@@ -29,7 +29,7 @@ pip install -U fvcore
 ### 2. Install from Anaconda Cloud (updated nightly)
 
 ```
-conda install -c conda-forge -c iopath -c fvcore fvcore
+conda install -c fvcore -c iopath -c conda-forge fvcore
 ```
 
 ### 3. Install latest from GitHub
