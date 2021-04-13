@@ -135,7 +135,7 @@ class Checkpointer:
             # no checkpoint provided
             self.logger.info("No checkpoint found. Initializing model from scratch")
             return {}
-        self.logger.info("Loading checkpoint from {}".format(path))
+        self.logger.info("[Checkpointer] Loading from {} ...".format(path))
         if not os.path.isfile(path):
             path = self.path_manager.get_local_path(path)
             assert os.path.isfile(path), "Checkpoint {} not found!".format(path)
@@ -149,7 +149,7 @@ class Checkpointer:
 
         for key in self.checkpointables if checkpointables is None else checkpointables:
             if key in checkpoint:
-                self.logger.info("Loading {} from {}".format(key, path))
+                self.logger.info("Loading {} from {} ...".format(key, path))
                 obj = self.checkpointables[key]
                 obj.load_state_dict(checkpoint.pop(key))
 
