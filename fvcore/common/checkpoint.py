@@ -454,8 +454,9 @@ def _filter_reused_missing_keys(model: nn.Module, keys: List[str]) -> List[str]:
     keyset = set(keys)
     param_to_names = defaultdict(set)  # param -> names that points to it
     for module_prefix, module in _named_modules_with_dup(model):
+        # pyre-fixme[58]: `+` is not supported for operand types `nn.Parameter` and `torch.Tensor`
         for name, param in list(module.named_parameters(recurse=False)) + list(
-            module.named_buffers(recurse=False)  # pyre-ignore
+            module.named_buffers(recurse=False)
         ):
             full_name = (module_prefix + "." if module_prefix else "") + name
             param_to_names[param].add(full_name)
