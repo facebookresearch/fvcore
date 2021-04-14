@@ -105,3 +105,13 @@ class TestMultiStepParamScheduler(unittest.TestCase):
             0.0001,
         ]
         self._test_config_scheduler(default_config, expected_schedule)
+
+    def test_optional_args(self):
+        v = [1, 0.1, 0.01]
+        s1 = MultiStepParamScheduler(v, num_updates=90, milestones=[30, 60])
+        s2 = MultiStepParamScheduler(v, num_updates=90)
+        s3 = MultiStepParamScheduler(v, milestones=[30, 60, 90])
+        for i in range(10):
+            k = i / 10
+            self.assertEqual(s1(k), s2(k))
+            self.assertEqual(s1(k), s3(k))

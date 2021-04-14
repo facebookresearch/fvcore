@@ -3,6 +3,9 @@ import math
 from typing import List, Optional, Sequence, Union
 
 
+# pyre-ignore-all-errors[58]   # handle optional
+
+
 __all__ = [
     "ParamScheduler",
     "ConstantParamScheduler",
@@ -32,8 +35,9 @@ class ParamScheduler:
         Get the value of the param for a given point at training.
 
         We update params (such as learning rate) based on the percent progress
-        of training completed.  This allows a scheduler to be agnostic to the
-        exact specifications of a particular run (e.g. 120 epochs vs 90 epochs).
+        of training completed. This allows a scheduler to be agnostic to the
+        exact length of a particular run (e.g. 120 epochs vs 90 epochs), as
+        long as the relative progress where params should be updated is the same.
         However, it assumes that the total length of training is known.
 
         Args:
@@ -53,7 +57,9 @@ class ConstantParamScheduler(ParamScheduler):
 
     def __call__(self, where: float) -> float:
         if where >= 1.0:
-            raise RuntimeError(f"Invalid where parameter for scheduler: {where}")
+            raise RuntimeError(
+                f"where in ParamScheduler must be in [0, 1]: got {where}"
+            )
         return self._value
 
 
@@ -152,8 +158,7 @@ class MultiStepParamScheduler(ParamScheduler):
 
           MultiStepParamScheduler(
             values=[0.1, 0.01, 0.001, 0.0001],
-            num_updates=120,
-            milestones=[30, 60, 80]
+            milestones=[30, 60, 80, 120]
           )
 
     Then the param value will be 0.1 for epochs 0-29, 0.01 for
@@ -165,30 +170,50 @@ class MultiStepParamScheduler(ParamScheduler):
     def __init__(
         self,
         values: List[float],
-        num_updates: int,
+        num_updates: Optional[int] = None,
         milestones: Optional[List[int]] = None,
     ) -> None:
-        if num_updates < len(values):
-            raise ValueError("num_updates must be greater than param schedule")
+        """
+        Args:
+            values: param value in each range
+            num_updates: the end of the last range. If None, will use ``milestones[-1]``
+            milestones: the boundary of each range. If None, will evenly split ``num_updates``
 
-        self._param_schedule = values
-        self._num_updates = num_updates
+        For example, all the following combinations define the same scheduler:
 
+        * num_updates=90, milestones=[30, 60], values=[1, 0.1, 0.01]
+        * num_updates=90, values=[1, 0.1, 0.01]
+        * milestones=[30, 60, 90], values=[1, 0.1, 0.01]
+        * milestones=[3, 6, 9], values=[1, 0.1, 0.01]  (ParamScheduler is scale-invariant)
+        """
+        if num_updates is None and milestones is None:
+            raise ValueError("num_updates and milestones cannot both be None")
         if milestones is None:
             # Default equispaced drop_epochs behavior
             milestones = []
-            step_width = math.ceil(self._num_updates / float(len(self._param_schedule)))
-            for idx in range(len(self._param_schedule) - 1):
+            step_width = math.ceil(num_updates / float(len(values)))
+            for idx in range(len(values) - 1):
                 milestones.append(step_width * (idx + 1))
-        self._milestones: List[int] = milestones
-        if not (
-            isinstance(self._milestones, Sequence)
-            and len(self._milestones) == len(values) - 1
-        ):
+        else:
+            if not (
+                isinstance(milestones, Sequence)
+                and len(milestones) == len(values) - int(num_updates is not None)
+            ):
+                raise ValueError(
+                    "MultiStep scheduler requires a list of %d miletones"
+                    % (len(values) - int(num_updates is not None))
+                )
+
+        if num_updates is None:
+            num_updates, milestones = milestones[-1], milestones[:-1]
+        if num_updates < len(values):
             raise ValueError(
-                "Non-Equi Step scheduler requires a list of %d miletones"
-                % (len(values) - 1)
+                "Total num_updates must be greater than length of param schedule"
             )
+
+        self._param_schedule = values
+        self._num_updates = num_updates
+        self._milestones: List[int] = milestones
 
         start_epoch = 0
         for milestone in self._milestones:
@@ -207,6 +232,10 @@ class MultiStepParamScheduler(ParamScheduler):
             start_epoch = milestone
 
     def __call__(self, where: float) -> float:
+        if where > 1.0:
+            raise RuntimeError(
+                f"where in ParamScheduler must be in [0, 1]: got {where}"
+            )
         epoch_num = int((where + self.WHERE_EPSILON) * self._num_updates)
         return self._param_schedule[bisect.bisect_right(self._milestones, epoch_num)]
 
