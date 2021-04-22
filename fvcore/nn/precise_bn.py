@@ -56,8 +56,9 @@ def update_bn_stats(
     # momentum is disabled.
     # bn.running_mean = (1 - momentum) * bn.running_mean + momentum * batch_mean
     # Setting the momentum to 1.0 to compute the stats without momentum.
-    momentum_actual = [bn.momentum for bn in bn_layers]  # pyre-ignore
+    momentum_actual = [bn.momentum for bn in bn_layers]
     for bn in bn_layers:
+        # pyre-fixme[16]: `Module` has no attribute `momentum`.
         bn.momentum = 1.0
 
     # Note that PyTorch's running_var means "running average of
@@ -74,10 +75,8 @@ def update_bn_stats(
     # of each batch in this function (otherwise we only have access to the
     # bessel-corrected batch variance given by pytorch), which is an extra
     # requirement.
-    running_mean = [
-        torch.zeros_like(bn.running_mean) for bn in bn_layers  # pyre-ignore
-    ]
-    running_var = [torch.zeros_like(bn.running_var) for bn in bn_layers]  # pyre-ignore
+    running_mean = [torch.zeros_like(bn.running_mean) for bn in bn_layers]
+    running_var = [torch.zeros_like(bn.running_var) for bn in bn_layers]
 
     ind = -1
     for ind, inputs in enumerate(itertools.islice(data_loader, num_iters)):
@@ -94,7 +93,9 @@ def update_bn_stats(
 
     for i, bn in enumerate(bn_layers):
         # Sets the precise bn stats.
+        # pyre-fixme[16]: `Module` has no attribute `running_mean`.
         bn.running_mean = running_mean[i]
+        # pyre-fixme[16]: `Module` has no attribute `running_var`.
         bn.running_var = running_var[i]
         bn.momentum = momentum_actual[i]
 

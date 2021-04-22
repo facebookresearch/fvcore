@@ -134,8 +134,10 @@ def _get_scoped_trace_graph(
     hook_handles: List[Any] = []
 
     def register_hooks(mod: nn.Module, name: str) -> None:
-        prehook = mod.register_forward_pre_hook(ScopePushHook(name))  # pyre-ignore[16]
-        posthook = mod.register_forward_hook(ScopePopHook())  # pyre-ignore[16]
+        # pyre-fixme[29]: `Union[Tensor, nn.Module]` is not a function.
+        prehook = mod.register_forward_pre_hook(ScopePushHook(name))
+        # pyre-fixme[29]: `Union[Tensor, nn.Module]` is not a function.
+        posthook = mod.register_forward_hook(ScopePopHook())
         hook_handles.append(prehook)
         hook_handles.append(posthook)
 
