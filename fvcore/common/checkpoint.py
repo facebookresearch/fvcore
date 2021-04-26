@@ -336,9 +336,9 @@ class Checkpointer:
                 self.model, incompatible.missing_keys
             )
             if missing_keys:
-                self.logger.info(get_missing_parameters_message(missing_keys))
+                self.logger.warning(get_missing_parameters_message(missing_keys))
         if incompatible.unexpected_keys:
-            self.logger.info(
+            self.logger.warning(
                 get_unexpected_parameters_message(incompatible.unexpected_keys)
             )
 
@@ -454,7 +454,7 @@ def _filter_reused_missing_keys(model: nn.Module, keys: List[str]) -> List[str]:
     keyset = set(keys)
     param_to_names = defaultdict(set)  # param -> names that points to it
     for module_prefix, module in _named_modules_with_dup(model):
-        # pyre-fixme[58]: `+` is not supported for operand types `nn.Parameter` and `torch.Tensor`
+        # pyre-fixme[58]
         for name, param in list(module.named_parameters(recurse=False)) + list(
             module.named_buffers(recurse=False)
         ):
