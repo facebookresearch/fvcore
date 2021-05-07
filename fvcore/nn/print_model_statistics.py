@@ -199,7 +199,6 @@ def _fill_missing_statistics(
             values filled with zero.
     """
     out_stats = {name: stat.copy() for name, stat in statistics.items()}
-    # pyre-fixme[29]: `Union[nn.Module, torch.Tensor]` is not a function.
     for mod_name, _ in model.named_modules():
         for stat in out_stats.values():
             if mod_name not in stat:
