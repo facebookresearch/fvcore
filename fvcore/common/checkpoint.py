@@ -1,5 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-# pyre-ignore-all-errors[2,3]
+# pyre-ignore-all-errors[2,3,58]
 
 import logging
 import os
@@ -420,8 +420,6 @@ class PeriodicCheckpointer:
 
             if self.max_to_keep is not None:
                 self.recent_checkpoints.append(self.checkpointer.get_checkpoint_file())
-                # pyre-fixme[58]: `>` is not supported for operand types `int` and
-                #  `Optional[int]`.
                 if len(self.recent_checkpoints) > self.max_to_keep:
                     file_to_delete = self.recent_checkpoints.pop(0)
                     if self.path_manager.exists(
@@ -430,7 +428,6 @@ class PeriodicCheckpointer:
                         self.path_manager.rm(file_to_delete)
 
         if self.max_iter is not None:
-            # pyre-fixme[58]
             if iteration >= self.max_iter - 1:
                 self.checkpointer.save(f"{self.file_prefix}_final", **additional_state)
 
@@ -454,7 +451,6 @@ def _filter_reused_missing_keys(model: nn.Module, keys: List[str]) -> List[str]:
     keyset = set(keys)
     param_to_names = defaultdict(set)  # param -> names that points to it
     for module_prefix, module in _named_modules_with_dup(model):
-        # pyre-fixme[58]
         for name, param in list(module.named_parameters(recurse=False)) + list(
             module.named_buffers(recurse=False)
         ):

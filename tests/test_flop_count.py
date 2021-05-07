@@ -772,3 +772,14 @@ class TestFlopCountHandles(unittest.TestCase):
             F.interpolate, (torch.rand(2, 2, 2, 2), None, 2, "bilinear", False), op_name
         )
         self.assertEqual(counter(*shapes), 2 ** 4 * 4 * 4)
+
+    def test_complicated_einsum(self):
+        op_name = "aten::einsum"
+        counter = _DEFAULT_SUPPORTED_OPS[op_name]
+
+        shapes = self._count_function(
+            torch.einsum,
+            ("nc,nchw->hw", torch.rand(3, 4), torch.rand(3, 4, 2, 3)),
+            op_name,
+        )
+        self.assertEqual(counter(*shapes), 72.0)
