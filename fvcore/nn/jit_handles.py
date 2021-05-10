@@ -8,6 +8,7 @@ from collections import Counter, OrderedDict
 from numbers import Number
 from typing import Any, Callable, List, Optional, Union
 
+import numpy as np
 from numpy import prod
 
 
@@ -158,8 +159,7 @@ def conv_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
 
 def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     """
-    Count flops for the einsum operation. We currently support
-    two einsum operations: "nct,ncp->ntp" and "ntg,ncg->nct".
+    Count flops for the einsum operation.
     """
     # Inputs of einsum should be a list of length 2.
     # Inputs[0] stores the equation used for einsum.
@@ -168,13 +168,14 @@ def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     equation = inputs[0].toIValue()
     # Get rid of white space in the equation string.
     equation = equation.replace(" ", "")
+    input_shapes_jit = inputs[1].node().inputs()
+    input_shapes = [get_shape(v) for v in input_shapes_jit]
+
     # Re-map equation so that same equation with different alphabet
     # representations will look the same.
     letter_order = OrderedDict((k, 0) for k in equation if k.isalpha()).keys()
     mapping = {ord(x): 97 + i for i, x in enumerate(letter_order)}
     equation = equation.translate(mapping)
-    input_shapes_jit = inputs[1].node().inputs()
-    input_shapes = [get_shape(v) for v in input_shapes_jit]
 
     if equation == "abc,abd->acd":
         n, c, t = input_shapes[0]
@@ -187,8 +188,14 @@ def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
         c = input_shapes[-1][1]
         flop = n * t * g * c
         return flop
-
     else:
+        np_arrs = [np.zeros(s) for s in input_shapes]
+        optim = np.einsum_path(equation, *np_arrs, optimize="optimal")[1]
+        for line in optim.split("\n"):
+            if "optimized flop" in line.lower():
+                # divided by 2 because we count MAC (multiply-add counted as one flop)
+                flop = float(np.floor(float(line.split(":")[-1]) / 2))
+                return flop
         raise NotImplementedError("Unsupported einsum operation.")
 
 
