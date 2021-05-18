@@ -18,7 +18,7 @@ class TestPreciseBN(unittest.TestCase):
     @staticmethod
     def compute_bn_stats(
         tensors: List[torch.Tensor], dims: List[int]
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Given a list of random initialized tensors, compute the mean and
             variance.
@@ -31,13 +31,14 @@ class TestPreciseBN(unittest.TestCase):
             .mean(dim=0)
             .numpy()
         )
-        var = (
+        mean_of_batch_var = (
             # pyre-ignore
-            torch.stack([tensor.var(dim=dims) for tensor in tensors])
+            torch.stack([tensor.var(dim=dims, unbiased=True) for tensor in tensors])
             .mean(dim=0)
             .numpy()
         )
-        return mean, var
+        var = torch.cat(tensors, dim=0).var(dim=dims, unbiased=False).numpy()
+        return mean, mean_of_batch_var, var
 
     def test_precise_bn(self) -> None:
         # Number of batches to test.
@@ -51,11 +52,29 @@ class TestPreciseBN(unittest.TestCase):
             model = bn(input_dim[1])
             model.train()
             tensors = [torch.randn(input_dim) for _ in range(NB)]
-            mean, var = TestPreciseBN.compute_bn_stats(tensors, stats_dim)
+            mean, mean_of_batch_var, var = TestPreciseBN.compute_bn_stats(
+                tensors, stats_dim
+            )
 
             old_weight = model.weight.detach().numpy()
-            update_bn_stats(model, itertools.cycle(tensors), NB * 100)
 
+            update_bn_stats(
+                model,
+                itertools.cycle(tensors),
+                len(tensors),
+            )
+            self.assertTrue(np.allclose(model.running_mean.numpy(), mean))
+            self.assertTrue(np.allclose(model.running_var.numpy(), var))
+
+            # Test that the new estimator can handle varying batch size
+            # It should obtain same results as earlier if the same input data are
+            # split into different batch sizes.
+            tensors = torch.split(torch.cat(tensors, dim=0), [2, 2, 4, 8, 16, 32, 64])
+            update_bn_stats(
+                model,
+                itertools.cycle(tensors),
+                len(tensors),
+            )
             self.assertTrue(np.allclose(model.running_mean.numpy(), mean))
             self.assertTrue(np.allclose(model.running_var.numpy(), var))
             self.assertTrue(np.allclose(model.weight.detach().numpy(), old_weight))

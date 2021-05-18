@@ -11,9 +11,12 @@ The computer vision team in FAIR is responsible for maintaining this library.
 
 ## Features:
 
-Besides some basic utilities, the most notable features of fvcore are:
+Besides some basic utilities, fvcore includes the following features:
+* Common pytorch layers, functions and losses in [fvcore.nn](fvcore/nn/).
 * A hierarchical per-operator flop counting tool: see [this note for details](./docs/flop_count.md).
-* Recursive parameter counting: [Doc](https://detectron2.readthedocs.io/en/latest/modules/fvcore.html#fvcore.nn.parameter_count).
+* Recursive parameter counting: see [API doc](https://detectron2.readthedocs.io/en/latest/modules/fvcore.html#fvcore.nn.parameter_count).
+* Recompute BatchNorm population statistics: see its [API doc](https://detectron2.readthedocs.io/en/latest/modules/fvcore.html#fvcore.nn.update_bn_stats).
+* A stateless, scale-invariant hyperparameter scheduler: see its [API doc](https://detectron2.readthedocs.io/en/latest/modules/fvcore.html#fvcore.common.param_scheduler.ParamScheduler).
 
 ## Install:
 
