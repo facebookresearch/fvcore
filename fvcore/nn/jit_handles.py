@@ -233,6 +233,16 @@ def norm_flop_counter(affine_arg_index: int) -> Handle:
     return norm_flop_jit
 
 
+def batchnorm_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
+    training = inputs[5].toIValue()
+    assert isinstance(training, bool), "Signature of aten::batch_norm has changed!"
+    if training:
+        return norm_flop_counter(1)(inputs, outputs)  # pyre-ignore
+    has_affine = get_shape(inputs[1]) is not None
+    input_shape = prod(get_shape(inputs[0]))
+    return input_shape * (2 if has_affine else 1)
+
+
 def elementwise_flop_counter(input_scale: float = 1, output_scale: float = 0) -> Handle:
     """
     Count flops by

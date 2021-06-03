@@ -614,10 +614,10 @@ class TestFlopCountAnalysis(unittest.TestCase):
         # Test for BatchNorm1d.
         batch_size = 10
         input_dim = 10
-        batch_1d = nn.BatchNorm1d(input_dim, affine=False)
+        batch_1d = nn.BatchNorm1d(input_dim, affine=False).eval()
         x = torch.randn(batch_size, input_dim)
         flop_dict, _ = flop_count(batch_1d, (x,))
-        gt_flop = 4 * batch_size * input_dim / 1e9
+        gt_flop = batch_size * input_dim / 1e9
         gt_dict = defaultdict(float)
         gt_dict["batch_norm"] = gt_flop
         self.assertDictEqual(
@@ -737,49 +737,57 @@ class TestFlopCountHandles(unittest.TestCase):
         counter = _DEFAULT_SUPPORTED_OPS[op_name]
 
         vec = torch.rand(2)
-        shapes = self._count_function(
+        nodes = self._count_function(
             F.batch_norm, (torch.rand(2, 2, 2, 2), vec, vec, vec, vec), op_name
         )
-        self.assertEqual(counter(*shapes), 80)
+        self.assertEqual(counter(*nodes), 32)
 
-        shapes = self._count_function(
+        nodes = self._count_function(
             F.batch_norm,
             (torch.rand(2, 2, 2, 2), vec, vec, None, None),
             op_name,
         )
-        self.assertEqual(counter(*shapes), 64)
+        self.assertEqual(counter(*nodes), 16)
+
+        nodes = self._count_function(
+            # training=True
+            F.batch_norm,
+            (torch.rand(2, 2, 2, 2), vec, vec, vec, vec, True),
+            op_name,
+        )
+        self.assertEqual(counter(*nodes), 80)
 
     def test_group_norm(self):
         op_name = "aten::group_norm"
         counter = _DEFAULT_SUPPORTED_OPS[op_name]
 
         vec = torch.rand(2)
-        shapes = self._count_function(
+        nodes = self._count_function(
             F.group_norm, (torch.rand(2, 2, 2, 2), 2, vec, vec), op_name
         )
-        self.assertEqual(counter(*shapes), 80)
+        self.assertEqual(counter(*nodes), 80)
 
-        shapes = self._count_function(
+        nodes = self._count_function(
             F.group_norm, (torch.rand(2, 2, 2, 2), 2, None, None), op_name
         )
-        self.assertEqual(counter(*shapes), 64)
+        self.assertEqual(counter(*nodes), 64)
 
     def test_upsample(self):
         op_name = "aten::upsample_bilinear2d"
         counter = _DEFAULT_SUPPORTED_OPS[op_name]
 
-        shapes = self._count_function(
+        nodes = self._count_function(
             F.interpolate, (torch.rand(2, 2, 2, 2), None, 2, "bilinear", False), op_name
         )
-        self.assertEqual(counter(*shapes), 2 ** 4 * 4 * 4)
+        self.assertEqual(counter(*nodes), 2 ** 4 * 4 * 4)
 
     def test_complicated_einsum(self):
         op_name = "aten::einsum"
         counter = _DEFAULT_SUPPORTED_OPS[op_name]
 
-        shapes = self._count_function(
+        nodes = self._count_function(
             torch.einsum,
             ("nc,nchw->hw", torch.rand(3, 4), torch.rand(3, 4, 2, 3)),
             op_name,
         )
-        self.assertEqual(counter(*shapes), 72.0)
+        self.assertEqual(counter(*nodes), 72.0)

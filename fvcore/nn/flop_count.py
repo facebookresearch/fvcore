@@ -11,6 +11,7 @@ from .jit_analysis import JitModelAnalysis
 from .jit_handles import (
     Handle,
     addmm_flop_jit,
+    batchnorm_flop_jit,
     bmm_flop_jit,
     conv_flop_jit,
     einsum_flop_jit,
@@ -31,7 +32,7 @@ _DEFAULT_SUPPORTED_OPS: Dict[str, Handle] = {
     "aten::linear": linear_flop_jit,
     # You might want to ignore BN flops due to inference-time fusion.
     # Use `set_op_handle("aten::batch_norm", None)
-    "aten::batch_norm": norm_flop_counter(1),
+    "aten::batch_norm": batchnorm_flop_jit,
     "aten::group_norm": norm_flop_counter(2),
     "aten::layer_norm": norm_flop_counter(2),
     "aten::instance_norm": norm_flop_counter(1),
