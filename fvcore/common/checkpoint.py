@@ -177,7 +177,7 @@ class Checkpointer:
             # if file doesn't exist, maybe because it has just been
             # deleted by a separate process
             return ""
-        return os.path.join(self.save_dir, last_saved)  # pyre-fixme[6]
+        return os.path.join(self.save_dir, last_saved)
 
     def get_all_checkpoint_files(self) -> List[str]:
         """
