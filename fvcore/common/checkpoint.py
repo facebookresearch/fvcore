@@ -311,7 +311,6 @@ class Checkpointer:
 
                     incorrect_shapes.append((k, shape_checkpoint, shape_model))
                     checkpoint_state_dict.pop(k)
-        # pyre-ignore
         incompatible = self.model.load_state_dict(checkpoint_state_dict, strict=False)
         return _IncompatibleKeys(
             missing_keys=incompatible.missing_keys,
