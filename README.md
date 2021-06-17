@@ -3,7 +3,7 @@
 fvcore is a light-weight core library that provides the most common and essential
 functionality shared in various computer vision frameworks developed in FAIR,
 such as [Detectron2](https://github.com/facebookresearch/detectron2/),
-[PySlowFast](https://github.com/facebookresearch/SlowFast)
+[PySlowFast](https://github.com/facebookresearch/SlowFast), and
 [ClassyVision](https://github.com/facebookresearch/ClassyVision).
 All components in this library are type-annotated, tested, and benchmarked.
 
