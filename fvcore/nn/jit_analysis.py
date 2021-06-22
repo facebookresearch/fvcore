@@ -605,7 +605,12 @@ class JitModelAnalysis:
             return False
         module_type = type(module)
         # Containers are not meant to be called anyway (they don't have forward)
-        no_forward_mods = {nn.ModuleList, nn.ModuleDict, nn.Module}
+        # NOTE: We add nn.Identity as well to silence the uncalled warning, but it's
+        # different from other containers: Identity has a forward but the forward does
+        # not contain ops, so it appears "uncalled" after tracing. A more proper way
+        # may be to use forward hooks (instead of the graph) to decide whether a module
+        # has been called.
+        no_forward_mods = {nn.ModuleList, nn.ModuleDict, nn.Module, nn.Identity}
         for mod in no_forward_mods:
             if module_type.forward is mod.forward:  # pyre-ignore[16]
                 return False
