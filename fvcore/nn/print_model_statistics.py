@@ -616,7 +616,7 @@ def flop_count_table(
 
     Examples:
     ::
-        print(flop_count_table(model, FlopCountAnalysis(model, inputs)))
+        print(flop_count_table(FlopCountAnalysis(model, inputs)))
     """
     params_header = "#parameters" + (" or shape" if show_param_shapes else "")
     flops_header, acts_header = "#flops", "#activations"
