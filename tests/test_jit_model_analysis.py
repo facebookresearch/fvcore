@@ -60,7 +60,7 @@ class NestedNetInnerModule(nn.Module):
         x = x.reshape(-1, 2, 5)
         x = self.conv(x)
         x = torch.flatten(x, 1)
-        x = 3 * self.fc(x) + 1  # pyre-ignore[9]
+        x = 3 * self.fc(x) + 1
         return x
 
 
