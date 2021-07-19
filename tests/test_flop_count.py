@@ -791,3 +791,16 @@ class TestFlopCountHandles(unittest.TestCase):
             op_name,
         )
         self.assertEqual(counter(*nodes), 72.0)
+
+    def test_torch_mm(self):
+        for op_name, func in zip(
+            ["aten::mm", "aten::matmul"], [torch.mm, torch.matmul]
+        ):
+            counter = _DEFAULT_SUPPORTED_OPS[op_name]
+
+            nodes = self._count_function(
+                func,
+                (torch.rand(3, 4), torch.rand(4, 5)),
+                op_name,
+            )
+            self.assertEqual(counter(*nodes), 60)

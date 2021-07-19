@@ -29,6 +29,7 @@ _DEFAULT_SUPPORTED_OPS: Dict[str, Handle] = {
     "aten::_convolution": conv_flop_jit,
     "aten::einsum": einsum_flop_jit,
     "aten::matmul": matmul_flop_jit,
+    "aten::mm": matmul_flop_jit,
     "aten::linear": linear_flop_jit,
     # You might want to ignore BN flops due to inference-time fusion.
     # Use `set_op_handle("aten::batch_norm", None)
