@@ -48,21 +48,32 @@ class ConvNet(nn.Module):
         input_dim: int,
         output_dim: int,
         kernel_size: int,
-        spatial_dim: int,
         stride: int,
         padding: int,
         groups_num: int,
+        transpose: bool = False,
+        output_padding: int = 0,
     ) -> None:
         super(ConvNet, self).__init__()
-        if conv_dim == 1:
-            convLayer = nn.Conv1d
-        elif conv_dim == 2:
-            convLayer = nn.Conv2d
+        if transpose:
+            conv_layers = [nn.ConvTranspose1d, nn.ConvTranspose2d, nn.ConvTranspose3d]
+            kwargs = {"output_padding": output_padding}
         else:
-            convLayer = nn.Conv3d
+            conv_layers = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
+            assert (
+                output_padding == 0
+            ), "output_padding is not supported for un-transposed convolutions."
+            kwargs = {}
+        convLayer = conv_layers[conv_dim - 1]
 
         self.conv = convLayer(
-            input_dim, output_dim, kernel_size, stride, padding, groups=groups_num
+            input_dim,
+            output_dim,
+            kernel_size,
+            stride,
+            padding,
+            groups=groups_num,
+            **kwargs
         )  # type: nn.Module
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -306,16 +317,19 @@ class TestFlopCountAnalysis(unittest.TestCase):
             padding: int,
             stride: int,
             group_size: int,
+            transpose: bool = False,
+            output_padding: int = 0,
         ) -> None:
             convNet = ConvNet(
                 conv_dim,
                 input_dim,
                 output_dim,
                 kernel_size,
-                spatial_dim,
                 stride,
                 padding,
                 group_size,
+                transpose,
+                output_padding,
             )
             assert conv_dim in [1, 2, 3], "Convolution dimension needs to be 1, 2, or 3"
             if conv_dim == 1:
@@ -328,13 +342,16 @@ class TestFlopCountAnalysis(unittest.TestCase):
                 )
 
             flop_dict, _ = flop_count(convNet, (x,))
-            spatial_out = ((spatial_dim + 2 * padding) - kernel_size) // stride + 1
+            if transpose:
+                spatial_size = spatial_dim
+            else:
+                spatial_size = ((spatial_dim + 2 * padding) - kernel_size) // stride + 1
             gt_flop = (
                 batch_size
                 * input_dim
                 * output_dim
                 * (kernel_size ** conv_dim)
-                * (spatial_out ** conv_dim)
+                * (spatial_size ** conv_dim)
                 / group_size
                 / 1e9
             )
@@ -477,6 +494,77 @@ class TestFlopCountAnalysis(unittest.TestCase):
             padding6,
             stride6,
             group_size6,
+        )
+
+        # Test flop count for transposed 2d convolution.
+        conv_dim7 = 2
+        batch_size7 = 5
+        input_dim7 = 10
+        output_dim7 = 3
+        spatial_dim7 = 15
+        kernel_size7 = 3
+        padding7 = 1
+        stride7 = 1
+        group_size7 = 1
+        _test_conv(
+            conv_dim7,
+            batch_size7,
+            input_dim7,
+            output_dim7,
+            spatial_dim7,
+            kernel_size7,
+            padding7,
+            stride7,
+            group_size7,
+            transpose=True,
+        )
+
+        # Test flop count for strided transposed 2d convolution.
+        conv_dim8 = 2
+        batch_size8 = 5
+        input_dim8 = 10
+        output_dim8 = 3
+        spatial_dim8 = 15
+        kernel_size8 = 3
+        padding8 = 1
+        stride8 = 2
+        group_size8 = 1
+        _test_conv(
+            conv_dim8,
+            batch_size8,
+            input_dim8,
+            output_dim8,
+            spatial_dim8,
+            kernel_size8,
+            padding8,
+            stride8,
+            group_size8,
+            transpose=True,
+        )
+
+        # Test flop count for strided transposed 2d convolution w/ output_padding.
+        conv_dim9 = 2
+        batch_size9 = 5
+        input_dim9 = 10
+        output_dim9 = 3
+        spatial_dim9 = 15
+        kernel_size9 = 3
+        padding9 = 1
+        stride9 = 3
+        group_size9 = 1
+        output_padding9 = 2
+        _test_conv(
+            conv_dim9,
+            batch_size9,
+            input_dim9,
+            output_dim9,
+            spatial_dim9,
+            kernel_size9,
+            padding9,
+            stride9,
+            group_size9,
+            transpose=True,
+            output_padding=output_padding9,
         )
 
     def test_matmul(self) -> None:

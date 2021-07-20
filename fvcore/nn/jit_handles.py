@@ -120,23 +120,29 @@ def bmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
 
 
 def conv_flop_count(
-    x_shape: List[int], w_shape: List[int], out_shape: List[int]
+    x_shape: List[int],
+    w_shape: List[int],
+    out_shape: List[int],
+    transposed: bool = False,
 ) -> Number:
     """
     Count flops for convolution. Note only multiplication is
     counted. Computation for addition and bias is ignored.
 
+    Flops for a transposed convolution are calculated as
+    flops = (x_shape[2:] * prod(w_shape) * batch_size).
+
     Args:
         x_shape (list(int)): The input shape before convolution.
         w_shape (list(int)): The filter shape.
         out_shape (list(int)): The output shape after convolution.
+        transposed (bool): is the convolution transposed
     Returns:
         int: the number of flops
     """
-    batch_size, Cin_dim, Cout_dim = x_shape[0], w_shape[1], out_shape[1]
-    out_size = prod(out_shape[2:])
-    kernel_size = prod(w_shape[2:])
-    flop = batch_size * out_size * Cout_dim * Cin_dim * kernel_size
+    batch_size = x_shape[0]
+    conv_shape = (x_shape if transposed else out_shape)[2:]
+    flop = batch_size * prod(w_shape) * prod(conv_shape)
     return flop
 
 
@@ -152,9 +158,12 @@ def conv_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     assert len(inputs) == 12 or len(inputs) == 13, len(inputs)
     x, w = inputs[:2]
     x_shape, w_shape, out_shape = (get_shape(x), get_shape(w), get_shape(outputs[0]))
+    transposed = inputs[6].toIValue()
 
     # use a custom name instead of "_convolution"
-    return Counter({"conv": conv_flop_count(x_shape, w_shape, out_shape)})
+    return Counter(
+        {"conv": conv_flop_count(x_shape, w_shape, out_shape, transposed=transposed)}
+    )
 
 
 def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
