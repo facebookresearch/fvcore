@@ -46,10 +46,7 @@ class TestFocalLoss(unittest.TestCase):
         self.assertEqual(ce_loss, focal_loss.data)
         focal_loss.backward()
         ce_loss.backward()
-        self.assertTrue(
-            # pyre-ignore
-            torch.allclose(inputs_fl.grad.data, inputs_ce.grad.data)
-        )
+        self.assertTrue(torch.allclose(inputs_fl.grad.data, inputs_ce.grad.data))
 
     def test_easy_ex_focal_loss_less_than_ce_loss(self) -> None:
         """
@@ -274,10 +271,7 @@ class TestFocalLossStar(unittest.TestCase):
         self.assertEqual(ce_loss, focal_loss_star.data)
         focal_loss_star.backward()
         ce_loss.backward()
-        self.assertTrue(
-            # pyre-ignore
-            torch.allclose(inputs_fl.grad.data, inputs_ce.grad.data)
-        )
+        self.assertTrue(torch.allclose(inputs_fl.grad.data, inputs_ce.grad.data))
 
     def test_easy_ex_focal_loss_star_less_than_ce_loss(self) -> None:
         """
