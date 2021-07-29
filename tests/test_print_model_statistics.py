@@ -535,3 +535,12 @@ class TestPrintModelStatistics(unittest.TestCase):
         # "    )\n"
         # "  )\n"
         # ")"
+
+    def test_flop_count_empty(self) -> None:
+        model = nn.ReLU()
+        inputs = (torch.randn((1, 10)),)
+        table = flop_count_table(FlopCountAnalysis(model, inputs))
+        self.assertGreater(len(table), 0)
+
+        out = flop_count_str(FlopCountAnalysis(model, inputs))
+        self.assertGreater(len(out), 0)

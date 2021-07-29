@@ -155,7 +155,7 @@ def _remove_zero_statistics(
             with submodules removed if they have zero for all statistics.
     """
     out_stats: Dict[str, Dict[str, int]] = {}
-    _force_keep: Set[str] = force_keep if force_keep else set()
+    _force_keep: Set[str] = force_keep if force_keep else set() | {""}
 
     def keep_stat(name: str) -> None:
         prefix = name + ("." if name else "")
