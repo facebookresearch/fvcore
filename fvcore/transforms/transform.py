@@ -754,6 +754,7 @@ class PadTransform(Transform):
         orig_w: Optional[int] = None,
         orig_h: Optional[int] = None,
         pad_value: float = 0,
+        seg_pad_value: int = 0,
     ):
         """
         Args:
@@ -761,7 +762,8 @@ class PadTransform(Transform):
             x1, y1: number of padded pixels on the right and bottom
             orig_w, orig_h: optional, original width and height.
                 Needed to make this transform invertible.
-            pad_value: the padding value
+            pad_value: the padding value to the image
+            seg_pad_value: the padding value to the segmentation mask
         """
         super().__init__()
         self._set_attributes(locals())
@@ -776,6 +778,18 @@ class PadTransform(Transform):
             padding,
             mode="constant",
             constant_values=self.pad_value,
+        )
+
+    def apply_segmentation(self, img):
+        if img.ndim == 3:
+            padding = ((self.y0, self.y1), (self.x0, self.x1), (0, 0))
+        else:
+            padding = ((self.y0, self.y1), (self.x0, self.x1))
+        return np.pad(
+            img,
+            padding,
+            mode="constant",
+            constant_values=self.seg_pad_value,
         )
 
     def apply_coords(self, coords):
