@@ -51,6 +51,7 @@ _IGNORED_OPS: Set[str] = {
     "aten::index_put_",
     "aten::max",
     "aten::nonzero",
+    "aten::new_empty",
     "aten::permute",
     "aten::relu",
     "aten::relu_",
@@ -492,9 +493,11 @@ class JitModelAnalysis:
             )
 
     def _warn_uncalled_mods(self, uncalled_mods: Set[str]) -> None:
-        if not self._enable_warn_uncalled_mods or not uncalled_mods:
+        if not self._enable_warn_uncalled_mods:
             return
         uncalled_mods = {x for x in uncalled_mods if self._has_forward(x)}
+        if len(uncalled_mods) == 0:
+            return
 
         logger = logging.getLogger(__name__)
         logger.warning(
