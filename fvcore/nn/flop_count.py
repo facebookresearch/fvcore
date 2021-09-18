@@ -2,12 +2,13 @@
 # pyre-ignore-all-errors[2,33]
 
 from collections import defaultdict
+from copy import deepcopy
 from typing import Any, Counter, DefaultDict, Dict, Optional, Tuple, Union
 
 import torch.nn as nn
 from torch import Tensor
 
-from .jit_analysis import JitModelAnalysis
+from .jit_analysis import JitModelAnalysis, Statistics
 from .jit_handles import (
     Handle,
     addmm_flop_jit,
@@ -31,6 +32,9 @@ _DEFAULT_SUPPORTED_OPS: Dict[str, Handle] = {
     "aten::matmul": matmul_flop_jit,
     "aten::mm": matmul_flop_jit,
     "aten::linear": linear_flop_jit,
+    # Flops for the following ops are just estimates as they are not very well
+    # defined and don't correlate with wall time very much. They shouldn't take
+    # a big portion of any model anyway.
     # You might want to ignore BN flops due to inference-time fusion.
     # Use `set_op_handle("aten::batch_norm", None)
     "aten::batch_norm": batchnorm_flop_jit,
@@ -38,25 +42,31 @@ _DEFAULT_SUPPORTED_OPS: Dict[str, Handle] = {
     "aten::layer_norm": norm_flop_counter(2),
     "aten::instance_norm": norm_flop_counter(1),
     "aten::upsample_nearest2d": elementwise_flop_counter(0, 1),
-    "aten::upsample_bilinear2d": elementwise_flop_counter(0, 4),
-    "aten::adaptive_avg_pool2d": elementwise_flop_counter(1, 0),
-    "aten::grid_sampler": elementwise_flop_counter(0, 4),  # assume bilinear
+    "aten::upsample_bilinear2d": elementwise_flop_counter(0, 8),
+    "aten::adaptive_avg_pool2d": elementwise_flop_counter(2, 0),
+    "aten::grid_sampler": elementwise_flop_counter(0, 8),  # assume bilinear
 }
 
 
 class FlopCountAnalysis(JitModelAnalysis):
     """
-    Provides access to per-submodule model flop count obtained by
-    tracing a model with pytorch's jit tracing functionality. By default,
-    comes with standard flop counters for a few common operators.
-    Note that:
+    Provides access to per-submodule flop count obtained by tracing a model
+    with pytorch's jit tracing functionality. By default, comes with standard
+    flop counters for a few common operators.
 
-        1. Flop is not a well-defined concept. We just produce our best estimate.
-        2. We count one fused multiply-add as one flop.
+    Flop represents floating point operations. Another common metric is MAC
+    (multiply-add count), which represents a multiply and an add operations.
+    We count MAC (multiply-add counts) by default, but this can be changed
+    by `set_use_mac(False)`. We just assume MAC is half of flops, which
+    is true for most expensive operators we care.
+
+    Note that flop/MAC is not a well-defined concept for many ops. We just produce
+    our best estimate.
 
     Handles for additional operators may be added, or the default ones
     overwritten, using the ``.set_op_handle(name, func)`` method.
     See the method documentation for details.
+    The handler for each op should always calculate flops instead of MAC.
 
     Flop counts can be obtained as:
 
@@ -112,6 +122,28 @@ class FlopCountAnalysis(JitModelAnalysis):
     ) -> None:
         super().__init__(model=model, inputs=inputs)
         self.set_op_handle(**_DEFAULT_SUPPORTED_OPS)
+        self._use_mac = True  # NOTE: maybe we'll want to change the default to False
+
+    def set_use_mac(self, enabled: bool) -> "FlopCountAnalysis":
+        """
+        Decide whether to count MAC (multiply-add counts) rather than flops.
+        Default to True because this is the convention in many computer vision papers.
+        Unfortunately this concept is typically misused as flops.
+
+        To implement counting of MAC, we simply assume MAC is half of flops.
+        Although we note that this is not true for all ops.
+        """
+        self._use_mac = enabled
+        return self
+
+    def _analyze(self) -> Statistics:
+        stats = super()._analyze()
+        if self._use_mac:
+            stats = deepcopy(stats)
+            for v in stats.counts.values():
+                for k in list(v.keys()):
+                    v[k] = v[k] // 2
+        return stats
 
     __init__.__doc__ = JitModelAnalysis.__init__.__doc__
 
@@ -122,8 +154,10 @@ def flop_count(
     supported_ops: Optional[Dict[str, Handle]] = None,
 ) -> Tuple[DefaultDict[str, float], Counter[str]]:
     """
-    Given a model and an input to the model, compute the per-operator Gflops
-    of the given model.
+    Given a model and an input to the model, compute the per-operator GMACs
+    (10^9 multiply-adds) of the given model.
+
+    For more features and customized counting, please use :class:`FlopCountAnalysis`.
 
     Args:
         model (nn.Module): The model to compute flop counts.
@@ -132,18 +166,21 @@ def flop_count(
         supported_ops (dict(str,Callable) or None) : provide additional
             handlers for extra ops, or overwrite the existing handlers for
             convolution and matmul and einsum. The key is operator name and the value
-            is a function that takes (inputs, outputs) of the op. We count
-            one Multiply-Add as one FLOP.
+            is a function that takes (inputs, outputs) of the op.
 
     Returns:
         tuple[defaultdict, Counter]: A dictionary that records the number of
-            gflops for each operation and a Counter that records the number of
+            GMACs for each operation and a Counter that records the number of
             unsupported operations.
     """
     if supported_ops is None:
         supported_ops = {}
-    flop_counter = FlopCountAnalysis(model, inputs).set_op_handle(**supported_ops)
-    giga_flops = defaultdict(float)
-    for op, flop in flop_counter.by_operator().items():
-        giga_flops[op] = flop / 1e9
-    return giga_flops, flop_counter.unsupported_ops()
+    mac_counter = (
+        FlopCountAnalysis(model, inputs)  # pyre-ignore
+        .set_op_handle(**supported_ops)
+        .set_use_mac(True)
+    )
+    giga_macs = defaultdict(float)
+    for op, mac in mac_counter.by_operator().items():
+        giga_macs[op] = mac / 1e9
+    return giga_macs, mac_counter.unsupported_ops()

@@ -620,7 +620,7 @@ class TestJitModelAnalysis(unittest.TestCase):
             "aten::linear": linear_flop_jit,
         }  # type: Dict[str, Handle]
 
-        analyzer = JitModelAnalysis(model=model, inputs=inputs).set_op_handle(
+        analyzer = FlopCountAnalysis(model=model, inputs=inputs).set_op_handle(
             **op_handles
         )
         analyzer.unsupported_ops_warnings(enabled=False)
@@ -638,7 +638,7 @@ class TestJitModelAnalysis(unittest.TestCase):
             def dummy_ops_handle(
                 inputs: List[Any], outputs: List[Any]
             ) -> typing.Counter[str]:
-                return Counter({name: output})
+                return Counter({name: output * 2})
 
             return dummy_ops_handle
 
@@ -725,10 +725,10 @@ class TestJitModelAnalysis(unittest.TestCase):
         non_forward_flops = new_model.fc_flops + new_model.submod.fc_flops
 
         # Total is correct for new model and inputs
-        self.assertEqual(analyzer_new.total(), non_forward_flops * bs)
+        self.assertEqual(analyzer_new.total(), non_forward_flops * bs * 2)
 
         # Original is unaffected
-        self.assertEqual(analyzer.total(), repeated_net_flops)
+        self.assertEqual(analyzer.total(), repeated_net_flops * 2)
 
         # Settings match
         self.assertEqual(

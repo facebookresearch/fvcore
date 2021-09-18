@@ -186,7 +186,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
         custom_ops: Dict[str, Handle] = {"aten::sigmoid": dummy_sigmoid_flop_jit}
         x = torch.rand(batch_size, input_dim)
         flop_dict1, _ = flop_count(customNet, (x,), supported_ops=custom_ops)
-        flop_sigmoid = 10000 / 1e9
+        flop_sigmoid = 10000 / 1e9 / 2
         self.assertEqual(
             flop_dict1["sigmoid"],
             flop_sigmoid,
@@ -211,7 +211,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
             "aten::{}".format(self.lin_op): addmm_dummy_flop_jit
         }
         flop_dict2, _ = flop_count(customNet, (x,), supported_ops=custom_ops2)
-        flop = 400000 / 1e9
+        flop = 400000 / 1e9 / 2
         self.assertEqual(
             flop_dict2[self.lin_op],
             flop,
@@ -632,7 +632,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
         batch_2d = nn.BatchNorm2d(input_dim, affine=False)
         x = torch.randn(batch_size, input_dim, spatial_dim_x, spatial_dim_y)
         flop_dict, _ = flop_count(batch_2d, (x,))
-        gt_flop = 4 * batch_size * input_dim * spatial_dim_x * spatial_dim_y / 1e9
+        gt_flop = 2.5 * batch_size * input_dim * spatial_dim_x * spatial_dim_y / 1e9
         gt_dict = defaultdict(float)
         gt_dict["batch_norm"] = gt_flop
         self.assertDictEqual(
@@ -651,7 +651,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
         )
         flop_dict, _ = flop_count(batch_3d, (x,))
         gt_flop = (
-            4
+            2.5
             * batch_size
             * input_dim
             * spatial_dim_x
@@ -740,14 +740,14 @@ class TestFlopCountHandles(unittest.TestCase):
         nodes = self._count_function(
             F.batch_norm, (torch.rand(2, 2, 2, 2), vec, vec, vec, vec), op_name
         )
-        self.assertEqual(counter(*nodes), 32)
+        self.assertEqual(counter(*nodes), 64)
 
         nodes = self._count_function(
             F.batch_norm,
             (torch.rand(2, 2, 2, 2), vec, vec, None, None),
             op_name,
         )
-        self.assertEqual(counter(*nodes), 16)
+        self.assertEqual(counter(*nodes), 32)
 
         nodes = self._count_function(
             # training=True
@@ -755,7 +755,7 @@ class TestFlopCountHandles(unittest.TestCase):
             (torch.rand(2, 2, 2, 2), vec, vec, vec, vec, True),
             op_name,
         )
-        self.assertEqual(counter(*nodes), 80)
+        self.assertEqual(counter(*nodes), 112)
 
     def test_group_norm(self):
         op_name = "aten::group_norm"
@@ -765,12 +765,12 @@ class TestFlopCountHandles(unittest.TestCase):
         nodes = self._count_function(
             F.group_norm, (torch.rand(2, 2, 2, 2), 2, vec, vec), op_name
         )
-        self.assertEqual(counter(*nodes), 80)
+        self.assertEqual(counter(*nodes), 112)
 
         nodes = self._count_function(
             F.group_norm, (torch.rand(2, 2, 2, 2), 2, None, None), op_name
         )
-        self.assertEqual(counter(*nodes), 64)
+        self.assertEqual(counter(*nodes), 80)
 
     def test_upsample(self):
         op_name = "aten::upsample_bilinear2d"
@@ -779,7 +779,7 @@ class TestFlopCountHandles(unittest.TestCase):
         nodes = self._count_function(
             F.interpolate, (torch.rand(2, 2, 2, 2), None, 2, "bilinear", False), op_name
         )
-        self.assertEqual(counter(*nodes), 2 ** 4 * 4 * 4)
+        self.assertEqual(counter(*nodes), 2 ** 4 * 4 * 4 * 2)
 
     def test_complicated_einsum(self):
         op_name = "aten::einsum"
@@ -790,7 +790,7 @@ class TestFlopCountHandles(unittest.TestCase):
             ("nc,nchw->hw", torch.rand(3, 4), torch.rand(3, 4, 2, 3)),
             op_name,
         )
-        self.assertEqual(counter(*nodes), 72.0)
+        self.assertEqual(counter(*nodes), 145.0)
 
     def test_torch_mm(self):
         for op_name, func in zip(
@@ -803,4 +803,4 @@ class TestFlopCountHandles(unittest.TestCase):
                 (torch.rand(3, 4), torch.rand(4, 5)),
                 op_name,
             )
-            self.assertEqual(counter(*nodes), 60)
+            self.assertEqual(counter(*nodes), 120)
