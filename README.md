@@ -48,4 +48,4 @@ pip install -e fvcore
 
 ## License
 
-This library is released under the [Apache 2.0 license](https://github.com/facebookresearch/fvcore/blob/master/LICENSE).
+This library is released under the [Apache 2.0 license](https://github.com/facebookresearch/fvcore/blob/main/LICENSE).
