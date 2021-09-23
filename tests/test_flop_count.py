@@ -1,5 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-# pyre-ignore-all-errors[2,3,53]
+# pyre-ignore-all-errors[2,3,14,53]
 import typing
 import unittest
 from collections import Counter, defaultdict
@@ -9,7 +9,18 @@ import torch
 import torch.nn as nn
 from fvcore.nn.flop_count import _DEFAULT_SUPPORTED_OPS, FlopCountAnalysis, flop_count
 from fvcore.nn.jit_handles import Handle
+from torch.autograd.function import Function
 from torch.nn import functional as F
+
+
+class _CustomOp(Function):
+    @staticmethod
+    def forward(ctx, input: torch.Tensor) -> torch.Tensor:
+        return input
+
+    @staticmethod
+    def backward(ctx, grad_output: torch.Tensor) -> torch.Tensor:
+        return torch.ones_like(grad_output)
 
 
 class ThreeNet(nn.Module):
@@ -717,6 +728,18 @@ class TestFlopCountAnalysis(unittest.TestCase):
         )
         gt_dict[""] = sum(gt_dict.values())
         self.assertEqual(flop_counter.by_module(), gt_dict)
+
+    def test_autograd_function(self):
+        # test support on custom autograd function
+
+        class Mod(nn.Module):
+            def forward(self, x):
+                return _CustomOp.apply(x)
+
+        flop = FlopCountAnalysis(Mod(), (torch.rand(4, 5),)).set_op_handle(
+            "prim::PythonOp._CustomOp", lambda *args, **kwargs: 42
+        )
+        self.assertEqual(flop.total(), 42)
 
 
 class TestFlopCountHandles(unittest.TestCase):

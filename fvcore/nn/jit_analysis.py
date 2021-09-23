@@ -555,6 +555,9 @@ class JitModelAnalysis:
         all_seen = set()
         for node in graph.nodes():
             kind = node.kind()
+            if kind == "prim::PythonOp":
+                # for PythonOp, pyname contains the actual name in Python
+                kind = kind + "." + node.pyname()
             scope_names = node.scopeName().split("/")
             all_seen.update(scope_names)
             if self._ancestor_mode == "caller":
@@ -563,8 +566,12 @@ class JitModelAnalysis:
                 ancestors = self._get_all_ancestors(scope_names[-1])
                 all_seen.update(ancestors)
             if kind not in self._op_handles:
-                # ignore all prim:: operators
-                if kind in self._ignored_ops or kind.startswith("prim::"):
+                # Ignore all prim:: operators. However, prim::PythonOp can be
+                # a user-implemented `torch.autograd.Function` so we shouldn't
+                # ignore it.
+                if kind in self._ignored_ops or (
+                    kind.startswith("prim::") and not kind.startswith("prim::PythonOp")
+                ):
                     continue
 
                 for name in ancestors:
