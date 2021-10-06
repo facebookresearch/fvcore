@@ -8,11 +8,30 @@ import typing
 import unittest
 from collections import OrderedDict
 from tempfile import TemporaryDirectory
+from typing import Tuple
 from unittest.mock import MagicMock
 
 import torch
 from fvcore.common.checkpoint import Checkpointer, PeriodicCheckpointer
 from torch import nn
+
+TORCH_VERSION: Tuple[int, ...] = tuple(int(x) for x in torch.__version__.split(".")[:2])
+if TORCH_VERSION >= (1, 10):
+    from torch.ao import quantization
+    from torch.ao.quantization import (
+        get_default_qat_qconfig,
+        prepare_qat,
+        disable_observer,
+        enable_fake_quant,
+    )
+else:
+    from torch import quantization
+    from torch.quantization import (
+        get_default_qat_qconfig,
+        prepare_qat,
+        disable_observer,
+        enable_fake_quant,
+    )
 
 
 class TestCheckpointer(unittest.TestCase):
@@ -46,15 +65,15 @@ class TestCheckpointer(unittest.TestCase):
         return m, state_dict
 
     @unittest.skipIf(  # pyre-fixme[56]
-        (not hasattr(torch.quantization, "ObserverBase"))
-        or (not hasattr(torch.quantization, "FakeQuantizeBase")),
+        (not hasattr(quantization, "ObserverBase"))
+        or (not hasattr(quantization, "FakeQuantizeBase")),
         "quantization per-channel observer base classes not supported",
     )
     def test_loading_objects_with_expected_shape_mismatches(self) -> None:
         def _get_model() -> torch.nn.Module:
             m = nn.Sequential(nn.Conv2d(2, 2, 1))
-            m.qconfig = torch.quantization.get_default_qat_qconfig("fbgemm")
-            m = torch.quantization.prepare_qat(m)
+            m.qconfig = get_default_qat_qconfig("fbgemm")
+            m = prepare_qat(m)
             return m
 
         m1, m2 = _get_model(), _get_model()
@@ -77,8 +96,8 @@ class TestCheckpointer(unittest.TestCase):
             # Run the expected input through the network with observers
             # disabled and fake_quant enabled. If buffers were loaded correctly
             # into per-channel observers, this line will not crash.
-            m2.apply(torch.quantization.disable_observer)
-            m2.apply(torch.quantization.enable_fake_quant)
+            m2.apply(disable_observer)
+            m2.apply(enable_fake_quant)
             m2(torch.randn(4, 2, 4, 4))
 
     def test_from_last_checkpoint_model(self) -> None:

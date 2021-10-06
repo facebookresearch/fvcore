@@ -14,6 +14,14 @@ from termcolor import colored
 from torch.nn.parallel import DataParallel, DistributedDataParallel
 
 
+TORCH_VERSION: Tuple[int, ...] = tuple(int(x) for x in torch.__version__.split(".")[:2])
+if TORCH_VERSION >= (1, 10):
+    from torch.ao import quantization
+    from torch.ao.quantization import ObserverBase, FakeQuantizeBase
+else:
+    from torch import quantization
+    from torch.quantization import ObserverBase, FakeQuantizeBase
+
 __all__ = ["Checkpointer", "PeriodicCheckpointer"]
 
 
@@ -282,8 +290,8 @@ class Checkpointer:
 
                     has_observer_base_classes = (
                         TORCH_VERSION >= (1, 8)
-                        and hasattr(torch.quantization, "ObserverBase")
-                        and hasattr(torch.quantization, "FakeQuantizeBase")
+                        and hasattr(quantization, "ObserverBase")
+                        and hasattr(quantization, "FakeQuantizeBase")
                     )
                     if has_observer_base_classes:
                         # Handle the special case of quantization per channel observers,
@@ -299,8 +307,8 @@ class Checkpointer:
                             return cur_module
 
                         cls_to_skip = (
-                            torch.quantization.ObserverBase,
-                            torch.quantization.FakeQuantizeBase,
+                            ObserverBase,
+                            FakeQuantizeBase,
                         )
                         target_module = _get_module_for_key(self.model, k)
                         if isinstance(target_module, cls_to_skip):
