@@ -84,7 +84,7 @@ class _PopulationVarianceEstimator:
         return self.pop_square_mean - self.pop_mean.square()
 
 
-@torch.no_grad()  # pyre-fixme[56]
+@torch.no_grad()
 def update_bn_stats(
     model: nn.Module,
     data_loader: Iterable[Any],
