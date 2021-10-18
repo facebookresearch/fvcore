@@ -15,6 +15,7 @@ import torch
 from fvcore.common.checkpoint import Checkpointer, PeriodicCheckpointer
 from torch import nn
 
+
 TORCH_VERSION: Tuple[int, ...] = tuple(int(x) for x in torch.__version__.split(".")[:2])
 if TORCH_VERSION >= (1, 11):
     from torch.ao import quantization
@@ -24,7 +25,11 @@ if TORCH_VERSION >= (1, 11):
         disable_observer,
         enable_fake_quant,
     )
-else:
+elif (
+    TORCH_VERSION >= (1, 8)
+    and hasattr(torch.quantization, "FakeQuantizeBase")
+    and hasattr(torch.quantization, "ObserverBase")
+):
     from torch import quantization
     from torch.quantization import (
         get_default_qat_qconfig,

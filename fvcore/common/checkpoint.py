@@ -18,7 +18,11 @@ TORCH_VERSION: Tuple[int, ...] = tuple(int(x) for x in torch.__version__.split("
 if TORCH_VERSION >= (1, 11):
     from torch.ao import quantization
     from torch.ao.quantization import ObserverBase, FakeQuantizeBase
-else:
+elif (
+    TORCH_VERSION >= (1, 8)
+    and hasattr(torch.quantization, "FakeQuantizeBase")
+    and hasattr(torch.quantization, "ObserverBase")
+):
     from torch import quantization
     from torch.quantization import ObserverBase, FakeQuantizeBase
 
