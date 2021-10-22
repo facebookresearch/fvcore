@@ -1,0 +1,2 @@
+_BASE_: ["base.yaml", "base2.yaml"]
+KEY2: "config"

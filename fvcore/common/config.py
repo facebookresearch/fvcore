@@ -19,7 +19,7 @@ class CfgNode(_CfgNode):
 
     1. The :meth:`merge_from_file` method supports the "_BASE_" key,
        which allows the new CfgNode to inherit all the attributes from the
-       base configuration file.
+       base configuration file(s).
     2. Keys that start with "COMPUTED_" are treated as insertion-only
        "computed" attributes. They can be inserted regardless of whether
        the CfgNode is frozen or not.
@@ -84,14 +84,23 @@ class CfgNode(_CfgNode):
                 else:
                     b[k] = v
 
-        if BASE_KEY in cfg:
-            base_cfg_file = cfg[BASE_KEY]
+        def _load_with_base(base_cfg_file: str) -> Dict[str, Any]:
             if base_cfg_file.startswith("~"):
                 base_cfg_file = os.path.expanduser(base_cfg_file)
             if not any(map(base_cfg_file.startswith, ["/", "https://", "http://"])):
                 # the path to base cfg is relative to the config file itself.
                 base_cfg_file = os.path.join(os.path.dirname(filename), base_cfg_file)
-            base_cfg = cls.load_yaml_with_base(base_cfg_file, allow_unsafe=allow_unsafe)
+            return cls.load_yaml_with_base(base_cfg_file, allow_unsafe=allow_unsafe)
+
+        if BASE_KEY in cfg:
+            if isinstance(cfg[BASE_KEY], list):
+                base_cfg: Dict[str, Any] = {}
+                base_cfg_files = cfg[BASE_KEY]
+                for base_cfg_file in base_cfg_files:
+                    merge_a_into_b(_load_with_base(base_cfg_file), base_cfg)
+            else:
+                base_cfg_file = cfg[BASE_KEY]
+                base_cfg = _load_with_base(base_cfg_file)
             del cfg[BASE_KEY]
 
             merge_a_into_b(cfg, base_cfg)
