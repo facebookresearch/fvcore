@@ -88,7 +88,7 @@ def addmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     batch_size, input_dim = input_shapes[0]
     output_dim = input_shapes[1][1]
     flops = batch_size * input_dim * output_dim
-    return flops
+    return flops * 2
 
 
 def linear_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
@@ -102,7 +102,7 @@ def linear_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     # input_shapes[1]: [output_feature_dim, input_feature_dim]
     assert input_shapes[0][-1] == input_shapes[1][-1]
     flops = prod(input_shapes[0]) * input_shapes[1][0]
-    return flops
+    return flops * 2
 
 
 def bmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
@@ -116,7 +116,7 @@ def bmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     n, c, t = input_shapes[0]
     d = input_shapes[-1][-1]
     flop = n * c * t * d
-    return flop
+    return flop * 2
 
 
 def conv_flop_count(
@@ -137,7 +137,7 @@ def conv_flop_count(
     out_size = prod(out_shape[2:])
     kernel_size = prod(w_shape[2:])
     flop = batch_size * out_size * Cout_dim * Cin_dim * kernel_size
-    return flop
+    return flop * 2
 
 
 def conv_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
@@ -181,20 +181,19 @@ def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
         n, c, t = input_shapes[0]
         p = input_shapes[-1][-1]
         flop = n * c * t * p
-        return flop
+        return flop * 2
 
     elif equation == "abc,adc->adb":
         n, t, g = input_shapes[0]
         c = input_shapes[-1][1]
         flop = n * t * g * c
-        return flop
+        return flop * 2
     else:
         np_arrs = [np.zeros(s) for s in input_shapes]
         optim = np.einsum_path(equation, *np_arrs, optimize="optimal")[1]
         for line in optim.split("\n"):
             if "optimized flop" in line.lower():
-                # divided by 2 because we count MAC (multiply-add counted as one flop)
-                flop = float(np.floor(float(line.split(":")[-1]) / 2))
+                flop = float(line.split(":")[-1].strip())
                 return flop
         raise NotImplementedError("Unsupported einsum operation.")
 
@@ -209,7 +208,7 @@ def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     assert len(input_shapes) == 2, input_shapes
     assert input_shapes[0][-1] == input_shapes[1][-2], input_shapes
     flop = prod(input_shapes[0]) * input_shapes[-1][-1]
-    return flop
+    return flop * 2
 
 
 def norm_flop_counter(affine_arg_index: int) -> Handle:
@@ -226,8 +225,11 @@ def norm_flop_counter(affine_arg_index: int) -> Handle:
         input_shape = get_shape(inputs[0])
         has_affine = get_shape(inputs[affine_arg_index]) is not None
         assert 2 <= len(input_shape) <= 5, input_shape
-        # 5 is just a rough estimate
-        flop = prod(input_shape) * (5 if has_affine else 4)
+        # 5 or 7 is just a rough estimate:
+        # 3 - compute E[x] and E[x^2]
+        # 2 - compute normalization
+        # 2 - compute affine
+        flop = prod(input_shape) * (7 if has_affine else 5)
         return flop
 
     return norm_flop_jit
@@ -240,7 +242,7 @@ def batchnorm_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
         return norm_flop_counter(1)(inputs, outputs)  # pyre-ignore
     has_affine = get_shape(inputs[1]) is not None
     input_shape = prod(get_shape(inputs[0]))
-    return input_shape * (2 if has_affine else 1)
+    return input_shape * (4 if has_affine else 2)
 
 
 def elementwise_flop_counter(input_scale: float = 1, output_scale: float = 0) -> Handle:
