@@ -5,11 +5,11 @@
 
 import typing
 from collections import Counter, OrderedDict
+from math import prod  # np.prod may use int32 and overflow
 from numbers import Number
 from typing import Any, Callable, List, Optional, Union
 
 import numpy as np
-from numpy import prod
 
 
 Handle = Callable[[List[Any], List[Any]], Union[typing.Counter[str], Number]]

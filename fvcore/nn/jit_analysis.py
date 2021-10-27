@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from numbers import Number
 from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union
 
+import numpy as np
 import torch
 import torch.nn as nn
 from fvcore.common.checkpoint import _named_modules_with_dup
@@ -588,6 +589,12 @@ class JitModelAnalysis:
                 op_counts = self._op_handles[kind](inputs, outputs)
                 if isinstance(op_counts, Number):
                     op_counts = Counter({self._simplify_op_name(kind): op_counts})
+                for v in op_counts.values():
+                    if not isinstance(v, (int, float, np.float64, np.int64)):
+                        raise ValueError(
+                            f"Invalid type {type(v)} for the flop count! "
+                            "Please use a wider type to avoid overflow."
+                        )
 
                 # Assures an op contributes at most once to a module
                 for name in ancestors:
