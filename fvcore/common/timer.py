@@ -43,6 +43,8 @@ class Timer:
         """
         if self._paused is None:
             raise ValueError("Trying to resume a Timer that is not paused!")
+        # pyre-fixme[58]: `-` is not supported for operand types `float` and
+        #  `Optional[float]`.
         self._total_paused += perf_counter() - self._paused
         self._paused = None
         self._count_start += 1
