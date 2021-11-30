@@ -8,7 +8,7 @@ from collections import Counter
 from copy import copy
 from dataclasses import dataclass
 from numbers import Number
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
 
 import numpy as np
 import torch
@@ -99,6 +99,18 @@ class Statistics:
     uncalled_mods: "Set[str]"
 
 
+def _named_modules_without_dup(model: nn.Module) -> Iterator[Tuple[str, nn.Module]]:
+    """
+    Like .named_modules(), but the results are slightly different for
+    some wrapped models.
+    """
+    seen = set()
+    for name, mod in _named_modules_with_dup(model):
+        if mod not in seen:
+            seen.add(mod)
+            yield name, mod
+
+
 def _get_scoped_trace_graph(
     module: nn.Module,
     inputs: Union[Tensor, Tuple[Tensor, ...]],
@@ -139,7 +151,6 @@ def _get_scoped_trace_graph(
                 tracing_state.pop_scope()
             return outputs
 
-    seen = set()
     hook_handles: List[Any] = []
 
     def register_hooks(mod: nn.Module, name: str) -> None:
@@ -149,31 +160,21 @@ def _get_scoped_trace_graph(
         hook_handles.append(prehook)
         hook_handles.append(posthook)
 
-    # Torch script does not support parallel torch models, but we still
-    # want the scope names to be correct for the complete module.
+    # Unwrap DDP, but correct the scope names for the root module.
     if isinstance(
         module, (nn.parallel.distributed.DistributedDataParallel, nn.DataParallel)
     ):
-
         # Since DataParallel just wraps the model, add an extra set of hooks
         # to the model it wraps to account for the wrapper. Then trace it.
         root_name = aliases[module]
         module = module.module
         register_hooks(module, root_name)
 
-    # We don't need the duplication here, but self._model.named_modules()
-    # gives slightly different results for some wrapped models.
-    for name, mod in _named_modules_with_dup(module):
-        if mod not in seen:
-            name = aliases[mod]
-            register_hooks(mod, name)
-            seen.add(mod)
+    for name, mod in _named_modules_without_dup(module):
+        name = aliases[mod]
+        register_hooks(mod, name)
 
-    if hasattr(torch.jit, "get_trace_graph"):
-        trace, _ = torch.jit.get_trace_graph(module, inputs)
-        graph = trace.graph()
-    else:
-        graph, _ = _get_trace_graph(module, inputs)
+    graph, _ = _get_trace_graph(module, inputs)
 
     for handle in hook_handles:
         handle.remove()
