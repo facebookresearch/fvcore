@@ -575,14 +575,8 @@ class JitModelAnalysis:
                 ancestors = self._get_all_ancestors(scope_names[-1])
                 all_seen.update(ancestors)
             if kind not in self._op_handles:
-                # Ignore all prim:: operators. However, prim::PythonOp can be
-                # a user-implemented `torch.autograd.Function` so we shouldn't
-                # ignore it.
-                if kind in self._ignored_ops or (
-                    kind.startswith("prim::") and not kind.startswith("prim::PythonOp")
-                ):
+                if self._should_ignore_node(node):
                     continue
-
                 for name in ancestors:
                     unsupported_ops[name][kind] += 1
             else:
@@ -640,3 +634,16 @@ class JitModelAnalysis:
             if module_type.forward is mod.forward:  # pyre-ignore[16]
                 return False
         return True
+
+    def _should_ignore_node(self, node) -> bool:
+        kind = node.kind()
+        if kind in self._ignored_ops:
+            return True
+        # Ignore all prim:: operators, with two exceptions:
+        # * prim::PythonOp can be a user-implemented `torch.autograd.Function`
+        # * prim::CallFunction an be a call to scripted module/function.
+        if kind.startswith("prim::PythonOp") or kind.startswith("prim::CallFunction"):
+            return False
+        if kind.startswith("prim::"):
+            return True
+        return False

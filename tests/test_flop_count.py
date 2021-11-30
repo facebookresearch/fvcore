@@ -829,6 +829,21 @@ class TestFlopCountAnalysis(unittest.TestCase):
         )
         self.assertEqual(flop.total(), 42)
 
+    def test_scripted_function(self):
+        # Scripted function is not yet supported. It should produce a warning
+
+        def func(x):
+            return x @ x
+
+        class Mod(nn.Module):
+            def forward(self, x):
+                f = torch.jit.script(func)
+                return f(x * x)
+
+        flop = FlopCountAnalysis(Mod(), (torch.rand(5, 5),))
+        _ = flop.total()
+        self.assertIn("prim::CallFunction", flop.unsupported_ops())
+
 
 class TestFlopCountHandles(unittest.TestCase):
     def _count_function(self, func, inputs, name) -> Tuple[Any, Any]:
