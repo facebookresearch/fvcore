@@ -151,9 +151,7 @@ def update_bn_stats(
         return (x,)
 
     hooks_to_remove = [
-        # pyre-ignore
-        bn.register_forward_pre_hook(get_bn_batch_size_hook)
-        for bn in bn_layers
+        bn.register_forward_pre_hook(get_bn_batch_size_hook) for bn in bn_layers
     ]
 
     estimators = [

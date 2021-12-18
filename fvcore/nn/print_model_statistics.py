@@ -251,7 +251,6 @@ def _model_stats_str(model: nn.Module, statistics: Dict[str, Dict[str, str]]) ->
     def repr_with_statistics(module: nn.Module, name: str) -> str:
         # We treat the extra repr like the sub-module, one item per line
         extra_lines = []
-        # pyre-fixme[29]: `Union[nn.Module, torch.Tensor]` is not a function.
         extra_repr = module.extra_repr()
         printed_stats = print_statistics(name)
         # empty string will be split into list ['']
@@ -260,14 +259,15 @@ def _model_stats_str(model: nn.Module, statistics: Dict[str, Dict[str, str]]) ->
         if printed_stats:
             extra_lines.extend(printed_stats.split("\n"))
         child_lines = []
-        for key, submod in module._modules.items():  # pyre-ignore[16]
+        for key, submod in module._modules.items():
             submod_name = name + ("." if name else "") + key
+            # pyre-fixme[6]: Expected `Module` for 1st param but got
+            #  `Optional[nn.modules.module.Module]`.
             submod_str = repr_with_statistics(submod, submod_name)
             submod_str = _addindent(submod_str, 2)
             child_lines.append("(" + key + "): " + submod_str)
         lines = extra_lines + child_lines
 
-        # pyre-fixme[29]: `Union[nn.Module, torch.Tensor]` is not a function.
         main_str = module._get_name() + "("
         if lines:
             # simple one-liner info, which most builtin Modules will use

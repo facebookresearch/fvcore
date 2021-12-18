@@ -251,7 +251,7 @@ class TestCheckpointer(unittest.TestCase):
                     self.y = self.x
 
         model = Model(has_y=False)
-        model.x.bias.data.fill_(5.0)  # pyre-ignore
+        model.x.bias.data.fill_(5.0)
         data = {"model": model.state_dict()}
         new_model = Model(has_y=True)
         chkpt = Checkpointer(new_model)
@@ -267,7 +267,7 @@ class TestCheckpointer(unittest.TestCase):
         not hasattr(nn, "LazyLinear"), "LazyModule not supported"
     )
     def test_load_lazy_module(self) -> None:
-        def _get_model() -> nn.Sequential:  # pyre-fixme[11]
+        def _get_model() -> nn.Sequential:
             return nn.Sequential(nn.LazyLinear(10))
 
         m1, m2 = _get_model(), _get_model()

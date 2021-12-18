@@ -154,7 +154,6 @@ def _get_scoped_trace_graph(
     hook_handles: List[Any] = []
 
     def register_hooks(mod: nn.Module, name: str) -> None:
-        # pyre-fixme[29]: `Union[Tensor, nn.Module]` is not a function.
         prehook = mod.register_forward_pre_hook(ScopePushHook(name))
         posthook = mod.register_forward_hook(ScopePopHook())
         hook_handles.append(prehook)
@@ -631,7 +630,7 @@ class JitModelAnalysis:
         # has been called.
         no_forward_mods = {nn.ModuleList, nn.ModuleDict, nn.Module, nn.Identity}
         for mod in no_forward_mods:
-            if module_type.forward is mod.forward:  # pyre-ignore[16]
+            if module_type.forward is mod.forward:
                 return False
         return True
 
