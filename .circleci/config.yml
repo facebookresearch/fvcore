@@ -45,12 +45,10 @@ install_dep: &install_dep
 
 install_fvcore: &install_fvcore
   - run:
-      environment:
-        BUILD_NIGHTLY: 1
       name: Install fvcore
       command: |
+        BUILD_NIGHTLY=1 python setup.py sdist
         pip install . -U
-        python setup.py sdist
         python -c 'import fvcore; print(fvcore.__version__)'
 
 run_unittests: &run_unittests
