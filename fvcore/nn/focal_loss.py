@@ -49,9 +49,7 @@ def sigmoid_focal_loss(
     return loss
 
 
-sigmoid_focal_loss_jit = torch.jit.script(
-    sigmoid_focal_loss
-)  # type: torch.jit.ScriptModule
+sigmoid_focal_loss_jit: "torch.jit.ScriptModule" = torch.jit.script(sigmoid_focal_loss)
 
 
 def sigmoid_focal_loss_star(
@@ -96,6 +94,6 @@ def sigmoid_focal_loss_star(
     return loss
 
 
-sigmoid_focal_loss_star_jit = torch.jit.script(
+sigmoid_focal_loss_star_jit: "torch.jit.ScriptModule" = torch.jit.script(
     sigmoid_focal_loss_star
-)  # type: torch.jit.ScriptModule
+)

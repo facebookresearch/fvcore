@@ -34,7 +34,7 @@ class ThreeNet(nn.Module):
         super(ThreeNet, self).__init__()
         self.conv = nn.Conv2d(input_dim, conv_dim, 1, 1)
         out_dim = 1
-        self.pool = nn.AdaptiveAvgPool2d((out_dim, out_dim))  # type: nn.Module
+        self.pool: "nn.Module" = nn.AdaptiveAvgPool2d((out_dim, out_dim))
         self.linear1 = nn.Linear(conv_dim, linear_dim)
         self.linear2 = nn.Linear(linear_dim, 1)
 
@@ -77,15 +77,15 @@ class ConvNet(nn.Module):
             kwargs = {}
         convLayer = conv_layers[conv_dim - 1]
 
-        self.conv = convLayer(
+        self.conv: "nn.Module" = convLayer(
             input_dim,
             output_dim,
             kernel_size,
             stride,
             padding,
             groups=groups_num,
-            **kwargs
-        )  # type: nn.Module
+            **kwargs,
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)
@@ -115,7 +115,7 @@ class EinsumNet(nn.Module):
 
     def __init__(self, equation: str) -> None:
         super(EinsumNet, self).__init__()
-        self.eq = equation  # type: str
+        self.eq: str = equation
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         x = torch.einsum(self.eq, x, y)
@@ -156,7 +156,7 @@ class CustomNet(nn.Module):
     def __init__(self, input_dim: int, output_dim: int) -> None:
         super(CustomNet, self).__init__()
         self.conv = nn.Linear(input_dim, output_dim)
-        self.sigmoid = nn.Sigmoid()  # type: nn.Module
+        self.sigmoid: "nn.Module" = nn.Sigmoid()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)

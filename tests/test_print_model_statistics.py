@@ -102,7 +102,7 @@ class A1B1C1(nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.d1 = nn.Linear(10, 10)
-        self.d2 = nn.ReLU()  # type: nn.Module
+        self.d2: "nn.Module" = nn.ReLU()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.d1(self.d2(x))

@@ -44,17 +44,17 @@ class NestedNetInnerModule(nn.Module):
         conv_flops = spatial_pos * kernel_size * conv_in * conv_out
         conv_flops = Counter({"conv": conv_flops})
         model_flops = conv_flops + fc_flops
-        self.flops = {
+        self.flops: "Dict[str, typing.Counter[str]]" = {
             "": model_flops,
             "fc": fc_flops,
             "conv": conv_flops,
-        }  # type: Dict[str, typing.Counter[str]]
+        }
 
-        self.name_to_module = {
+        self.name_to_module: "Dict[str, nn.Module]" = {
             "": self,
             "fc": self.fc,
             "conv": self.conv,
-        }  # type: Dict[str, nn.Module]
+        }
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.reshape(-1, 2, 5)
@@ -97,23 +97,23 @@ class NestedNet(nn.Module):
         conv_flops = Counter({"conv": conv_flops})
 
         model_flops = conv_flops + fc_flops + self.submod.flops[""]
-        self.flops = {
+        self.flops: "Dict[str, Counter[str]]" = {
             "": model_flops,
             "fc": fc_flops,
             "conv": conv_flops,
             "submod": self.submod.flops[""],
             "submod.fc": self.submod.flops["fc"],
             "submod.conv": self.submod.flops["conv"],
-        }  # type: Dict[str, Counter[str]]
+        }
 
-        self.name_to_module = {
+        self.name_to_module: "Dict[str, nn.Module]" = {
             "": self,
             "fc": self.fc,
             "conv": self.conv,
             "submod": self.submod,
             "submod.fc": self.submod.name_to_module["fc"],
             "submod.conv": self.submod.name_to_module["conv"],
-        }  # type: Dict[str, nn.Module]
+        }
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)
@@ -138,11 +138,11 @@ class UnusedNet(nn.Module):
         self.fc1 = nn.Linear(in_features=fc1_in, out_features=fc1_out)
         self.fc2 = nn.Linear(in_features=fc2_in, out_features=fc2_out)
         self.unused = nn.Linear(in_features=unused_in, out_features=unused_out)
-        self.act = nn.ReLU()  # type: nn.Module
+        self.act: "nn.Module" = nn.ReLU()
 
-        self.fc1_flops = fc1_in * fc1_out  # type: int
-        self.fc2_flops = fc2_in * fc2_out  # type: int
-        self.unused_flops = unused_in * unused_out  # type: int # If it were applied
+        self.fc1_flops: int = fc1_in * fc1_out
+        self.fc2_flops: int = fc2_in * fc2_out
+        self.unused_flops: int = unused_in * unused_out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.fc2(self.act(self.fc1(x)))
@@ -164,8 +164,8 @@ class RepeatedNet(nn.Module):
         self.fc1 = nn.Linear(in_features=fc1_in, out_features=fc1_out)
         self.fc2 = nn.Linear(in_features=fc2_in, out_features=fc2_out)
 
-        self.fc1_flops = fc1_in * fc1_out  # type: int
-        self.fc2_flops = fc2_in * fc2_out  # type: int
+        self.fc1_flops: int = fc1_in * fc1_out
+        self.fc2_flops: int = fc2_in * fc2_out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         for _i in range(self.fc1_num):
@@ -187,7 +187,7 @@ class NonForwardInnerModule(nn.Module):
 
         self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
 
-        self.fc_flops = fc_in * fc_out  # type: int
+        self.fc_flops: int = fc_in * fc_out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x
@@ -209,7 +209,7 @@ class NonForwardNet(nn.Module):
         self.submod = NonForwardInnerModule()
         self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
 
-        self.fc_flops = fc_in * fc_out  # type: int
+        self.fc_flops: int = fc_in * fc_out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.submod.other_func(self.fc(x))
@@ -244,11 +244,11 @@ class SharedModuleNet(nn.Module):
         self.submod1 = SharedInnerModule(inner)
         self.submod2 = SharedInnerModule(inner)
         multiname = nn.Linear(in_features=fc2_in, out_features=fc2_out)
-        self.multiname1 = multiname  # type: nn.Module
-        self.multiname2 = multiname  # type: nn.Module
+        self.multiname1: "nn.Module" = multiname
+        self.multiname2: "nn.Module" = multiname
 
-        self.multiname_flops = fc2_in * fc2_out  # type: int
-        self.shared_flops = fc1_in * fc1_out  # type: int
+        self.multiname_flops: int = fc2_in * fc2_out
+        self.shared_flops: int = fc1_in * fc1_out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.submod1(x) + self.submod2(x)
@@ -268,7 +268,7 @@ class RecursiveScopeNet(nn.Module):
 
         self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
 
-        self.flops = fc_in * fc_out  # type: int
+        self.flops: int = fc_in * fc_out
 
     def forward(self, x: torch.Tensor, count: int = 3) -> torch.Tensor:
         if count > 0:
@@ -292,8 +292,8 @@ class TraceWarningNet(nn.Module):
         self.fc1 = nn.Linear(in_features=fc1_in, out_features=fc1_out)
         self.fc2 = nn.Linear(in_features=fc2_in, out_features=fc2_out)
 
-        self.fc1_flops = fc1_in * fc1_out  # type: int
-        self.fc2_flops = fc2_in * fc2_out  # type: int
+        self.fc1_flops: int = fc1_in * fc1_out
+        self.fc2_flops: int = fc2_in * fc2_out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = self.fc1(x).item()
@@ -623,10 +623,10 @@ class TestJitModelAnalysis(unittest.TestCase):
         """
         model = NestedNet(lin_op=self.lin_op)
         inputs = (torch.randn((1, *model.input_size)),)
-        op_handles = {
+        op_handles: "Dict[str, Handle]" = {
             "aten::addmm": addmm_flop_jit,
             "aten::linear": linear_flop_jit,
-        }  # type: Dict[str, Handle]
+        }
 
         analyzer = JitModelAnalysis(model=model, inputs=inputs).set_op_handle(
             **op_handles
