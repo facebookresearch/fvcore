@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 from fvcore.nn.flop_count import FlopCountAnalysis
 from fvcore.nn.jit_analysis import JitModelAnalysis
-from fvcore.nn.jit_handles import Handle, addmm_flop_jit, conv_flop_jit, linear_flop_jit
+from fvcore.nn.jit_handles import addmm_flop_jit, conv_flop_jit, Handle, linear_flop_jit
 
 
 class NestedNetInnerModule(nn.Module):

@@ -20,10 +20,10 @@ TORCH_VERSION: Tuple[int, ...] = tuple(int(x) for x in torch.__version__.split("
 if TORCH_VERSION >= (1, 11):
     from torch.ao import quantization
     from torch.ao.quantization import (
-        get_default_qat_qconfig,
-        prepare_qat,
         disable_observer,
         enable_fake_quant,
+        get_default_qat_qconfig,
+        prepare_qat,
     )
 elif (
     TORCH_VERSION >= (1, 8)
@@ -32,10 +32,10 @@ elif (
 ):
     from torch import quantization
     from torch.quantization import (
-        get_default_qat_qconfig,
-        prepare_qat,
         disable_observer,
         enable_fake_quant,
+        get_default_qat_qconfig,
+        prepare_qat,
     )
 
 
