@@ -1,6 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-from .activation_count import ActivationCountAnalysis, activation_count
-from .flop_count import FlopCountAnalysis, flop_count
+from .activation_count import activation_count, ActivationCountAnalysis
+from .flop_count import flop_count, FlopCountAnalysis
 from .focal_loss import (
     sigmoid_focal_loss,
     sigmoid_focal_loss_jit,

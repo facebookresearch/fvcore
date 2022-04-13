@@ -8,7 +8,7 @@ import uuid
 from typing import Optional
 from unittest.mock import MagicMock
 
-from fvcore.common.file_io import LazyPath, PathManager, get_cache_dir
+from fvcore.common.file_io import get_cache_dir, LazyPath, PathManager
 
 
 class TestNativeIO(unittest.TestCase):

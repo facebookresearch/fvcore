@@ -6,13 +6,13 @@ import tempfile
 from typing import Optional
 
 from iopath.common.file_io import (  # noqa, unused import required by some deps
+    file_lock,
     HTTPURLHandler,
     LazyPath,
     NativePathHandler,
     OneDrivePathHandler,
     PathHandler,
     PathManager as PathManagerBase,
-    file_lock,
 )
 
 

@@ -17,14 +17,14 @@ from torch.nn.parallel import DataParallel, DistributedDataParallel
 TORCH_VERSION: Tuple[int, ...] = tuple(int(x) for x in torch.__version__.split(".")[:2])
 if TORCH_VERSION >= (1, 11):
     from torch.ao import quantization
-    from torch.ao.quantization import ObserverBase, FakeQuantizeBase
+    from torch.ao.quantization import FakeQuantizeBase, ObserverBase
 elif (
     TORCH_VERSION >= (1, 8)
     and hasattr(torch.quantization, "FakeQuantizeBase")
     and hasattr(torch.quantization, "ObserverBase")
 ):
     from torch import quantization
-    from torch.quantization import ObserverBase, FakeQuantizeBase
+    from torch.quantization import FakeQuantizeBase, ObserverBase
 
 __all__ = ["Checkpointer", "PeriodicCheckpointer"]
 

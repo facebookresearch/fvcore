@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 from fvcore.common.checkpoint import _named_modules_with_dup
 from torch import Tensor
-from torch.jit import TracerWarning, _get_trace_graph
+from torch.jit import _get_trace_graph, TracerWarning
 
 from .jit_handles import Handle
 

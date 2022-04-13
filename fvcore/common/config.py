@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import IO, Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, IO, List, Union
 
 import yaml
 from iopath.common.file_io import g_pathmgr

@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch import Tensor
 
 from .jit_analysis import JitModelAnalysis
-from .jit_handles import Handle, generic_activation_jit
+from .jit_handles import generic_activation_jit, Handle
 
 
 # A dictionary that maps supported operations to their activation count handles.

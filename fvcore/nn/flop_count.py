@@ -9,13 +9,13 @@ from torch import Tensor
 
 from .jit_analysis import JitModelAnalysis
 from .jit_handles import (
-    Handle,
     addmm_flop_jit,
     batchnorm_flop_jit,
     bmm_flop_jit,
     conv_flop_jit,
     einsum_flop_jit,
     elementwise_flop_counter,
+    Handle,
     linear_flop_jit,
     matmul_flop_jit,
     norm_flop_counter,
