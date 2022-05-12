@@ -361,8 +361,8 @@ class TestFlopCountAnalysis(unittest.TestCase):
                 batch_size
                 * input_dim
                 * output_dim
-                * (kernel_size ** conv_dim)
-                * (spatial_size ** conv_dim)
+                * (kernel_size**conv_dim)
+                * (spatial_size**conv_dim)
                 / group_size
                 / 1e9
             )
@@ -905,7 +905,7 @@ class TestFlopCountHandles(unittest.TestCase):
         nodes = self._count_function(
             F.interpolate, (torch.rand(2, 2, 2, 2), None, 2, "bilinear", False), op_name
         )
-        self.assertEqual(counter(*nodes), 2 ** 4 * 4 * 4)
+        self.assertEqual(counter(*nodes), 2**4 * 4 * 4)
 
     def test_complicated_einsum(self):
         op_name = "aten::einsum"

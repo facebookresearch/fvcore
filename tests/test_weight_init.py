@@ -63,9 +63,9 @@ class TestWeightInit(unittest.TestCase):
                 if layer is nn.Conv1d:
                     spatial_dim = k_size
                 elif layer is nn.Conv2d:
-                    spatial_dim = k_size ** 2
+                    spatial_dim = k_size**2
                 elif layer is nn.Conv3d:
-                    spatial_dim = k_size ** 3
+                    spatial_dim = k_size**3
 
                 # Calculate fan_in and fan_out.
                 # pyre-fixme[61]: `spatial_dim` may not be initialized here.

@@ -116,7 +116,7 @@ class ExponentialParamScheduler(ParamScheduler):
         self._decay = decay
 
     def __call__(self, where: float) -> float:
-        return self._start_value * (self._decay ** where)
+        return self._start_value * (self._decay**where)
 
 
 class LinearParamScheduler(ParamScheduler):

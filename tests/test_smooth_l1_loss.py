@@ -17,7 +17,7 @@ class TestSmoothL1Loss(unittest.TestCase):
         targets = torch.tensor([1.1, 2, 4.5], dtype=torch.float32)
         beta = 0.5
         loss = smooth_l1_loss(inputs, targets, beta=beta, reduction="none").numpy()
-        self.assertTrue(np.allclose(loss, [0.5 * 0.1 ** 2 / beta, 0, 1.5 - 0.5 * beta]))
+        self.assertTrue(np.allclose(loss, [0.5 * 0.1**2 / beta, 0, 1.5 - 0.5 * beta]))
 
         beta = 0.05
         loss = smooth_l1_loss(inputs, targets, beta=beta, reduction="none").numpy()
