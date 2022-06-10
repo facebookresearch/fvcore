@@ -77,7 +77,7 @@ def benchmark(
     kwargs_list: List[Any],
     *,
     num_iters: int = -1,
-    warmup_iters: int = 0
+    warmup_iters: int = 0,
 ) -> None:
     """
     Benchmark the input function and print out the results.
