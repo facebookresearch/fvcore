@@ -115,7 +115,7 @@ def _get_scoped_trace_graph(
     module: nn.Module,
     inputs: Union[Tensor, Tuple[Tensor, ...]],
     aliases: Dict[Union[str, nn.Module], str],
-) -> torch._C.Graph:  # pyre-ignore[11]
+) -> torch._C.Graph:
     """
     Traces the provided module using torch.jit._get_trace_graph, but adds
     submodule scope information to each graph node. The resulting graph
@@ -565,6 +565,7 @@ class JitModelAnalysis:
             kind = node.kind()
             if kind == "prim::PythonOp":
                 # for PythonOp, pyname contains the actual name in Python
+                # pyre-fixme[16]: `Node` has no attribute `pyname`.
                 kind = kind + "." + node.pyname()
             scope_names = node.scopeName().split("/")
             all_seen.update(scope_names)

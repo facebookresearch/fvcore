@@ -21,12 +21,14 @@ class TestWeightInit(unittest.TestCase):
     def msra_fill_std(fan_out: int) -> float:
         # Given the fan_out, calculate the expected standard deviation for msra
         # fill.
+        # pyre-fixme[7]: Expected `float` but got `Tensor`.
         return torch.as_tensor(math.sqrt(2.0 / fan_out))
 
     @staticmethod
     def xavier_fill_std(fan_in: int) -> float:
         # Given the fan_in, calculate the expected standard deviation for
         # xavier fill.
+        # pyre-fixme[7]: Expected `float` but got `Tensor`.
         return torch.as_tensor(math.sqrt(1.0 / fan_in))
 
     @staticmethod
@@ -78,6 +80,8 @@ class TestWeightInit(unittest.TestCase):
                 self.assertTrue(
                     TestWeightInit.weight_and_bias_dist_match(
                         model.weight,
+                        # pyre-fixme[6]: For 2nd param expected `Tensor` but got
+                        #  `Optional[Tensor]`.
                         model.bias,
                         # pyre-fixme[6]: Expected `Tensor` for 3rd param but got
                         #  `float`.
@@ -90,6 +94,8 @@ class TestWeightInit(unittest.TestCase):
                 self.assertTrue(
                     TestWeightInit.weight_and_bias_dist_match(
                         model.weight,
+                        # pyre-fixme[6]: For 2nd param expected `Tensor` but got
+                        #  `Optional[Tensor]`.
                         model.bias,
                         # pyre-fixme[6]: Expected `Tensor` for 3rd param but got
                         #  `float`.

@@ -123,6 +123,8 @@ class Checkpointer:
         assert os.path.basename(save_file) == basename, basename
         self.logger.info("Saving checkpoint to {}".format(save_file))
         with self.path_manager.open(save_file, "wb") as f:
+            # pyre-fixme[6]: For 2nd param expected `Union[PathLike[typing.Any],
+            #  IO[bytes], str, BinaryIO]` but got `Union[IO[bytes], IO[str]]`.
             torch.save(data, f)
         self.tag_last_checkpoint(basename)
 

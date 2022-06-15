@@ -64,6 +64,7 @@ def smooth_l1_loss(
     else:
         n = torch.abs(input - target)
         cond = n < beta
+        # pyre-fixme[58]: `**` is not supported for operand types `Tensor` and `int`.
         loss = torch.where(cond, 0.5 * n**2 / beta, n - 0.5 * beta)
 
     if reduction == "mean":

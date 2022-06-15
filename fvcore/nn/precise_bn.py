@@ -10,6 +10,9 @@ import tqdm
 from torch import nn
 
 
+# pyre-fixme[9]: BN_MODULE_TYPES has type `Tuple[Type[Module]]`; used as
+#  `Tuple[Type[BatchNorm1d], Type[BatchNorm2d], Type[BatchNorm3d],
+#  Type[SyncBatchNorm]]`.
 BN_MODULE_TYPES: Tuple[Type[nn.Module]] = (
     torch.nn.BatchNorm1d,
     torch.nn.BatchNorm2d,
