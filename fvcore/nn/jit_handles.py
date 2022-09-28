@@ -175,10 +175,11 @@ def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     """
     Count flops for the einsum operation.
     """
-    # Inputs of einsum should be a list of length 2.
+    # Inputs of einsum should be a list of length 2+.
     # Inputs[0] stores the equation used for einsum.
     # Inputs[1] stores the list of input shapes.
-    assert len(inputs) == 2, len(inputs)
+    # Inputs[2] optionally stores the optimized path of contraction.
+    assert len(inputs) >= 2, len(inputs)
     equation = inputs[0].toIValue()
     # Get rid of white space in the equation string.
     equation = equation.replace(" ", "")
