@@ -19,6 +19,7 @@ from .jit_handles import (
     linear_flop_jit,
     matmul_flop_jit,
     norm_flop_counter,
+    mul_flop_jit,
 )
 
 
@@ -31,6 +32,8 @@ _DEFAULT_SUPPORTED_OPS: Dict[str, Handle] = {
     "aten::matmul": matmul_flop_jit,
     "aten::mm": matmul_flop_jit,
     "aten::linear": linear_flop_jit,
+    "aten::mul": mul_flop_jit,
+    "aten::mul_": mul_flop_jit,
     # You might want to ignore BN flops due to inference-time fusion.
     # Use `set_op_handle("aten::batch_norm", None)
     "aten::batch_norm": batchnorm_flop_jit,

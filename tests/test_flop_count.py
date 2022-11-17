@@ -147,6 +147,17 @@ class BMMNet(nn.Module):
         return x
 
 
+class MulNet(nn.Module):
+    """
+    A network with a single torch.mul operation. This is used for testing
+    flop count for torch.mul.
+    """
+
+    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        x = torch.mul(x, y)
+        return x
+
+
 class CustomNet(nn.Module):
     """
     A network with a fully connected layer followed by a sigmoid layer. This is
@@ -703,6 +714,26 @@ class TestFlopCountAnalysis(unittest.TestCase):
             flop_dict,
             gt_dict,
             "Einsum operation ntg,ncg->nct failed to pass the flop count test.",
+        )
+
+    def test_mul(self) -> None:
+        """
+        Test flop count for operation torch.mul.
+        """
+        m = 2
+        n = 5
+        p = 7
+        net = MulNet()
+        x = torch.randn(m, 1, n)
+        y = torch.randn(p, 1)
+        flop_dict, _ = flop_count(net, (x, y))
+        gt_flop = m * n * p / 1e9
+        gt_dict = defaultdict(float)
+        gt_dict["mul"] = gt_flop
+        self.assertDictEqual(
+            flop_dict,
+            gt_dict,
+            "Mul operation failed to pass the flop count test."
         )
 
     def test_batchnorm(self) -> None:
