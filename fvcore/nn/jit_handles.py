@@ -227,22 +227,6 @@ def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     return flop
 
 
-def mul_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
-    """
-    Count flops for the mul operation supporting broadcast.
-    """
-    # Inputs should be a list of length 2.
-    # Inputs contains the shapes of two tensor.
-    assert len(inputs) == 2, len(inputs)
-    input_shapes = [get_shape(v) for v in inputs]
-    shape_zero_len, shape_one_len = len(input_shapes[0]), len(input_shapes[1])
-    max_len = max(shape_zero_len, shape_one_len)
-    shape_zero_padded = np.pad(input_shapes[0], (max_len - shape_zero_len, 0), 'constant', constant_values=(1, 1))
-    shape_one_padded = np.pad(input_shapes[1], (max_len - shape_one_len, 0), 'constant', constant_values=(1, 1))
-    flop = int(prod(np.maximum(shape_zero_padded, shape_one_padded)))
-    return flop
-
-
 def norm_flop_counter(affine_arg_index: int) -> Handle:
     """
     Args:
