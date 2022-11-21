@@ -124,7 +124,7 @@ jobs:
           command: |
             # https://support.circleci.com/hc/en-us/articles/360050623311-Docker-Hub-rate-limiting-FAQ
             docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_TOKEN
-            nvidia-docker run -itd --name fvcore nvcr.io/nvidia/pytorch:21.05-py3
+            nvidia-docker run -itd --name fvcore pytorch/pytorch
             docker exec -it fvcore nvidia-smi
 
       - run:
