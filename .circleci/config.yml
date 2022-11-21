@@ -102,12 +102,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Install nvidia driver
-          working_directory: ~/
-          command: |
-            nvidia-smi
-
-      - run:
           name: Install nvidia-docker
           working_directory: ~/
           command: |
