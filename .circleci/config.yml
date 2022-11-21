@@ -17,7 +17,7 @@ cpu: &cpu
 
 gpu: &gpu
   machine:
-    image: ubuntu-1604:201903-01
+    image: ubuntu-2004:202201-02
     docker_layer_caching: true
   resource_class: gpu.nvidia.small
 
