@@ -568,7 +568,7 @@ class TestJitModelAnalysis(unittest.TestCase):
 
     def test_data_parallel_root_scope(self) -> None:
         # A test case discussed in D32227000
-        model = nn.DataParallel(nn.Linear(10, 10))
+        model = nn.DataParallel(nn.Linear(10, 10)).cpu()
         for mode in ["caller", "owner"]:
             flop = FlopCountAnalysis(model, (torch.randn(10, 10),))
             flop.ancestor_mode(mode)

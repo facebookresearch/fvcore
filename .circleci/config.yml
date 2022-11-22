@@ -17,7 +17,7 @@ cpu: &cpu
 
 gpu: &gpu
   machine:
-    image: ubuntu-1604:201903-01
+    image: ubuntu-2004-cuda-11.4:202110-01
     docker_layer_caching: true
   resource_class: gpu.nvidia.small
 
@@ -101,14 +101,6 @@ jobs:
 
     steps:
       - checkout
-      - run:
-          name: Install nvidia driver
-          working_directory: ~/
-          command: |
-            wget -q 'https://s3.amazonaws.com/ossci-linux/nvidia_driver/NVIDIA-Linux-x86_64-430.40.run'
-            sudo /bin/bash ./NVIDIA-Linux-x86_64-430.40.run -s --no-drm
-            nvidia-smi
-
       - run:
           name: Install nvidia-docker
           working_directory: ~/
