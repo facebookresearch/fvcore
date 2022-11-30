@@ -718,7 +718,9 @@ class CropTransform(Transform):
             cropped = polygon.intersection(crop_box)
             if cropped.is_empty:
                 continue
-            if not isinstance(cropped, geometry.collection.BaseMultipartGeometry):
+            if isinstance(cropped, geometry.collection.BaseMultipartGeometry):
+                cropped = cropped.geoms
+            else:
                 cropped = [cropped]
             # one polygon may be cropped to multiple ones
             for poly in cropped:
