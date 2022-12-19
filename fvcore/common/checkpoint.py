@@ -4,7 +4,7 @@
 import logging
 import os
 from collections import defaultdict
-from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Tuple
+from typing import Any, cast, Dict, IO, Iterable, List, NamedTuple, Optional, Tuple
 
 import numpy as np
 import torch
@@ -123,9 +123,7 @@ class Checkpointer:
         assert os.path.basename(save_file) == basename, basename
         self.logger.info("Saving checkpoint to {}".format(save_file))
         with self.path_manager.open(save_file, "wb") as f:
-            # pyre-fixme[6]: For 2nd param expected `Union[PathLike[typing.Any],
-            #  IO[bytes], str, BinaryIO]` but got `Union[IO[bytes], IO[str]]`.
-            torch.save(data, f)
+            torch.save(data, cast(IO[bytes], f))
         self.tag_last_checkpoint(basename)
 
     def load(
@@ -150,9 +148,7 @@ class Checkpointer:
             self.logger.info("No checkpoint found. Initializing model from scratch")
             return {}
         self.logger.info("[Checkpointer] Loading from {} ...".format(path))
-        if not os.path.isfile(path):
-            path = self.path_manager.get_local_path(path)
-            assert os.path.isfile(path), "Checkpoint {} not found!".format(path)
+        assert self.path_manager.isfile(path), "Checkpoint {} not found!".format(path)
 
         checkpoint = self._load_file(path)
         incompatible = self._load_model(checkpoint)
@@ -251,7 +247,8 @@ class Checkpointer:
                 the checkpointer dict["model"] must be a dict which maps strings
                 to torch.Tensor or numpy arrays.
         """
-        return torch.load(f, map_location=torch.device("cpu"))
+        with self.path_manager.open(f, "rb") as f:
+            return torch.load(cast(IO[bytes], f), map_location=torch.device("cpu"))
 
     def _load_model(self, checkpoint: Any) -> _IncompatibleKeys:
         """
