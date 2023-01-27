@@ -148,10 +148,7 @@ class Checkpointer:
             self.logger.info("No checkpoint found. Initializing model from scratch")
             return {}
         self.logger.info("[Checkpointer] Loading from {} ...".format(path))
-        if not os.path.isfile(path):
-            path = self.path_manager.get_local_path(path)
-            assert os.path.isfile(path), "Checkpoint {} not found!".format(path)
-
+        # path may not be a local file, but _load_file is responsible to handle it.
         checkpoint = self._load_file(path)
         incompatible = self._load_model(checkpoint)
         if (
@@ -249,7 +246,8 @@ class Checkpointer:
                 the checkpointer dict["model"] must be a dict which maps strings
                 to torch.Tensor or numpy arrays.
         """
-        return torch.load(f, map_location=torch.device("cpu"))
+        with self.path_manager.open(f, "rb") as file:
+            return torch.load(file, map_location=torch.device("cpu"))
 
     def _load_model(self, checkpoint: Any) -> _IncompatibleKeys:
         """
