@@ -530,11 +530,11 @@ class TestTransforms(unittest.TestCase):
         for interp in ["nearest"]:
             grid_2d = np.stack(
                 np.meshgrid(np.linspace(-1, 1, 10), np.linspace(-1, 1, 10)), axis=2
-            ).astype(np.float)
+            ).astype(float)
             grid = np.tile(grid_2d[None, :, :, :], [8, 1, 1, 1])
             transformer = T.GridSampleTransform(grid, interp)
 
-            img_h, img_w = np.mgrid[0:10:1, 0:10:1].astype(np.float)
+            img_h, img_w = np.mgrid[0:10:1, 0:10:1].astype(float)
             img_hw = img_h * 10 + img_w
             img_hwc = np.repeat(img_hw[:, :, None], 3, axis=2)
             img_bhwc = np.repeat(img_hwc[None, :, :, :], 8, axis=0)
