@@ -247,7 +247,7 @@ class Checkpointer:
                 to torch.Tensor or numpy arrays.
         """
         with self.path_manager.open(f, "rb") as file:
-            return torch.load(file, map_location=torch.device("cpu"))
+            return torch.load(cast(IO[bytes], file), map_location=torch.device("cpu"))
 
     def _load_model(self, checkpoint: Any) -> _IncompatibleKeys:
         """
