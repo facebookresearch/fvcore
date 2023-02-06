@@ -107,8 +107,6 @@ class CfgNode(_CfgNode):
             return base_cfg
         return cfg
 
-    # pyre-fixme[14]: `merge_from_file` overrides method defined in `_CfgNode`
-    #  inconsistently.
     def merge_from_file(self, cfg_filename: str, allow_unsafe: bool = False) -> None:
         """
         Merge configs from a given yaml file.
