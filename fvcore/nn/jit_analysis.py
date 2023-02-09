@@ -524,6 +524,9 @@ class JitModelAnalysis:
             if module not in aliases:
                 aliases[module] = name
             aliases[name] = aliases[module]
+            if "/" in name:
+                sub_name = name.split("/")[-1]
+                aliases[sub_name] = aliases[module]
         return aliases
 
     def _get_all_ancestors(self, module_name: str) -> Set[str]:
