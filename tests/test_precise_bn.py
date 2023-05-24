@@ -62,6 +62,7 @@ class TestPreciseBN(unittest.TestCase):
                 itertools.cycle(tensors),
                 len(tensors),
             )
+            # pyre-fixme[16]: Optional type has no attribute `numpy`.
             self.assertTrue(np.allclose(model.running_mean.numpy(), mean))
             self.assertTrue(np.allclose(model.running_var.numpy(), var))
 
