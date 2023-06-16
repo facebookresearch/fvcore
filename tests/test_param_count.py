@@ -41,4 +41,6 @@ class TestParamCount(unittest.TestCase):
         net = NetWithDupPrefix()
         table = parameter_count_table(net)
         c = ["conv111.weight" in line for line in table.split("\n")]
-        self.assertEqual(sum(c), 1)  # it only appears once, despite being a prefix of conv1
+        self.assertEqual(
+            sum(c), 1
+        )  # it only appears once, despite being a prefix of conv1

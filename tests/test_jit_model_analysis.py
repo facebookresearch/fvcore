@@ -505,8 +505,12 @@ class TestJitModelAnalysis(unittest.TestCase):
         # Test getting canonical name
         self.assertEqual(analyzer.canonical_module_name("multiname2"), "multiname1")
         self.assertEqual(analyzer.canonical_module_name("multiname1"), "multiname1")
-        self.assertEqual(analyzer.canonical_module_name("submod2.submod"), "submod1.submod")
-        self.assertEqual(analyzer.canonical_module_name("submod1.submod"), "submod1.submod")
+        self.assertEqual(
+            analyzer.canonical_module_name("submod2.submod"), "submod1.submod"
+        )
+        self.assertEqual(
+            analyzer.canonical_module_name("submod1.submod"), "submod1.submod"
+        )
 
         # Tests no uncalled modules
         self.assertEqual(analyzer.uncalled_modules(), set())
@@ -537,7 +541,8 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         # Find flops for wrapper
         flops = {
-            "module" + ("." if name else "") + name: flop for name, flop in model.flops.items()
+            "module" + ("." if name else "") + name: flop
+            for name, flop in model.flops.items()
         }
         flops[""] = model.flops[""]
         name_to_module = {
@@ -624,7 +629,9 @@ class TestJitModelAnalysis(unittest.TestCase):
             "aten::linear": linear_flop_jit,
         }
 
-        analyzer = JitModelAnalysis(model=model, inputs=inputs).set_op_handle(**op_handles)
+        analyzer = JitModelAnalysis(model=model, inputs=inputs).set_op_handle(
+            **op_handles
+        )
         analyzer.unsupported_ops_warnings(enabled=False)
 
         # Request a result once to cache flop counts
@@ -637,14 +644,18 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         # Overwrite an op handle
         def make_dummy_op(name: str, output: int) -> Handle:
-            def dummy_ops_handle(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
+            def dummy_ops_handle(
+                inputs: List[Any], outputs: List[Any]
+            ) -> typing.Counter[str]:
                 return Counter({name: output})
 
             return dummy_ops_handle
 
         dummy_name = "dummy_op"
         dummy_out = 1000
-        analyzer.set_op_handle("aten::{}".format(self.lin_op), make_dummy_op(dummy_name, dummy_out))
+        analyzer.set_op_handle(
+            "aten::{}".format(self.lin_op), make_dummy_op(dummy_name, dummy_out)
+        )
 
         dummy_flops = {}
         for name, counts in model.flops.items():

@@ -96,7 +96,9 @@ class Checkpointer:
         if key in self.checkpointables:
             raise KeyError(f"Key {key} already used in the Checkpointer")
         if not hasattr(checkpointable, "state_dict"):
-            raise TypeError("add_checkpointable needs an object with 'state_dict()' method.")
+            raise TypeError(
+                "add_checkpointable needs an object with 'state_dict()' method."
+            )
         self.checkpointables[key] = checkpointable
 
     def save(self, name: str, **kwargs: Any) -> None:
@@ -124,7 +126,9 @@ class Checkpointer:
             torch.save(data, cast(IO[bytes], f))
         self.tag_last_checkpoint(basename)
 
-    def load(self, path: str, checkpointables: Optional[List[str]] = None) -> Dict[str, Any]:
+    def load(
+        self, path: str, checkpointables: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """
         Load from the given checkpoint.
 
@@ -147,7 +151,9 @@ class Checkpointer:
         # path may not be a local file, but _load_file is responsible to handle it.
         checkpoint = self._load_file(path)
         incompatible = self._load_model(checkpoint)
-        if incompatible is not None:  # handle some existing subclasses that returns None
+        if (
+            incompatible is not None
+        ):  # handle some existing subclasses that returns None
             self._log_incompatible_keys(incompatible)
 
         for key in self.checkpointables if checkpointables is None else checkpointables:
@@ -193,7 +199,8 @@ class Checkpointer:
         all_model_checkpoints = [
             os.path.join(self.save_dir, file)
             for file in self.path_manager.ls(self.save_dir)
-            if self.path_manager.isfile(os.path.join(self.save_dir, file)) and file.endswith(".pth")
+            if self.path_manager.isfile(os.path.join(self.save_dir, file))
+            and file.endswith(".pth")
         ]
         return all_model_checkpoints
 
@@ -335,11 +342,15 @@ class Checkpointer:
                 )
             )
         if incompatible.missing_keys:
-            missing_keys = _filter_reused_missing_keys(self.model, incompatible.missing_keys)
+            missing_keys = _filter_reused_missing_keys(
+                self.model, incompatible.missing_keys
+            )
             if missing_keys:
                 self.logger.warning(get_missing_parameters_message(missing_keys))
         if incompatible.unexpected_keys:
-            self.logger.warning(get_unexpected_parameters_message(incompatible.unexpected_keys))
+            self.logger.warning(
+                get_unexpected_parameters_message(incompatible.unexpected_keys)
+            )
 
     def _convert_ndarray_to_tensor(self, state_dict: Dict[str, Any]) -> None:
         """
@@ -354,7 +365,9 @@ class Checkpointer:
         for k in list(state_dict.keys()):
             v = state_dict[k]
             if not isinstance(v, np.ndarray) and not isinstance(v, torch.Tensor):
-                raise ValueError("Unsupported type found in checkpoint! {}: {}".format(k, type(v)))
+                raise ValueError(
+                    "Unsupported type found in checkpoint! {}: {}".format(k, type(v))
+                )
             if not isinstance(v, torch.Tensor):
                 state_dict[k] = torch.from_numpy(v)
 
@@ -419,9 +432,9 @@ class PeriodicCheckpointer:
                 self.recent_checkpoints.append(self.checkpointer.get_checkpoint_file())
                 if len(self.recent_checkpoints) > self.max_to_keep:
                     file_to_delete = self.recent_checkpoints.pop(0)
-                    if self.path_manager.exists(file_to_delete) and not file_to_delete.endswith(
-                        f"{self.file_prefix}_final.pth"
-                    ):
+                    if self.path_manager.exists(
+                        file_to_delete
+                    ) and not file_to_delete.endswith(f"{self.file_prefix}_final.pth"):
                         self.path_manager.rm(file_to_delete)
 
         if self.max_iter is not None:
@@ -488,7 +501,9 @@ def get_unexpected_parameters_message(keys: List[str]) -> str:
     """
     groups = _group_checkpoint_keys(keys)
     msg = "The checkpoint state_dict contains keys that are not used by the model:\n"
-    msg += "\n".join("  " + colored(k + _group_to_str(v), "magenta") for k, v in groups.items())
+    msg += "\n".join(
+        "  " + colored(k + _group_to_str(v), "magenta") for k, v in groups.items()
+    )
     return msg
 
 
@@ -563,7 +578,9 @@ def _group_to_str(group: List[str]) -> str:
     return ".{" + ", ".join(sorted(group)) + "}"
 
 
-def _named_modules_with_dup(model: nn.Module, prefix: str = "") -> Iterable[Tuple[str, nn.Module]]:
+def _named_modules_with_dup(
+    model: nn.Module, prefix: str = ""
+) -> Iterable[Tuple[str, nn.Module]]:
     """
     The same as `model.named_modules()`, except that it includes
     duplicated modules that have more than one name.

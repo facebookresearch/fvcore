@@ -38,7 +38,8 @@ class TestStepScheduler(unittest.TestCase):
 
         scheduler = StepParamScheduler(**config)
         schedule = [
-            scheduler(epoch_num / self._num_updates) for epoch_num in range(self._num_updates)
+            scheduler(epoch_num / self._num_updates)
+            for epoch_num in range(self._num_updates)
         ]
         expected_schedule = [
             0.1,

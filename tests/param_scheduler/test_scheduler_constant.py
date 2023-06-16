@@ -11,7 +11,8 @@ class TestConstantScheduler(unittest.TestCase):
     def test_scheduler(self):
         scheduler = ConstantParamScheduler(0.1)
         schedule = [
-            scheduler(epoch_num / self._num_epochs) for epoch_num in range(self._num_epochs)
+            scheduler(epoch_num / self._num_epochs)
+            for epoch_num in range(self._num_epochs)
         ]
         expected_schedule = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
 

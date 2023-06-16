@@ -32,7 +32,9 @@ def get_cache_dir(cache_dir: Optional[str] = None) -> str:
         2) otherwise ~/.torch/fvcore_cache
     """
     if cache_dir is None:
-        cache_dir = os.path.expanduser(os.getenv("FVCORE_CACHE", "~/.torch/fvcore_cache"))
+        cache_dir = os.path.expanduser(
+            os.getenv("FVCORE_CACHE", "~/.torch/fvcore_cache")
+        )
     try:
         PathManager.mkdirs(cache_dir)
         assert os.access(cache_dir, os.W_OK)

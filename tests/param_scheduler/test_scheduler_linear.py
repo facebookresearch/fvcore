@@ -35,5 +35,7 @@ class TestLienarScheduler(unittest.TestCase):
             round(scheduler(epoch_num / self._num_epochs), 4)
             for epoch_num in range(self._num_epochs)
         ]
-        expected_schedule = [config["start_value"]] + list(reversed(self._get_valid_intermediate()))
+        expected_schedule = [config["start_value"]] + list(
+            reversed(self._get_valid_intermediate())
+        )
         self.assertEqual(schedule, expected_schedule)

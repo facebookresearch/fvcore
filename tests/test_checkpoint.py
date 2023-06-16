@@ -139,7 +139,9 @@ class TestCheckpointer(unittest.TestCase):
                 )
                 fresh_checkpointer.load(fresh_checkpointer.get_checkpoint_file())
 
-            for trained_p, loaded_p in zip(trained_model.parameters(), fresh_model.parameters()):
+            for trained_p, loaded_p in zip(
+                trained_model.parameters(), fresh_model.parameters()
+            ):
                 # different tensor references
                 self.assertFalse(id(trained_p) == id(loaded_p))
                 # same content
@@ -159,7 +161,9 @@ class TestCheckpointer(unittest.TestCase):
             ),
         ]:
             with TemporaryDirectory() as f:
-                checkpointer = Checkpointer(trained_model, save_dir=f, save_to_disk=True)
+                checkpointer = Checkpointer(
+                    trained_model, save_dir=f, save_to_disk=True
+                )
                 checkpointer.save("checkpoint_file")
 
                 # on different folders.
@@ -169,7 +173,9 @@ class TestCheckpointer(unittest.TestCase):
                     self.assertEqual(fresh_checkpointer.get_checkpoint_file(), "")
                     fresh_checkpointer.load(os.path.join(f, "checkpoint_file.pth"))
 
-            for trained_p, loaded_p in zip(trained_model.parameters(), fresh_model.parameters()):
+            for trained_p, loaded_p in zip(
+                trained_model.parameters(), fresh_model.parameters()
+            ):
                 # different tensor references.
                 self.assertFalse(id(trained_p) == id(loaded_p))
                 # same content.
@@ -187,7 +193,9 @@ class TestCheckpointer(unittest.TestCase):
             """
 
             def __init__(self):
-                self.state = {self.random_handle(): self.random_handle() for i in range(10)}
+                self.state = {
+                    self.random_handle(): self.random_handle() for i in range(10)
+                }
 
             def random_handle(self, str_len=100) -> str:
                 """
@@ -233,7 +241,9 @@ class TestCheckpointer(unittest.TestCase):
                 fresh_checkpointer.get_checkpoint_file(),
                 os.path.join(f, "checkpoint_file.pth"),
             )
-            checkpoint = fresh_checkpointer.load(fresh_checkpointer.get_checkpoint_file())
+            checkpoint = fresh_checkpointer.load(
+                fresh_checkpointer.get_checkpoint_file()
+            )
             state_dict = checkpointables.state_dict()
             for key, _ in state_dict.items():
                 self.assertTrue(checkpoint["checkpointables"].get(key) is not None)
@@ -261,7 +271,9 @@ class TestCheckpointer(unittest.TestCase):
         )
         logger.info.assert_not_called()
 
-    @unittest.skipIf(not hasattr(nn, "LazyLinear"), "LazyModule not supported")  # pyre-fixme[56]
+    @unittest.skipIf(
+        not hasattr(nn, "LazyLinear"), "LazyModule not supported"
+    )  # pyre-fixme[56]
     def test_load_lazy_module(self) -> None:
         def _get_model() -> nn.Sequential:
             return nn.Sequential(nn.LazyLinear(10))
@@ -301,7 +313,9 @@ class TestPeriodicCheckpointer(unittest.TestCase):
             nn.DataParallel(self._create_model()),
         ]:
             with TemporaryDirectory() as f:
-                checkpointer = Checkpointer(trained_model, save_dir=f, save_to_disk=True)
+                checkpointer = Checkpointer(
+                    trained_model, save_dir=f, save_to_disk=True
+                )
                 periodic_checkpointer = PeriodicCheckpointer(checkpointer, _period, 99)
                 for iteration in range(_max_iter):
                     periodic_checkpointer.step(iteration)
@@ -323,7 +337,9 @@ class TestPeriodicCheckpointer(unittest.TestCase):
             nn.DataParallel(self._create_model()),
         ]:
             with TemporaryDirectory() as f:
-                checkpointer = Checkpointer(trained_model, save_dir=f, save_to_disk=True)
+                checkpointer = Checkpointer(
+                    trained_model, save_dir=f, save_to_disk=True
+                )
                 periodic_checkpointer = PeriodicCheckpointer(
                     checkpointer, _period, 99, max_to_keep=_max_to_keep
                 )

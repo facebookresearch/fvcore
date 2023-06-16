@@ -38,11 +38,15 @@ def to_float_tensor(numpy_array: np.ndarray) -> torch.Tensor:
         # NxHxWxC -> NxCxHxW
         float_tensor = float_tensor.permute(0, 3, 1, 2)
     else:
-        raise NotImplementedError("Unknow numpy_array dimension of {}".format(float_tensor.shape))
+        raise NotImplementedError(
+            "Unknow numpy_array dimension of {}".format(float_tensor.shape)
+        )
     return float_tensor
 
 
-def to_numpy(float_tensor: torch.Tensor, target_shape: list, target_dtype: np.dtype) -> np.ndarray:
+def to_numpy(
+    float_tensor: torch.Tensor, target_shape: list, target_dtype: np.dtype
+) -> np.ndarray:
     """
     Convert float tensor with dimension of NxCxHxW back to numpy array.
     Args:
@@ -70,7 +74,9 @@ def to_numpy(float_tensor: torch.Tensor, target_shape: list, target_dtype: np.dt
         # NxCxHxW -> NxHxWxC
         float_tensor = float_tensor.permute(0, 2, 3, 1)
     else:
-        raise NotImplementedError("Unknow target shape dimension of {}".format(target_shape))
+        raise NotImplementedError(
+            "Unknow target shape dimension of {}".format(target_shape)
+        )
     if target_dtype == np.uint8:
         # Need to specifically call round here, notice in pytroch the round
         # is half to even.

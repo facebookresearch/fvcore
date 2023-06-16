@@ -62,7 +62,8 @@ class TestMultiStepParamScheduler(unittest.TestCase):
     def _test_config_scheduler(self, config, expected_schedule):
         scheduler = MultiStepParamScheduler(**config)
         schedule = [
-            scheduler(epoch_num / self._num_updates) for epoch_num in range(self._num_updates)
+            scheduler(epoch_num / self._num_updates)
+            for epoch_num in range(self._num_updates)
         ]
         self.assertEqual(schedule, expected_schedule)
 

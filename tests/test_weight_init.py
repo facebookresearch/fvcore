@@ -40,7 +40,9 @@ class TestWeightInit(unittest.TestCase):
         # number of elements would not give us a standard deviation that close
         # enough to the expected distribution. So the default rtol of 1e-8 will
         # break some test cases. Therefore a larger rtol is used.
-        weight_dist_match = torch.allclose(target_std, torch.std(weight), rtol=1e-2, atol=0)
+        weight_dist_match = torch.allclose(
+            target_std, torch.std(weight), rtol=1e-2, atol=0
+        )
         bias_dist_match = torch.nonzero(bias).nelement() == 0
         return weight_dist_match and bias_dist_match
 
@@ -110,7 +112,9 @@ class TestWeightInit(unittest.TestCase):
         channel_out_dims = [256, 512, 1024, 2048]
 
         for layer in [nn.Linear]:
-            for c_in_dim, c_out_dim in itertools.product(channel_in_dims, channel_out_dims):
+            for c_in_dim, c_out_dim in itertools.product(
+                channel_in_dims, channel_out_dims
+            ):
                 p = {"in_features": c_in_dim, "out_features": c_out_dim}
                 # pyre-fixme[6]: For 1st argument expected `bool` but got `int`.
                 model = layer(**p)

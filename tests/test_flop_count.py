@@ -231,7 +231,9 @@ class TestFlopCountAnalysis(unittest.TestCase):
             flop_dict[self.lin_op] = 400000
             return flop_dict
 
-        custom_ops2: Dict[str, Handle] = {"aten::{}".format(self.lin_op): addmm_dummy_flop_jit}
+        custom_ops2: Dict[str, Handle] = {
+            "aten::{}".format(self.lin_op): addmm_dummy_flop_jit
+        }
         flop_dict2, _ = flop_count(customNet, (x,), supported_ops=custom_ops2)
         flop = 400000 / 1e9
         self.assertEqual(
@@ -253,7 +255,9 @@ class TestFlopCountAnalysis(unittest.TestCase):
         gt_flop = batch_size * input_dim * output_dim / 1e9
         gt_dict = defaultdict(float)
         gt_dict[self.lin_op] = gt_flop
-        self.assertDictEqual(flop_dict, gt_dict, "nn.Linear failed to pass the flop count test.")
+        self.assertDictEqual(
+            flop_dict, gt_dict, "nn.Linear failed to pass the flop count test."
+        )
 
     def test_skip_ops(self) -> None:
         """
@@ -346,7 +350,9 @@ class TestFlopCountAnalysis(unittest.TestCase):
             elif conv_dim == 2:
                 x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
             else:
-                x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim, spatial_dim)
+                x = torch.randn(
+                    batch_size, input_dim, spatial_dim, spatial_dim, spatial_dim
+                )
 
             flop_dict, _ = flop_count(convNet, (x,))
             if transpose:
@@ -715,7 +721,9 @@ class TestFlopCountAnalysis(unittest.TestCase):
         gt_flop = batch_size * input_dim / 1e9
         gt_dict = defaultdict(float)
         gt_dict["batch_norm"] = gt_flop
-        self.assertDictEqual(flop_dict, gt_dict, "BatchNorm1d failed to pass the flop count test.")
+        self.assertDictEqual(
+            flop_dict, gt_dict, "BatchNorm1d failed to pass the flop count test."
+        )
 
         # Test for BatchNorm2d.
         batch_size = 10
@@ -728,7 +736,9 @@ class TestFlopCountAnalysis(unittest.TestCase):
         gt_flop = 4 * batch_size * input_dim * spatial_dim_x * spatial_dim_y / 1e9
         gt_dict = defaultdict(float)
         gt_dict["batch_norm"] = gt_flop
-        self.assertDictEqual(flop_dict, gt_dict, "BatchNorm2d failed to pass the flop count test.")
+        self.assertDictEqual(
+            flop_dict, gt_dict, "BatchNorm2d failed to pass the flop count test."
+        )
 
         # Test for BatchNorm3d.
         batch_size = 10
@@ -737,12 +747,24 @@ class TestFlopCountAnalysis(unittest.TestCase):
         spatial_dim_y = 5
         spatial_dim_z = 5
         batch_3d = nn.BatchNorm3d(input_dim, affine=False)
-        x = torch.randn(batch_size, input_dim, spatial_dim_x, spatial_dim_y, spatial_dim_z)
+        x = torch.randn(
+            batch_size, input_dim, spatial_dim_x, spatial_dim_y, spatial_dim_z
+        )
         flop_dict, _ = flop_count(batch_3d, (x,))
-        gt_flop = 4 * batch_size * input_dim * spatial_dim_x * spatial_dim_y * spatial_dim_z / 1e9
+        gt_flop = (
+            4
+            * batch_size
+            * input_dim
+            * spatial_dim_x
+            * spatial_dim_y
+            * spatial_dim_z
+            / 1e9
+        )
         gt_dict = defaultdict(float)
         gt_dict["batch_norm"] = gt_flop
-        self.assertDictEqual(flop_dict, gt_dict, "BatchNorm3d failed to pass the flop count test.")
+        self.assertDictEqual(
+            flop_dict, gt_dict, "BatchNorm3d failed to pass the flop count test."
+        )
 
     def test_threeNet(self) -> None:
         """
@@ -868,10 +890,14 @@ class TestFlopCountHandles(unittest.TestCase):
         counter = _DEFAULT_SUPPORTED_OPS[op_name]
 
         vec = torch.rand(2)
-        nodes = self._count_function(F.group_norm, (torch.rand(2, 2, 2, 2), 2, vec, vec), op_name)
+        nodes = self._count_function(
+            F.group_norm, (torch.rand(2, 2, 2, 2), 2, vec, vec), op_name
+        )
         self.assertEqual(counter(*nodes), 80)
 
-        nodes = self._count_function(F.group_norm, (torch.rand(2, 2, 2, 2), 2, None, None), op_name)
+        nodes = self._count_function(
+            F.group_norm, (torch.rand(2, 2, 2, 2), 2, None, None), op_name
+        )
         self.assertEqual(counter(*nodes), 64)
 
     def test_upsample(self):
@@ -895,7 +921,9 @@ class TestFlopCountHandles(unittest.TestCase):
         self.assertEqual(counter(*nodes), 72.0)
 
     def test_torch_mm(self):
-        for op_name, func in zip(["aten::mm", "aten::matmul"], [torch.mm, torch.matmul]):
+        for op_name, func in zip(
+            ["aten::mm", "aten::matmul"], [torch.mm, torch.matmul]
+        ):
             counter = _DEFAULT_SUPPORTED_OPS[op_name]
 
             nodes = self._count_function(

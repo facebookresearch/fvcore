@@ -22,6 +22,8 @@ class TestExponentialScheduler(unittest.TestCase):
             round(scheduler(epoch_num / self._num_epochs), 4)
             for epoch_num in range(self._num_epochs)
         ]
-        expected_schedule = [config["start_value"]] + self._get_valid_intermediate_values()
+        expected_schedule = [
+            config["start_value"]
+        ] + self._get_valid_intermediate_values()
 
         self.assertEqual(schedule, expected_schedule)

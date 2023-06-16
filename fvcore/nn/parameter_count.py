@@ -113,6 +113,8 @@ def parameter_count_table(model: nn.Module, max_depth: int = 3) -> str:
 
     old_ws = tabulate.PRESERVE_WHITESPACE
     tabulate.PRESERVE_WHITESPACE = True
-    tab = tabulate.tabulate(table, headers=["name", "#elements or shape"], tablefmt="pipe")
+    tab = tabulate.tabulate(
+        table, headers=["name", "#elements or shape"], tablefmt="pipe"
+    )
     tabulate.PRESERVE_WHITESPACE = old_ws
     return tab

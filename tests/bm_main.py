@@ -15,7 +15,9 @@ if __name__ == "__main__":
         # Get all the benchmark files (starting with "bm_").
         bm_files = glob.glob(join(dirname(__file__), "bm_*.py"))  # pyre-ignore
         module_names = [
-            basename(f)[:-3] for f in bm_files if isfile(f) and not f.endswith("bm_main.py")
+            basename(f)[:-3]
+            for f in bm_files
+            if isfile(f) and not f.endswith("bm_main.py")
         ]
 
     for module_name in module_names:

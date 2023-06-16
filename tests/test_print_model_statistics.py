@@ -356,7 +356,9 @@ class TestPrintModelStatistics(unittest.TestCase):
         # "|    a2.b1.c2   |    0    |         |         |"
 
         # Test changing max depth
-        table = _model_stats_table(string_statistics, stat_columns=stat_columns, max_depth=2)
+        table = _model_stats_table(
+            string_statistics, stat_columns=stat_columns, max_depth=2
+        )
 
         self.assertTrue("a1.b1.c1.d1" in table)  # Skipping wrappers reaches deeper
         self.assertTrue(" a2.b1 " in table)  # Get to depth 2
@@ -438,7 +440,9 @@ class TestPrintModelStatistics(unittest.TestCase):
 
         model = TestNet()
         inputs = (torch.randn((1, 10)),)
-        model_str = flop_count_str(FlopCountAnalysis(model, inputs).ancestor_mode("caller"))
+        model_str = flop_count_str(
+            FlopCountAnalysis(model, inputs).ancestor_mode("caller")
+        )
 
         self.assertTrue("N/A indicates a possibly missing statistic" in model_str)
         self.assertTrue("#params: 0.11K, #flops: 100" in model_str)

@@ -161,7 +161,9 @@ def _get_scoped_trace_graph(
         hook_handles.append(posthook)
 
     # Unwrap DDP, but correct the scope names for the root module.
-    if isinstance(module, (nn.parallel.distributed.DistributedDataParallel, nn.DataParallel)):
+    if isinstance(
+        module, (nn.parallel.distributed.DistributedDataParallel, nn.DataParallel)
+    ):
         # Since DataParallel just wraps the model, add an extra set of hooks
         # to the model it wraps to account for the wrapper. Then trace it.
         root_name = aliases[module]
@@ -308,7 +310,8 @@ class JitModelAnalysis:
         """
         if self._stats is None:
             raise RuntimeError(
-                "Analysis results should be computed " "before calling unsupported_ops()"
+                "Analysis results should be computed "
+                "before calling unsupported_ops()"
             )
         module_name = self.canonical_module_name(module_name)
         return self._stats.unsupported_ops[module_name]  # pyre-fixme
@@ -351,7 +354,9 @@ class JitModelAnalysis:
         """
         self._stats = None
         if len(args) % 2 != 0:
-            raise TypeError("set_op_handle should be called with pairs of names and handles!")
+            raise TypeError(
+                "set_op_handle should be called with pairs of names and handles!"
+            )
         for name, handle in zip(args[::2], args[1::2]):
             kwargs[name] = handle
         for name, handle in kwargs.items():
@@ -388,7 +393,8 @@ class JitModelAnalysis:
             return self._aliases[name]
         else:
             raise KeyError(
-                "Requested module name is not among " "the descendants of the analyzed model."
+                "Requested module name is not among "
+                "the descendants of the analyzed model."
             )
 
     def copy(
@@ -491,7 +497,9 @@ class JitModelAnalysis:
             return
         logger = logging.getLogger(__name__)
         for op, freq in ops.items():
-            logger.warning("Unsupported operator {} encountered {} time(s)".format(op, freq))
+            logger.warning(
+                "Unsupported operator {} encountered {} time(s)".format(op, freq)
+            )
 
     def _warn_uncalled_mods(self, uncalled_mods: Set[str]) -> None:
         if not self._enable_warn_uncalled_mods:
