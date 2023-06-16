@@ -7,10 +7,11 @@ from typing import Any, Dict, Tuple
 
 import torch
 import torch.nn as nn
-from fvcore.nn.flop_count import _DEFAULT_SUPPORTED_OPS, flop_count, FlopCountAnalysis
-from fvcore.nn.jit_handles import Handle
 from torch.autograd.function import Function
 from torch.nn import functional as F
+
+from fvcore.nn.flop_count import _DEFAULT_SUPPORTED_OPS, flop_count, FlopCountAnalysis
+from fvcore.nn.jit_handles import Handle
 
 
 class _CustomOp(Function):
@@ -189,6 +190,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
         The second case checks when a new handle for a default operation is
         passed. The new handle should overwrite the default handle.
         """
+
         # New handle for a new operation.
         def dummy_sigmoid_flop_jit(
             inputs: typing.List[Any], outputs: typing.List[Any]

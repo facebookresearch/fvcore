@@ -10,6 +10,7 @@ from typing import Any, Dict, List
 
 import torch
 import torch.nn as nn
+
 from fvcore.nn.flop_count import FlopCountAnalysis
 from fvcore.nn.jit_analysis import JitModelAnalysis
 from fvcore.nn.jit_handles import addmm_flop_jit, conv_flop_jit, Handle, linear_flop_jit

@@ -6,11 +6,12 @@ import typing
 import unittest
 
 import numpy as np
+from yaml.constructor import ConstructorError
+
 from fvcore.common.config import CfgNode
 from fvcore.common.history_buffer import HistoryBuffer
 from fvcore.common.registry import Registry
 from fvcore.common.timer import Timer
-from yaml.constructor import ConstructorError
 
 
 class TestHistoryBuffer(unittest.TestCase):

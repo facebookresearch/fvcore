@@ -12,8 +12,9 @@ from typing import Tuple
 from unittest.mock import MagicMock
 
 import torch
-from fvcore.common.checkpoint import Checkpointer, PeriodicCheckpointer
 from torch import nn
+
+from fvcore.common.checkpoint import Checkpointer, PeriodicCheckpointer
 
 
 TORCH_VERSION: Tuple[int, ...] = tuple(int(x) for x in torch.__version__.split(".")[:2])
@@ -125,7 +126,6 @@ class TestCheckpointer(unittest.TestCase):
                 nn.DataParallel(self._create_model()),
             ),
         ]:
-
             with TemporaryDirectory() as f:
                 checkpointer = Checkpointer(trained_model, save_dir=f)
                 checkpointer.save("checkpoint_file")

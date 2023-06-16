@@ -5,13 +5,14 @@ import unittest
 
 import numpy as np
 import torch
+from torch.nn import functional as F
+
 from fvcore.nn import (
     sigmoid_focal_loss,
     sigmoid_focal_loss_jit,
     sigmoid_focal_loss_star,
     sigmoid_focal_loss_star_jit,
 )
-from torch.nn import functional as F
 
 
 def logit(p: torch.Tensor) -> torch.Tensor:

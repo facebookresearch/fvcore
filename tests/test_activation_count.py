@@ -8,9 +8,10 @@ from typing import Any, Dict, List, Tuple
 
 import torch
 import torch.nn as nn
+from numpy import prod
+
 from fvcore.nn.activation_count import activation_count, ActivationCountAnalysis
 from fvcore.nn.jit_handles import Handle
-from numpy import prod
 
 
 class SmallConvNet(nn.Module):
