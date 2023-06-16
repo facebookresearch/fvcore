@@ -9,7 +9,7 @@ version: 2.1
 # -------------------------------------------------------------------------------------
 cpu: &cpu
   docker:
-    - image: cimg/python:3.11.4
+    - image: circleci/python:3.7
       auth:
         username: $DOCKERHUB_USERNAME
         password: $DOCKERHUB_TOKEN
@@ -17,18 +17,9 @@ cpu: &cpu
 
 gpu: &gpu
   machine:
-    image: linux-cuda-12:2023.05.1
+    image: ubuntu-2004-cuda-11.4:202110-01
     docker_layer_caching: true
   resource_class: gpu.nvidia.small
-
-version_parameters: &version_parameters
-  parameters:
-    cuda_version:
-      type: string
-      default: '12.1'
-
-  environment:
-    CUDA_VERSION: << parameters.cuda_version >>
 
 # -------------------------------------------------------------------------------------
 # Re-usable commands
@@ -67,11 +58,6 @@ run_unittests: &run_unittests
         python -m unittest discover -v -s tests
         python -m unittest discover -v -s io_tests
 
-select_cuda: &select_cuda
-  - run:
-      name: Select CUDA
-      command: |
-        sudo update-alternatives --set cuda /usr/local/cuda-<< parameters.cuda_version >>
 # -------------------------------------------------------------------------------------
 # Jobs to run
 # -------------------------------------------------------------------------------------
@@ -88,14 +74,14 @@ jobs:
       # Cache the venv directory that contains dependencies
       - restore_cache:
           keys:
-            - cache-key-{{ .Branch }}-ID-20230617
+            - cache-key-{{ .Branch }}-ID-20200130
 
       - <<: *install_dep
 
       - save_cache:
           paths:
             - ~/venv
-          key: cache-key-{{ .Branch }}-ID-20230617
+          key: cache-key-{{ .Branch }}-ID-20200130
 
       - <<: *install_fvcore
 
@@ -110,13 +96,11 @@ jobs:
 
   gpu_tests:
     <<: *gpu
-    <<: *version_parameters
 
     working_directory: ~/fvcore
 
     steps:
       - checkout
-      - <<: *select_cuda
       - run:
           name: Install nvidia-docker
           working_directory: ~/
@@ -150,7 +134,7 @@ jobs:
 
   upload_wheel:
     docker:
-      - image: cimg/python:3.11.4
+      - image: circleci/python:3.7
         auth:
           username: $DOCKERHUB_USERNAME
           password: $DOCKERHUB_TOKEN
@@ -200,7 +184,6 @@ workflows:
           context:
             - DOCKERHUB_TOKEN
       - gpu_tests:
-          cuda_version: '12.1'
           context:
             - DOCKERHUB_TOKEN
 
