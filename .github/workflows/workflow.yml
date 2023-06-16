@@ -25,8 +25,8 @@ jobs:
       - name: Lint
         run: |
           echo "Running isort"
-          isort -c -sp .
+          isort -c --sp . .
           echo "Running black"
-          black --check .
+          black -l 100 --check .
           echo "Running flake8"
           flake8 .
