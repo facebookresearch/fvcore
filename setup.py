@@ -41,7 +41,7 @@ setup(
     url="https://github.com/facebookresearch/fvcore",
     description="Collection of common code shared among different research "
     "projects in FAIR computer vision team",
-    python_requires=">=3.6",
+    python_requires=">=3.8",
     install_requires=[
         "numpy",
         "yacs>=0.1.6",
@@ -51,7 +51,7 @@ setup(
         "Pillow",
         "tabulate",
         "iopath>=0.1.7",
-        "dataclasses; python_version<'3.7'",
+        "dataclasses; python_version<'3.12'",
     ],
     extras_require={"all": ["shapely"]},
     packages=find_packages(exclude=("tests",)),
