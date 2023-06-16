@@ -95,8 +95,7 @@ class TestCompositeScheduler(unittest.TestCase):
 
         scheduler = CompositeParamScheduler(**config)
         schedule = [
-            scheduler(epoch_num / self._num_updates)
-            for epoch_num in range(self._num_updates)
+            scheduler(epoch_num / self._num_updates) for epoch_num in range(self._num_updates)
         ]
         expected_schedule = [0.1, 0.1, 0.2, 0.2, 0.2, 0.2, 0.3, 0.4, 0.4, 0.4]
 
@@ -106,8 +105,7 @@ class TestCompositeScheduler(unittest.TestCase):
         config = self._get_lengths_sum_less_one_config()
         scheduler = CompositeParamScheduler(**config)
         schedule = [
-            scheduler(epoch_num / self._num_updates)
-            for epoch_num in range(self._num_updates)
+            scheduler(epoch_num / self._num_updates) for epoch_num in range(self._num_updates)
         ]
         expected_schedule = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.2, 0.2, 0.2]
         self.assertEqual(schedule, expected_schedule)
@@ -171,8 +169,7 @@ class TestCompositeScheduler(unittest.TestCase):
         # Check rescaled
         scheduler = CompositeParamScheduler(**config)
         schedule = [
-            scheduler(epoch_num / self._num_updates)
-            for epoch_num in range(self._num_updates)
+            scheduler(epoch_num / self._num_updates) for epoch_num in range(self._num_updates)
         ]
         expected_schedule = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
         self.assertEqual(expected_schedule, schedule)
@@ -183,8 +180,7 @@ class TestCompositeScheduler(unittest.TestCase):
         scheduler = CompositeParamScheduler(**config)
         linear_scheduler = config["schedulers"][0]
         schedule = [
-            scheduler(epoch_num / self._num_updates)
-            for epoch_num in range(self._num_updates)
+            scheduler(epoch_num / self._num_updates) for epoch_num in range(self._num_updates)
         ]
         expected_schedule = [
             linear_scheduler(epoch_num / self._num_updates)

@@ -189,9 +189,7 @@ class Transform(metaclass=ABCMeta):
 
         assert callable(
             func
-        ), "You can only register a callable to a Transform. Got {} instead.".format(
-            func
-        )
+        ), "You can only register a callable to a Transform. Got {} instead.".format(func)
         argspec = inspect.getfullargspec(func)
         assert len(argspec.args) == 2, (
             "You can only register a function that takes two positional "
@@ -224,14 +222,11 @@ class Transform(metaclass=ABCMeta):
             argstr = []
             for name, param in sig.parameters.items():
                 assert (
-                    param.kind != param.VAR_POSITIONAL
-                    and param.kind != param.VAR_KEYWORD
+                    param.kind != param.VAR_POSITIONAL and param.kind != param.VAR_KEYWORD
                 ), "The default __repr__ doesn't support *args or **kwargs"
                 assert hasattr(self, name), (
                     "Attribute {} not found! "
-                    "Default __repr__ only works if attributes match the constructor.".format(
-                        name
-                    )
+                    "Default __repr__ only works if attributes match the constructor.".format(name)
                 )
                 attr = getattr(self, name)
                 default = param.default
@@ -528,9 +523,9 @@ class ScaleTransform(Transform):
             h, w = img.shape[:2]
         else:
             raise ("Unsupported input with shape of {}".format(img.shape))
-        assert (
-            self.h == h and self.w == w
-        ), "Input size mismatch h w {}:{} -> {}:{}".format(self.h, self.w, h, w)
+        assert self.h == h and self.w == w, "Input size mismatch h w {}:{} -> {}:{}".format(
+            self.h, self.w, h, w
+        )
         interp_method = interp if interp is not None else self.interp
         # Option of align_corners is only supported for linear, bilinear,
         # and bicubic.
@@ -704,9 +699,7 @@ class CropTransform(Transform):
         import shapely.geometry as geometry
 
         # Create a window that will be used to crop
-        crop_box = geometry.box(
-            self.x0, self.y0, self.x0 + self.w, self.y0 + self.h
-        ).buffer(0.0)
+        crop_box = geometry.box(self.x0, self.y0, self.x0 + self.w, self.y0 + self.h).buffer(0.0)
 
         cropped_polygons = []
 
@@ -741,9 +734,7 @@ class CropTransform(Transform):
         ), "orig_w, orig_h are required for CropTransform to be invertible!"
         pad_x1 = self.orig_w - self.x0 - self.w
         pad_y1 = self.orig_h - self.y0 - self.h
-        return PadTransform(
-            self.x0, self.y0, pad_x1, pad_y1, orig_w=self.w, orig_h=self.h
-        )
+        return PadTransform(self.x0, self.y0, pad_x1, pad_y1, orig_w=self.w, orig_h=self.h)
 
 
 class PadTransform(Transform):
@@ -805,9 +796,7 @@ class PadTransform(Transform):
         ), "orig_w, orig_h are required for PadTransform to be invertible!"
         neww = self.orig_w + self.x0 + self.x1
         newh = self.orig_h + self.y0 + self.y1
-        return CropTransform(
-            self.x0, self.y0, self.orig_w, self.orig_h, orig_w=neww, orig_h=newh
-        )
+        return CropTransform(self.x0, self.y0, self.orig_w, self.orig_h, orig_w=neww, orig_h=newh)
 
 
 class BlendTransform(Transform):

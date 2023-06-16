@@ -70,15 +70,11 @@ def _pretty_statistics(
     """
     out_stats = {}
     for mod, stats in statistics.items():
-        out_stats[mod] = {
-            s: _format_size(val, sig_figs, hide_zero) for s, val in stats.items()
-        }
+        out_stats[mod] = {s: _format_size(val, sig_figs, hide_zero) for s, val in stats.items()}
     return out_stats
 
 
-def _group_by_module(
-    statistics: Dict[str, Dict[str, Any]]
-) -> Dict[str, Dict[str, Any]]:
+def _group_by_module(statistics: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     """
     Converts statistics organized first by statistic type and then by module
     to statistics organized first by module and then by statistic type.
@@ -407,9 +403,7 @@ def flop_count_str(
     stats = _pretty_statistics(stats, sig_figs=2)
     stats = _indicate_uncalled_modules(stats, "#flops", flops.uncalled_modules())
     if activations is not None:
-        stats = _indicate_uncalled_modules(
-            stats, "#acts", activations.uncalled_modules()
-        )
+        stats = _indicate_uncalled_modules(stats, "#acts", activations.uncalled_modules())
 
     model_string = ""
     if all_uncalled:
@@ -425,9 +419,7 @@ def flop_count_str(
 ### Table Printing ###
 
 
-def _get_single_child(
-    name: str, statistics: Dict[str, Dict[str, str]]
-) -> Optional[str]:
+def _get_single_child(name: str, statistics: Dict[str, Dict[str, str]]) -> Optional[str]:
     """
     If the given module has only a single child in statistics, return it.
     Otherwise, return None.
@@ -444,9 +436,7 @@ def _get_single_child(
     return child
 
 
-def _try_combine(
-    stats1: Dict[str, str], stats2: Dict[str, str]
-) -> Optional[Dict[str, str]]:
+def _try_combine(stats1: Dict[str, str], stats2: Dict[str, str]) -> Optional[Dict[str, str]]:
     """
     Try combine two statistics dict to display in one row. If they conflict,
     returns None.
@@ -462,9 +452,7 @@ def _try_combine(
     return ret
 
 
-def _fastforward(
-    name: str, statistics: Dict[str, Dict[str, str]]
-) -> Tuple[str, Dict[str, str]]:
+def _fastforward(name: str, statistics: Dict[str, Dict[str, str]]) -> Tuple[str, Dict[str, str]]:
     """
     If the given module has only a single child and matches statistics
     with that child, merge statistics and their names into one row.

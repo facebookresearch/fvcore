@@ -19,9 +19,7 @@ def bm_focal_loss() -> None:
         {"N": 10000},
         {"N": 10000, "alpha": 0},
     ]
-    benchmark(
-        TestFocalLoss.focal_loss_with_init, "Focal_loss", kwargs_list, warmup_iters=1
-    )
+    benchmark(TestFocalLoss.focal_loss_with_init, "Focal_loss", kwargs_list, warmup_iters=1)
     benchmark(
         TestFocalLoss.focal_loss_jit_with_init,
         "Focal_loss_JIT",

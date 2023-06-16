@@ -43,9 +43,7 @@ class _MeanOfBatchVarianceEstimator:
         self.pop_var: torch.Tensor = torch.zeros_like(var_buffer)
         self.ind = 0
 
-    def update(
-        self, batch_mean: torch.Tensor, batch_var: torch.Tensor, batch_size: int
-    ) -> None:
+    def update(self, batch_mean: torch.Tensor, batch_var: torch.Tensor, batch_size: int) -> None:
         self.ind += 1
         self.pop_mean += (batch_mean - self.pop_mean) / self.ind
         self.pop_var += (batch_var - self.pop_var) / self.ind
@@ -70,17 +68,11 @@ class _PopulationVarianceEstimator:
         self.pop_square_mean: torch.Tensor = torch.zeros_like(var_buffer)
         self.tot = 0
 
-    def update(
-        self, batch_mean: torch.Tensor, batch_var: torch.Tensor, batch_size: int
-    ) -> None:
+    def update(self, batch_mean: torch.Tensor, batch_var: torch.Tensor, batch_size: int) -> None:
         self.tot += batch_size
-        batch_square_mean = batch_mean.square() + batch_var * (
-            (batch_size - 1) / batch_size
-        )
+        batch_square_mean = batch_mean.square() + batch_var * ((batch_size - 1) / batch_size)
         self.pop_mean += (batch_mean - self.pop_mean) * (batch_size / self.tot)
-        self.pop_square_mean += (batch_square_mean - self.pop_square_mean) * (
-            batch_size / self.tot
-        )
+        self.pop_square_mean += (batch_square_mean - self.pop_square_mean) * (batch_size / self.tot)
 
     @property
     def pop_var(self) -> torch.Tensor:
@@ -145,22 +137,15 @@ def update_bn_stats(
             module not in batch_size_per_bn_layer
         ), "Some BN layers are reused. This is not supported and probably not desired."
         x = input[0]
-        assert isinstance(
-            x, torch.Tensor
-        ), f"BN layer should take tensor as input. Got {input}"
+        assert isinstance(x, torch.Tensor), f"BN layer should take tensor as input. Got {input}"
         # consider spatial dimensions as batch as well
         batch_size = x.numel() // x.shape[1]
         batch_size_per_bn_layer[module] = batch_size
         return (x,)
 
-    hooks_to_remove = [
-        bn.register_forward_pre_hook(get_bn_batch_size_hook) for bn in bn_layers
-    ]
+    hooks_to_remove = [bn.register_forward_pre_hook(get_bn_batch_size_hook) for bn in bn_layers]
 
-    estimators = [
-        _PopulationVarianceEstimator(bn.running_mean, bn.running_var)
-        for bn in bn_layers
-    ]
+    estimators = [_PopulationVarianceEstimator(bn.running_mean, bn.running_var) for bn in bn_layers]
 
     ind = -1
     for inputs in tqdm.tqdm(
@@ -205,7 +190,5 @@ def get_bn_modules(model: nn.Module) -> List[nn.Module]:
         list[nn.Module]: all BN modules in the model.
     """
     # Finds all the bn layers.
-    bn_layers = [
-        m for m in model.modules() if m.training and isinstance(m, BN_MODULE_TYPES)
-    ]
+    bn_layers = [m for m in model.modules() if m.training and isinstance(m, BN_MODULE_TYPES)]
     return bn_layers

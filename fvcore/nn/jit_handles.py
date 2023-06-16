@@ -62,9 +62,7 @@ def generic_activation_jit(op_name: Optional[str] = None) -> Handle:
         Callable: An activation handle for the given operation.
     """
 
-    def _generic_activation_jit(
-        i: Any, outputs: List[Any]
-    ) -> Union[typing.Counter[str], Number]:
+    def _generic_activation_jit(i: Any, outputs: List[Any]) -> Union[typing.Counter[str], Number]:
         """
         This is a generic jit handle that counts the number of activations for any
         operation given the output shape.
@@ -166,9 +164,7 @@ def conv_flop_jit(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
     transposed = inputs[6].toIValue()
 
     # use a custom name instead of "_convolution"
-    return Counter(
-        {"conv": conv_flop_count(x_shape, w_shape, out_shape, transposed=transposed)}
-    )
+    return Counter({"conv": conv_flop_count(x_shape, w_shape, out_shape, transposed=transposed)})
 
 
 def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:

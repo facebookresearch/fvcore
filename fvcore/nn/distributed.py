@@ -27,11 +27,7 @@ def differentiable_all_reduce(input: torch.Tensor) -> torch.Tensor:
     """
     Differentiable counterpart of `dist.all_reduce`.
     """
-    if (
-        not dist.is_available()
-        or not dist.is_initialized()
-        or dist.get_world_size() == 1
-    ):
+    if not dist.is_available() or not dist.is_initialized() or dist.get_world_size() == 1:
         return input
     return _AllReduce.apply(input)
 
@@ -54,10 +50,6 @@ def differentiable_all_gather(input: torch.Tensor) -> List[torch.Tensor]:
     """
     Differentiable counterpart of `dist.all_gather`.
     """
-    if (
-        not dist.is_available()
-        or not dist.is_initialized()
-        or dist.get_world_size() == 1
-    ):
+    if not dist.is_available() or not dist.is_initialized() or dist.get_world_size() == 1:
         return [input]
     return list(_AllGather.apply(input))

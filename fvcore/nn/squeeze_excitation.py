@@ -43,19 +43,11 @@ class SqueezeExcitation(nn.Module):
             activation = nn.ReLU()
 
         if is_3d:
-            conv1 = nn.Conv3d(
-                num_channels, num_channels_reduced, kernel_size=1, bias=True
-            )
-            conv2 = nn.Conv3d(
-                num_channels_reduced, num_channels, kernel_size=1, bias=True
-            )
+            conv1 = nn.Conv3d(num_channels, num_channels_reduced, kernel_size=1, bias=True)
+            conv2 = nn.Conv3d(num_channels_reduced, num_channels, kernel_size=1, bias=True)
         else:
-            conv1 = nn.Conv2d(
-                num_channels, num_channels_reduced, kernel_size=1, bias=True
-            )
-            conv2 = nn.Conv2d(
-                num_channels_reduced, num_channels, kernel_size=1, bias=True
-            )
+            conv1 = nn.Conv2d(num_channels, num_channels_reduced, kernel_size=1, bias=True)
+            conv2 = nn.Conv2d(num_channels_reduced, num_channels, kernel_size=1, bias=True)
 
         self.is_3d = is_3d
         self.block = nn.Sequential(
@@ -168,8 +160,6 @@ class ChannelSpatialSqueezeExcitation(nn.Module):
                 For 3d X, shape = (batch_size, num_channels, T, H, W)
             output tensor
         """
-        output_tensor = torch.max(
-            self.channel(input_tensor), self.spatial(input_tensor)
-        )
+        output_tensor = torch.max(self.channel(input_tensor), self.spatial(input_tensor))
 
         return output_tensor

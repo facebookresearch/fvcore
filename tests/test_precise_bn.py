@@ -27,11 +27,7 @@ class TestPreciseBN(unittest.TestCase):
             tensors (list): list of randomly initialized tensors.
             dims (list): list of dimensions to compute the mean and variance.
         """
-        mean = (
-            torch.stack([tensor.mean(dim=dims) for tensor in tensors])
-            .mean(dim=0)
-            .numpy()
-        )
+        mean = torch.stack([tensor.mean(dim=dims) for tensor in tensors]).mean(dim=0).numpy()
         mean_of_batch_var = (
             torch.stack([tensor.var(dim=dims, unbiased=True) for tensor in tensors])
             .mean(dim=0)
@@ -52,9 +48,7 @@ class TestPreciseBN(unittest.TestCase):
             model = bn(input_dim[1])
             model.train()
             tensors = [torch.randn(input_dim) for _ in range(NB)]
-            mean, mean_of_batch_var, var = TestPreciseBN.compute_bn_stats(
-                tensors, stats_dim
-            )
+            mean, mean_of_batch_var, var = TestPreciseBN.compute_bn_stats(tensors, stats_dim)
 
             old_weight = model.weight.detach().numpy()
 

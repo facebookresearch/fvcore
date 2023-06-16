@@ -57,9 +57,7 @@ class ConstantParamScheduler(ParamScheduler):
 
     def __call__(self, where: float) -> float:
         if where >= 1.0:
-            raise RuntimeError(
-                f"where in ParamScheduler must be in [0, 1]: got {where}"
-            )
+            raise RuntimeError(f"where in ParamScheduler must be in [0, 1]: got {where}")
         return self._value
 
 
@@ -207,9 +205,7 @@ class MultiStepParamScheduler(ParamScheduler):
         if num_updates is None:
             num_updates, milestones = milestones[-1], milestones[:-1]
         if num_updates < len(values):
-            raise ValueError(
-                "Total num_updates must be greater than length of param schedule"
-            )
+            raise ValueError("Total num_updates must be greater than length of param schedule")
 
         self._param_schedule = values
         self._num_updates = num_updates
@@ -233,9 +229,7 @@ class MultiStepParamScheduler(ParamScheduler):
 
     def __call__(self, where: float) -> float:
         if where > 1.0:
-            raise RuntimeError(
-                f"where in ParamScheduler must be in [0, 1]: got {where}"
-            )
+            raise RuntimeError(f"where in ParamScheduler must be in [0, 1]: got {where}")
         epoch_num = int((where + self.WHERE_EPSILON) * self._num_updates)
         return self._param_schedule[bisect.bisect_right(self._milestones, epoch_num)]
 
@@ -293,9 +287,7 @@ class StepParamScheduler(ParamScheduler):
         if num_updates <= 0:
             raise ValueError("Number of updates must be larger than 0")
         if not (isinstance(values, Sequence) and len(values) > 0):
-            raise ValueError(
-                "Step scheduler requires a list of at least one param value"
-            )
+            raise ValueError("Step scheduler requires a list of at least one param value")
         self._param_schedule = values
 
     def __call__(self, where: float) -> float:
@@ -341,9 +333,7 @@ class StepWithFixedGammaParamScheduler(ParamScheduler):
         for _ in range(num_decays):
             values.append(values[-1] * gamma)
 
-        self._step_param_scheduler = StepParamScheduler(
-            num_updates=num_updates, values=values
-        )
+        self._step_param_scheduler = StepParamScheduler(num_updates=num_updates, values=values)
 
     def __call__(self, where: float) -> float:
         return self._step_param_scheduler(where)
@@ -389,9 +379,7 @@ class CompositeParamScheduler(ParamScheduler):
         if len(schedulers) != len(lengths):
             raise ValueError("Schedulers and lengths must be same length")
         if len(schedulers) == 0:
-            raise ValueError(
-                "There must be at least one scheduler in the composite scheduler"
-            )
+            raise ValueError("There must be at least one scheduler in the composite scheduler")
         if abs(sum(lengths) - 1.0) >= 1e-3:
             raise ValueError("The sum of all values in lengths must be 1")
         if sum(lengths) != 1.0:
@@ -408,9 +396,7 @@ class CompositeParamScheduler(ParamScheduler):
         # Find scheduler corresponding to where
         i = 0
         running_total = self._lengths[i]
-        while (where + self.WHERE_EPSILON) > running_total and i < len(
-            self._schedulers
-        ) - 1:
+        while (where + self.WHERE_EPSILON) > running_total and i < len(self._schedulers) - 1:
             i += 1
             running_total += self._lengths[i]
         scheduler = self._schedulers[i]

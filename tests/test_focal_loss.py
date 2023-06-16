@@ -28,21 +28,15 @@ class TestFocalLoss(unittest.TestCase):
         """
         No weighting of easy/hard (gamma = 0) or positive/negative (alpha = 0).
         """
-        inputs = logit(
-            torch.tensor([[[0.95], [0.90], [0.98], [0.99]]], dtype=torch.float32)
-        )
+        inputs = logit(torch.tensor([[[0.95], [0.90], [0.98], [0.99]]], dtype=torch.float32))
         targets = torch.tensor([[[1], [1], [1], [1]]], dtype=torch.float32)
         inputs_fl = inputs.clone().requires_grad_()
         targets_fl = targets.clone()
         inputs_ce = inputs.clone().requires_grad_()
         targets_ce = targets.clone()
 
-        focal_loss = sigmoid_focal_loss(
-            inputs_fl, targets_fl, gamma=0, alpha=-1, reduction="mean"
-        )
-        ce_loss = F.binary_cross_entropy_with_logits(
-            inputs_ce, targets_ce, reduction="mean"
-        )
+        focal_loss = sigmoid_focal_loss(inputs_fl, targets_fl, gamma=0, alpha=-1, reduction="mean")
+        ce_loss = F.binary_cross_entropy_with_logits(inputs_ce, targets_ce, reduction="mean")
 
         self.assertEqual(ce_loss, focal_loss.data)
         focal_loss.backward()
@@ -69,9 +63,7 @@ class TestFocalLoss(unittest.TestCase):
         """
         With gamma = 2, alpha = 0.5 loss of easy examples is downweighted.
         """
-        inputs = logit(
-            torch.tensor([[[0.95], [0.90], [0.6], [0.3]]], dtype=torch.float64)
-        )
+        inputs = logit(torch.tensor([[[0.95], [0.90], [0.6], [0.3]]], dtype=torch.float64))
         targets = torch.tensor([[[1], [1], [1], [1]]], dtype=torch.float64)
         focal_loss = sigmoid_focal_loss(inputs, targets, gamma=2, alpha=0.5)
         ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
@@ -95,17 +87,11 @@ class TestFocalLoss(unittest.TestCase):
         """
         With alpha = 1 negative examples have focal loss of 0.
         """
-        inputs = logit(
-            torch.tensor([[[0.05], [0.12], [0.89], [0.79]]], dtype=torch.float32)
-        )
+        inputs = logit(torch.tensor([[[0.05], [0.12], [0.89], [0.79]]], dtype=torch.float32))
         targets = torch.tensor([[[1], [1], [0], [0]]], dtype=torch.float32)
-        focal_loss = (
-            sigmoid_focal_loss(inputs, targets, gamma=2, alpha=1).squeeze().numpy()
-        )
+        focal_loss = sigmoid_focal_loss(inputs, targets, gamma=2, alpha=1).squeeze().numpy()
         ce_loss = (
-            F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
-            .squeeze()
-            .numpy()
+            F.binary_cross_entropy_with_logits(inputs, targets, reduction="none").squeeze().numpy()
         )
         targets = targets.squeeze().numpy()
         self.assertTrue(np.all(ce_loss[targets == 0] > 0))
@@ -115,17 +101,11 @@ class TestFocalLoss(unittest.TestCase):
         """
         With alpha = 0 postive examples have focal loss of 0.
         """
-        inputs = logit(
-            torch.tensor([[[0.05], [0.12], [0.89], [0.79]]], dtype=torch.float32)
-        )
+        inputs = logit(torch.tensor([[[0.05], [0.12], [0.89], [0.79]]], dtype=torch.float32))
         targets = torch.tensor([[[1], [1], [0], [0]]], dtype=torch.float32)
-        focal_loss = (
-            sigmoid_focal_loss(inputs, targets, gamma=2, alpha=0).squeeze().numpy()
-        )
+        focal_loss = sigmoid_focal_loss(inputs, targets, gamma=2, alpha=0).squeeze().numpy()
         ce_loss = (
-            F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
-            .squeeze()
-            .numpy()
+            F.binary_cross_entropy_with_logits(inputs, targets, reduction="none").squeeze().numpy()
         )
         targets = targets.squeeze().numpy()
         self.assertTrue(np.all(ce_loss[targets == 1] > 0))
@@ -142,9 +122,7 @@ class TestFocalLoss(unittest.TestCase):
             )
         )
         targets = torch.tensor([[1, 0], [1, 0], [1, 1], [0, 1]], dtype=torch.float32)
-        focal_loss = sigmoid_focal_loss(
-            inputs, targets, gamma=0, alpha=-1, reduction="mean"
-        )
+        focal_loss = sigmoid_focal_loss(inputs, targets, gamma=0, alpha=-1, reduction="mean")
         ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="mean")
         self.assertEqual(ce_loss, focal_loss)
 
@@ -152,13 +130,9 @@ class TestFocalLoss(unittest.TestCase):
         """
         Sum of focal loss across all examples matches ce loss.
         """
-        inputs = logit(
-            torch.tensor([[[0.05], [0.12], [0.89], [0.79]]], dtype=torch.float32)
-        )
+        inputs = logit(torch.tensor([[[0.05], [0.12], [0.89], [0.79]]], dtype=torch.float32))
         targets = torch.tensor([[[1], [1], [0], [0]]], dtype=torch.float32)
-        focal_loss = sigmoid_focal_loss(
-            inputs, targets, gamma=0, alpha=-1, reduction="sum"
-        )
+        focal_loss = sigmoid_focal_loss(inputs, targets, gamma=0, alpha=-1, reduction="sum")
         ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="sum")
         self.assertEqual(ce_loss, focal_loss)
 
@@ -183,9 +157,7 @@ class TestFocalLoss(unittest.TestCase):
             [[[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]],
             dtype=torch.float32,
         )
-        focal_loss = sigmoid_focal_loss(
-            inputs, targets, gamma=0, alpha=-1, reduction="mean"
-        )
+        focal_loss = sigmoid_focal_loss(inputs, targets, gamma=0, alpha=-1, reduction="mean")
         ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="mean")
         self.assertEqual(ce_loss, focal_loss)
 
@@ -201,44 +173,32 @@ class TestFocalLoss(unittest.TestCase):
         inputs = logit(torch.rand(N)).to(device)
         targets = torch.randint(0, 2, (N,)).float().to(device)
         focal_loss = sigmoid_focal_loss_jit(inputs, targets, gamma=0, alpha=-1)
-        ce_loss = F.binary_cross_entropy_with_logits(
-            inputs.cpu(), targets.cpu(), reduction="none"
-        )
+        ce_loss = F.binary_cross_entropy_with_logits(inputs.cpu(), targets.cpu(), reduction="none")
         self.assertTrue(np.allclose(ce_loss, focal_loss.cpu()))
 
     @staticmethod
     def focal_loss_with_init(N: int, alpha: float = -1) -> typing.Callable[[], None]:
         device = torch.device("cuda:0")
         inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
-        targets: torch.Tensor = (
-            torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
-        )
+        targets: torch.Tensor = torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
         torch.cuda.synchronize()
 
         def run_focal_loss() -> None:
-            fl = sigmoid_focal_loss(
-                inputs, targets, gamma=0, alpha=alpha, reduction="mean"
-            )
+            fl = sigmoid_focal_loss(inputs, targets, gamma=0, alpha=alpha, reduction="mean")
             fl.backward()
             torch.cuda.synchronize()
 
         return run_focal_loss
 
     @staticmethod
-    def focal_loss_jit_with_init(
-        N: int, alpha: float = -1
-    ) -> typing.Callable[[], None]:
+    def focal_loss_jit_with_init(N: int, alpha: float = -1) -> typing.Callable[[], None]:
         device = torch.device("cuda:0")
         inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
-        targets: torch.Tensor = (
-            torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
-        )
+        targets: torch.Tensor = torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
         torch.cuda.synchronize()
 
         def run_focal_loss_jit() -> None:
-            fl = sigmoid_focal_loss_jit(
-                inputs, targets, gamma=0, alpha=alpha, reduction="mean"
-            )
+            fl = sigmoid_focal_loss_jit(inputs, targets, gamma=0, alpha=alpha, reduction="mean")
             fl.backward()
             torch.cuda.synchronize()
 
@@ -254,9 +214,7 @@ class TestFocalLossStar(unittest.TestCase):
         """
         No weighting of easy/hard (gamma = 1) or positive/negative (alpha = -1).
         """
-        inputs = logit(
-            torch.tensor([[[0.95], [0.90], [0.98], [0.99]]], dtype=torch.float32)
-        )
+        inputs = logit(torch.tensor([[[0.95], [0.90], [0.98], [0.99]]], dtype=torch.float32))
         targets = torch.tensor([[[1], [1], [1], [1]]], dtype=torch.float32)
         inputs_fl = inputs.clone().requires_grad_()
         targets_fl = targets.clone()
@@ -266,9 +224,7 @@ class TestFocalLossStar(unittest.TestCase):
         focal_loss_star = sigmoid_focal_loss_star(
             inputs_fl, targets_fl, gamma=1, alpha=-1, reduction="mean"
         )
-        ce_loss = F.binary_cross_entropy_with_logits(
-            inputs_ce, targets_ce, reduction="mean"
-        )
+        ce_loss = F.binary_cross_entropy_with_logits(inputs_ce, targets_ce, reduction="mean")
 
         self.assertEqual(ce_loss, focal_loss_star.data)
         focal_loss_star.backward()
@@ -316,17 +272,13 @@ class TestFocalLossStar(unittest.TestCase):
         """
         With alpha = 1 negative examples have focal loss of 0.
         """
-        inputs = logit(
-            torch.tensor([[[0.05], [0.12], [0.89], [0.79]]], dtype=torch.float32)
-        )
+        inputs = logit(torch.tensor([[[0.05], [0.12], [0.89], [0.79]]], dtype=torch.float32))
         targets = torch.tensor([[[1], [1], [0], [0]]], dtype=torch.float32)
         focal_loss_star = (
             sigmoid_focal_loss_star(inputs, targets, gamma=3, alpha=1).squeeze().numpy()
         )
         ce_loss = (
-            F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
-            .squeeze()
-            .numpy()
+            F.binary_cross_entropy_with_logits(inputs, targets, reduction="none").squeeze().numpy()
         )
         targets = targets.squeeze().numpy()
         self.assertTrue(np.all(ce_loss[targets == 0] > 0))
@@ -336,17 +288,13 @@ class TestFocalLossStar(unittest.TestCase):
         """
         With alpha = 0 postive examples have focal loss of 0.
         """
-        inputs = logit(
-            torch.tensor([[[0.05], [0.12], [0.89], [0.79]]], dtype=torch.float32)
-        )
+        inputs = logit(torch.tensor([[[0.05], [0.12], [0.89], [0.79]]], dtype=torch.float32))
         targets = torch.tensor([[[1], [1], [0], [0]]], dtype=torch.float32)
         focal_loss_star = (
             sigmoid_focal_loss_star(inputs, targets, gamma=3, alpha=0).squeeze().numpy()
         )
         ce_loss = (
-            F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
-            .squeeze()
-            .numpy()
+            F.binary_cross_entropy_with_logits(inputs, targets, reduction="none").squeeze().numpy()
         )
         targets = targets.squeeze().numpy()
         self.assertTrue(np.all(ce_loss[targets == 1] > 0))
@@ -373,9 +321,7 @@ class TestFocalLossStar(unittest.TestCase):
         """
         Sum of focal loss across all examples matches ce loss.
         """
-        inputs = logit(
-            torch.tensor([[[0.05], [0.12], [0.89], [0.79]]], dtype=torch.float32)
-        )
+        inputs = logit(torch.tensor([[[0.05], [0.12], [0.89], [0.79]]], dtype=torch.float32))
         targets = torch.tensor([[[1], [1], [0], [0]]], dtype=torch.float32)
         focal_loss_star = sigmoid_focal_loss_star(
             inputs, targets, gamma=1, alpha=-1, reduction="sum"
@@ -422,40 +368,28 @@ class TestFocalLossStar(unittest.TestCase):
         inputs = logit(torch.rand(N)).to(device)
         targets = torch.randint(0, 2, (N,)).float().to(device)
         focal_loss_star = sigmoid_focal_loss_star_jit(inputs, targets, gamma=1)
-        ce_loss = F.binary_cross_entropy_with_logits(
-            inputs.cpu(), targets.cpu(), reduction="none"
-        )
+        ce_loss = F.binary_cross_entropy_with_logits(inputs.cpu(), targets.cpu(), reduction="none")
         self.assertTrue(np.allclose(ce_loss, focal_loss_star.cpu()))
 
     @staticmethod
-    def focal_loss_star_with_init(
-        N: int, alpha: float = -1
-    ) -> typing.Callable[[], None]:
+    def focal_loss_star_with_init(N: int, alpha: float = -1) -> typing.Callable[[], None]:
         device = torch.device("cuda:0")
         inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
-        targets: torch.Tensor = (
-            torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
-        )
+        targets: torch.Tensor = torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
         torch.cuda.synchronize()
 
         def run_focal_loss_star() -> None:
-            fl = sigmoid_focal_loss_star(
-                inputs, targets, gamma=1, alpha=alpha, reduction="mean"
-            )
+            fl = sigmoid_focal_loss_star(inputs, targets, gamma=1, alpha=alpha, reduction="mean")
             fl.backward()
             torch.cuda.synchronize()
 
         return run_focal_loss_star
 
     @staticmethod
-    def focal_loss_star_jit_with_init(
-        N: int, alpha: float = -1
-    ) -> typing.Callable[[], None]:
+    def focal_loss_star_jit_with_init(N: int, alpha: float = -1) -> typing.Callable[[], None]:
         device = torch.device("cuda:0")
         inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
-        targets: torch.Tensor = (
-            torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
-        )
+        targets: torch.Tensor = torch.randint(0, 2, (N,)).float().to(device).requires_grad_()
         torch.cuda.synchronize()
 
         def run_focal_loss_star_jit() -> None:

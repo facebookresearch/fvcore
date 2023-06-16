@@ -96,9 +96,7 @@ class TestActivationCountAnalysis(unittest.TestCase):
         gt_count = batch_size * output_dim
         gt_dict = defaultdict(float)
         gt_dict[self.lin_op] = gt_count / 1e6
-        self.assertEquals(
-            gt_dict, ac_dict, "FC layer failed to pass the activation count test."
-        )
+        self.assertEquals(gt_dict, ac_dict, "FC layer failed to pass the activation count test.")
 
     def test_supported_ops(self) -> None:
         """

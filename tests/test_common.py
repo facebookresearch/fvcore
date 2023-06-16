@@ -51,9 +51,7 @@ class TestHistoryBuffer(unittest.TestCase):
         for _ in range(num_iters):
             gt_len = 1000
             buffer_len = np.random.randint(1, gt_len)
-            create_buffer = TestHistoryBuffer.create_buffer_with_init(
-                gt_len, buffer_len
-            )
+            create_buffer = TestHistoryBuffer.create_buffer_with_init(gt_len, buffer_len)
             buf, gt = create_buffer()  # pyre-ignore
 
             values, iterations = zip(*buf.values())
@@ -199,9 +197,7 @@ class TestCfgNode(unittest.TestCase):
         cfg.COMPUTED_1 = "computed1"
         with self.assertRaises(KeyError) as err:
             cfg.COMPUTED_1 = "update_computed1"
-        self.assertTrue(
-            "Computed attributed 'COMPUTED_1' already exists" in str(err.exception)
-        )
+        self.assertTrue("Computed attributed 'COMPUTED_1' already exists" in str(err.exception))
 
         # Resetting the same value should be safe:
         cfg.COMPUTED_1 = "computed1"
@@ -230,11 +226,8 @@ class TestRegistry(unittest.TestCase):
         with self.assertRaises(KeyError) as err:
             OBJECT_REGISTRY.get("Object2")
         self.assertTrue(
-            "No object named 'Object2' found in 'OBJECT' registry!"
-            in str(err.exception)
+            "No object named 'Object2' found in 'OBJECT' registry!" in str(err.exception)
         )
 
         items = list(OBJECT_REGISTRY)
-        self.assertListEqual(
-            items, [("Object1", Object1)], "Registry iterable contains valid item"
-        )
+        self.assertListEqual(items, [("Object1", Object1)], "Registry iterable contains valid item")

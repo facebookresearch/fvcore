@@ -40,9 +40,7 @@ class CfgNode(_CfgNode):
         return g_pathmgr.open(filename, "r")
 
     @classmethod
-    def load_yaml_with_base(
-        cls, filename: str, allow_unsafe: bool = False
-    ) -> Dict[str, Any]:
+    def load_yaml_with_base(cls, filename: str, allow_unsafe: bool = False) -> Dict[str, Any]:
         """
         Just like `yaml.load(open(filename))`, but inherit attributes from its
             `_BASE_`.
@@ -65,9 +63,7 @@ class CfgNode(_CfgNode):
                 logger = logging.getLogger(__name__)
                 logger.warning(
                     "Loading config {} with yaml.unsafe_load. Your machine may "
-                    "be at risk if the file contains malicious content.".format(
-                        filename
-                    )
+                    "be at risk if the file contains malicious content.".format(filename)
                 )
                 f.close()
                 with cls._open_cfg(filename) as f:
@@ -77,9 +73,7 @@ class CfgNode(_CfgNode):
             # merge dict a into dict b. values in a will overwrite b.
             for k, v in a.items():
                 if isinstance(v, dict) and k in b:
-                    assert isinstance(
-                        b[k], dict
-                    ), "Cannot inherit key '{}' from base!".format(k)
+                    assert isinstance(b[k], dict), "Cannot inherit key '{}' from base!".format(k)
                     merge_a_into_b(v, b[k])
                 else:
                     b[k] = v
@@ -126,9 +120,9 @@ class CfgNode(_CfgNode):
         Args:
             cfg_other (CfgNode): configs to merge from.
         """
-        assert (
-            BASE_KEY not in cfg_other
-        ), "The reserved key '{}' can only be used in files!".format(BASE_KEY)
+        assert BASE_KEY not in cfg_other, "The reserved key '{}' can only be used in files!".format(
+            BASE_KEY
+        )
         return super().merge_from_other_cfg(cfg_other)
 
     def merge_from_list(self, cfg_list: List[str]) -> Callable[[], None]:
@@ -137,9 +131,9 @@ class CfgNode(_CfgNode):
             cfg_list (list): list of configs to merge from.
         """
         keys = set(cfg_list[0::2])
-        assert (
-            BASE_KEY not in keys
-        ), "The reserved key '{}' can only be used in files!".format(BASE_KEY)
+        assert BASE_KEY not in keys, "The reserved key '{}' can only be used in files!".format(
+            BASE_KEY
+        )
         return super().merge_from_list(cfg_list)
 
     def __setattr__(self, name: str, val: Any) -> None:  # pyre-ignore

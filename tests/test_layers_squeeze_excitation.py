@@ -108,9 +108,7 @@ class TestSqueezeExcitation(unittest.TestCase):
             yield torch.rand(shape)
 
     @staticmethod
-    def _get_inputs(
-        num_channels: int = 8, is_3d: bool = False
-    ) -> Iterable[torch.Tensor]:
+    def _get_inputs(num_channels: int = 8, is_3d: bool = False) -> Iterable[torch.Tensor]:
         """
         Provide different tensors as test cases.
 
