@@ -58,6 +58,11 @@ run_unittests: &run_unittests
         python -m unittest discover -v -s tests
         python -m unittest discover -v -s io_tests
 
+select_cuda: &select_cuda
+  - run:
+      name: Select CUDA
+      command: |
+        sudo update-alternatives --set cuda /usr/local/cuda-<< parameters.cuda_version >>
 # -------------------------------------------------------------------------------------
 # Jobs to run
 # -------------------------------------------------------------------------------------
@@ -101,6 +106,7 @@ jobs:
 
     steps:
       - checkout
+      - <<: *select_cuda
       - run:
           name: Install nvidia-docker
           working_directory: ~/
@@ -184,6 +190,7 @@ workflows:
           context:
             - DOCKERHUB_TOKEN
       - gpu_tests:
+          cuda_version: '12.1'
           context:
             - DOCKERHUB_TOKEN
 
