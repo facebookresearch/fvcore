@@ -123,6 +123,7 @@ class Checkpointer:
         assert os.path.basename(save_file) == basename, basename
         self.logger.info("Saving checkpoint to {}".format(save_file))
         with self.path_manager.open(save_file, "wb") as f:
+            # pyre-fixme[22]: The cast is redundant.
             torch.save(data, cast(IO[bytes], f))
         self.tag_last_checkpoint(basename)
 
@@ -186,8 +187,6 @@ class Checkpointer:
             # if file doesn't exist, maybe because it has just been
             # deleted by a separate process
             return ""
-        # pyre-fixme[6]: For 2nd argument expected `Union[PathLike[str], str]` but
-        #  got `Union[bytes, str]`.
         return os.path.join(self.save_dir, last_saved)
 
     def get_all_checkpoint_files(self) -> List[str]:
@@ -234,7 +233,7 @@ class Checkpointer:
         """
         save_file = os.path.join(self.save_dir, "last_checkpoint")
         with self.path_manager.open(save_file, "w") as f:
-            f.write(last_filename_basename)  # pyre-ignore
+            f.write(last_filename_basename)
 
     def _load_file(self, f: str) -> Dict[str, Any]:
         """
@@ -249,6 +248,7 @@ class Checkpointer:
                 to torch.Tensor or numpy arrays.
         """
         with self.path_manager.open(f, "rb") as file:
+            # pyre-fixme[22]: The cast is redundant.
             return torch.load(cast(IO[bytes], file), map_location=torch.device("cpu"))
 
     def _load_model(self, checkpoint: Any) -> _IncompatibleKeys:
