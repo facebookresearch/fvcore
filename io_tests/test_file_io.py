@@ -283,4 +283,4 @@ class TestOneDrive(unittest.TestCase):
             "https://api.onedrive.com/v1.0/shares/u!aHR0cHM6Ly8xZHJ2Lm1zL3UvcyFBd"
             + "XM4VkNaX0NfMzNnUWJKc1VQVElqM3JRdTk5/root/content"
         )
-        self.assertEquals(_direct_url, _gt_url)
+        self.assertEqual(_direct_url, _gt_url)
