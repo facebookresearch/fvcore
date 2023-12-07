@@ -58,7 +58,6 @@ class TestHistoryBuffer(unittest.TestCase):
             values, iterations = zip(*buf.values())
             self.assertEqual(len(values), buffer_len)
             self.assertEqual(len(iterations), buffer_len)
-            # pyre-fixme[16]: `bool` has no attribute `all`.
             self.assertTrue((values == gt[-buffer_len:]).all())
             iterations_gt = np.arange(gt_len - buffer_len, gt_len)
             self.assertTrue(
