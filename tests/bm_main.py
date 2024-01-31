@@ -7,13 +7,13 @@ import sys
 from os.path import basename, dirname, isfile, join
 
 
-if __name__ == "__main__":
+def main() -> None:
     if len(sys.argv) > 1:
         # Parse from flags.
-        module_names = [n for n in sys.argv if n.startswith("bm_")]  # pyre-ignore
+        module_names = [n for n in sys.argv if n.startswith("bm_")]
     else:
         # Get all the benchmark files (starting with "bm_").
-        bm_files = glob.glob(join(dirname(__file__), "bm_*.py"))  # pyre-ignore
+        bm_files = glob.glob(join(dirname(__file__), "bm_*.py"))
         module_names = [
             basename(f)[:-3]
             for f in bm_files
@@ -27,3 +27,7 @@ if __name__ == "__main__":
             if attr.startswith("bm_"):
                 print("Running benchmarks for " + module_name + "/" + attr + "...")
                 getattr(module, attr)()
+
+
+if __name__ == "__main__":
+    main()  # pragma: no cover
