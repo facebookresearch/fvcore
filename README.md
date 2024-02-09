@@ -22,7 +22,7 @@ Besides some basic utilities, fvcore includes the following features:
 
 ## Install:
 
-fvcore requires pytorch and python >= 3.6.
+fvcore requires pytorch and python >= 3.8.
 
 Use one of the following ways to install:
 

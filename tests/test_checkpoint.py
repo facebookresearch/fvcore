@@ -12,8 +12,9 @@ from typing import Tuple
 from unittest.mock import MagicMock
 
 import torch
-from fvcore.common.checkpoint import Checkpointer, PeriodicCheckpointer
 from torch import nn
+
+from fvcore.common.checkpoint import Checkpointer, PeriodicCheckpointer
 
 
 TORCH_VERSION: Tuple[int, ...] = tuple(int(x) for x in torch.__version__.split(".")[:2])
@@ -118,7 +119,6 @@ class TestCheckpointer(unittest.TestCase):
                 nn.DataParallel(self._create_model()),
             ),
         ]:
-
             with TemporaryDirectory() as f:
                 checkpointer = Checkpointer(trained_model, save_dir=f)
                 checkpointer.save("checkpoint_file")
@@ -264,9 +264,9 @@ class TestCheckpointer(unittest.TestCase):
         )
         logger.info.assert_not_called()
 
-    @unittest.skipIf(  # pyre-fixme[56]
+    @unittest.skipIf(
         not hasattr(nn, "LazyLinear"), "LazyModule not supported"
-    )
+    )  # pyre-fixme[56]
     def test_load_lazy_module(self) -> None:
         def _get_model() -> nn.Sequential:
             return nn.Sequential(nn.LazyLinear(10))

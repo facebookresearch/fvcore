@@ -13,9 +13,10 @@ from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Uni
 import numpy as np
 import torch
 import torch.nn as nn
-from fvcore.common.checkpoint import _named_modules_with_dup
 from torch import Tensor
 from torch.jit import _get_trace_graph, TracerWarning
+
+from fvcore.common.checkpoint import _named_modules_with_dup
 
 from .jit_handles import Handle
 

@@ -6,6 +6,7 @@ import unittest
 
 import torch
 import torch.nn as nn
+
 from fvcore.nn.weight_init import c2_msra_fill, c2_xavier_fill
 
 

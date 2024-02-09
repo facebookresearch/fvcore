@@ -1,7 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
-from fvcore.common.benchmark import benchmark
 from test_common import TestHistoryBuffer
+
+from fvcore.common.benchmark import benchmark
 
 
 def bm_history_buffer_update() -> None:

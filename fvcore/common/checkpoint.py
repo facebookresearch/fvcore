@@ -291,7 +291,6 @@ class Checkpointer:
                 shape_model = tuple(model_param.shape)
                 shape_checkpoint = tuple(checkpoint_state_dict[k].shape)
                 if shape_model != shape_checkpoint:
-
                     has_observer_base_classes = (
                         TORCH_VERSION >= (1, 8)
                         and hasattr(quantization, "ObserverBase")
