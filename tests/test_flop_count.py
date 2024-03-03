@@ -189,6 +189,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
         The second case checks when a new handle for a default operation is
         passed. The new handle should overwrite the default handle.
         """
+
         # New handle for a new operation.
         def dummy_sigmoid_flop_jit(
             inputs: typing.List[Any], outputs: typing.List[Any]
