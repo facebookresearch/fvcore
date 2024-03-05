@@ -1,4 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+
+# pyre-strict
 # pyre-ignore-all-errors[2,3,16,33,6,23]
 # NOTE: most Any type in this file should be torch._C.Value - which was not yet annotated.
 # pyre also doesn't work well with many Optional in this file

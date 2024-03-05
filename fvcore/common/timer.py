@@ -1,6 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 # -*- coding: utf-8 -*-
 
+# pyre-strict
+
 from time import perf_counter
 from typing import Optional
 

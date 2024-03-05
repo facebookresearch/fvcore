@@ -1,5 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
+# pyre-strict
+
 from typing import List, Optional, Tuple
 
 import numpy as np

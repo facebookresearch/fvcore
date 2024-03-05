@@ -1,5 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 
+# pyre-ignore-all-errors
+
 import copy
 import unittest
 from typing import Any, Dict

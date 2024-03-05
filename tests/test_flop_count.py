@@ -1,4 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+
+# pyre-strict
 # pyre-ignore-all-errors[2,3,14,53]
 import typing
 import unittest

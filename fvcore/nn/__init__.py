@@ -1,4 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+
+# pyre-ignore-all-errors
 from .activation_count import activation_count, ActivationCountAnalysis
 from .flop_count import flop_count, FlopCountAnalysis
 from .focal_loss import (

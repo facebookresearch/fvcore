@@ -1,3 +1,4 @@
+# pyre-strict
 from typing import List, Tuple
 
 import torch

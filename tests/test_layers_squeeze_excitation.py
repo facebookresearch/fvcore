@@ -1,4 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+
+# pyre-strict
 import itertools
 import unittest
 from typing import Iterable

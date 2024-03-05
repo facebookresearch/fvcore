@@ -1,5 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
+# pyre-strict
+
 from fvcore.common.benchmark import benchmark
 from test_common import TestHistoryBuffer
 

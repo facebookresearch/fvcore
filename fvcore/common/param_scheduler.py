@@ -1,3 +1,4 @@
+# pyre-strict
 import bisect
 import math
 from typing import List, Optional, Sequence, Union

@@ -1,5 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 
+# pyre-ignore-all-errors
+
 import unittest
 
 from fvcore.common.param_scheduler import PolynomialDecayParamScheduler

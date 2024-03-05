@@ -1,4 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+
+# pyre-strict
 # pyre-ignore-all-errors[2,3,58]
 
 import logging
