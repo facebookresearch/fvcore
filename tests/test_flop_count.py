@@ -9,6 +9,8 @@ from typing import Any, Dict, Tuple
 
 import torch
 import torch.nn as nn
+
+# pyre-fixme[21]: Could not find module `fvcore.nn.flop_count`.
 from fvcore.nn.flop_count import _DEFAULT_SUPPORTED_OPS, flop_count, FlopCountAnalysis
 from fvcore.nn.jit_handles import Handle
 from torch.autograd.function import Function

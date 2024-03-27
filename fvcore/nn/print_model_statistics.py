@@ -9,8 +9,13 @@ import tabulate
 import torch
 from torch import nn
 
+# pyre-fixme[21]: Could not find module `fvcore.nn.activation_count`.
 from .activation_count import ActivationCountAnalysis
+
+# pyre-fixme[21]: Could not find module `fvcore.nn.flop_count`.
 from .flop_count import FlopCountAnalysis
+
+# pyre-fixme[21]: Could not find module `fvcore.nn.parameter_count`.
 from .parameter_count import parameter_count
 
 
