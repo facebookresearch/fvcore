@@ -5,7 +5,6 @@
 
 import unittest
 
-# pyre-fixme[21]: Could not find module `fvcore.nn.parameter_count`.
 from fvcore.nn.parameter_count import parameter_count, parameter_count_table
 from torch import nn
 
