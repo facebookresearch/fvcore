@@ -310,7 +310,11 @@ def _get_input_sizes(iterable: Iterable[Any]) -> List[Any]:  # pyre-ignore[2,3]
 
 
 def flop_count_str(
-    flops: FlopCountAnalysis, activations: Optional[ActivationCountAnalysis] = None
+    # pyre-fixme[11]: Annotation `FlopCountAnalysis` is not defined as a type.
+    # pyre-fixme[11]: Annotation `ActivationCountAnalysis` is not defined as a type.
+    flops: FlopCountAnalysis,
+    # pyre-fixme[11]: Annotation `ActivationCountAnalysis` is not defined as a type.
+    activations: Optional[ActivationCountAnalysis] = None,
 ) -> str:
     """
     Calculates the parameters and flops of the model with the given inputs
