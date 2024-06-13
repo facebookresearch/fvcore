@@ -38,6 +38,10 @@ def get_shape(val: Any) -> Optional[List[int]]:
         return None
 
 
+def get_values(vals: List[Any]) -> Optional[List[Any]]:
+    return [v.toIValue() for v in vals]
+
+
 """
 Below are flop/activation counters for various ops. Every counter has the following signature:
 
@@ -65,7 +69,7 @@ def generic_activation_jit(op_name: Optional[str] = None) -> Handle:
     """
 
     def _generic_activation_jit(
-        i: Any, outputs: List[Any]
+            inputs: Any, outputs: List[Any]
     ) -> Union[typing.Counter[str], Number]:
         """
         This is a generic jit handle that counts the number of activations for any
@@ -75,8 +79,19 @@ def generic_activation_jit(op_name: Optional[str] = None) -> Handle:
         ac_count = prod(out_shape)
         if op_name is None:
             return ac_count
-        else:
-            return Counter({op_name: ac_count})
+
+        if op_name == "lstm":
+            time_dim, batch_size, input_dim = get_shape(inputs[0])
+            *_, proj_size = get_shape(outputs[1])
+            *_, hidden_dim = get_shape(outputs[2])
+
+            *_, bias, lstm_layers, dropout, _, bidirectional, batch_first = get_values(inputs)
+
+            ac_count = 11 * proj_size + (0 if proj_size == hidden_dim else hidden_dim)
+
+            return ac_count * batch_size * (2 if bidirectional else 1) * lstm_layers * time_dim
+
+        return Counter({op_name: ac_count})
 
     return _generic_activation_jit
 
@@ -110,6 +125,22 @@ def linear_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     assert input_shapes[0][-1] == input_shapes[1][-1]
     flops = prod(input_shapes[0]) * input_shapes[1][0]
     return flops
+
+
+def lstm_flop_jit(inputs: List[Any], outputs: List[Any]):
+    """
+    Count flops for the aten::lstm operator.
+    """
+    time_dim, batch_size, input_dim = get_shape(inputs[0])
+    *_, proj_size = get_shape(outputs[1])
+    *_, hidden_dim = get_shape(outputs[2])
+
+    *_, _, lstm_layers, _, _, bidirectional, batch_first = get_values(inputs)
+
+    mm_flops = 4 * ((input_dim + hidden_dim) * proj_size) + (hidden_dim * proj_size if hidden_dim != proj_size else 0)
+    mul_flops = 3 * proj_size
+
+    return (mm_flops + mul_flops) * batch_size * (2 if bidirectional else 1) * lstm_layers * time_dim
 
 
 def bmm_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
