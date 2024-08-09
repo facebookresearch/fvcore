@@ -63,6 +63,7 @@ class NestedNetInnerModule(nn.Module):
         x = x.reshape(-1, 2, 5)
         x = self.conv(x)
         x = torch.flatten(x, 1)
+        # pyre-fixme[9]: x has type `Tensor`; used as `int`.
         x = 3 * self.fc(x) + 1
         return x
 
