@@ -22,7 +22,8 @@ class TestHistoryBuffer(unittest.TestCase):
 
     @staticmethod
     def create_buffer_with_init(
-        num_values: int, buffer_len: int = 1000000
+        num_values: int,
+        buffer_len: int = 1000000,
     ) -> typing.Callable[[], typing.Union[object, np.ndarray]]:
         """
         Return a HistoryBuffer of the given length filled with random numbers.
@@ -33,6 +34,7 @@ class TestHistoryBuffer(unittest.TestCase):
         """
 
         max_value = 1000
+        # pyre-fixme[24]: Generic type `np.ndarray` expects 2 type parameters.
         values: np.ndarray = np.random.randint(max_value, size=num_values)
 
         def create_buffer() -> typing.Union[object, np.ndarray]:
@@ -55,7 +57,9 @@ class TestHistoryBuffer(unittest.TestCase):
             create_buffer = TestHistoryBuffer.create_buffer_with_init(
                 gt_len, buffer_len
             )
-            buf, gt = create_buffer()  # pyre-ignore
+            # pyre-fixme[23]: Unable to unpack `Union[ndarray[typing.Any,
+            #  typing.Any], object]` into 2 values.
+            buf, gt = create_buffer()
 
             values, iterations = zip(*buf.values())
             self.assertEqual(len(values), buffer_len)

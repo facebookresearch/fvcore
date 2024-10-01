@@ -261,7 +261,7 @@ class TestCheckpointer(unittest.TestCase):
         incompatible = chkpt._load_model(data)
         chkpt._log_incompatible_keys(incompatible)
         self.assertTrue(
-            # pyre-fixme[6]: For 1st param expected `Tensor` but got `float`.
+            # pyre-fixme[6]: For 1st argument expected `Tensor` but got `float`.
             torch.allclose(new_model.y.bias - 5.0, torch.zeros_like(new_model.y.bias))
         )
         logger.info.assert_not_called()

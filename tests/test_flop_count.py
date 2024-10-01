@@ -195,7 +195,8 @@ class TestFlopCountAnalysis(unittest.TestCase):
 
         # New handle for a new operation.
         def dummy_sigmoid_flop_jit(
-            inputs: typing.List[Any], outputs: typing.List[Any]
+            inputs: typing.List[Any],
+            outputs: typing.List[Any],
         ) -> typing.Counter[str]:
             """
             A dummy handle function for sigmoid. Note the handle here does
@@ -222,7 +223,8 @@ class TestFlopCountAnalysis(unittest.TestCase):
         # New handle that overwrites a default handle addmm. So now the new
         # handle counts flops for the fully connected layer.
         def addmm_dummy_flop_jit(
-            inputs: typing.List[object], outputs: typing.List[object]
+            inputs: typing.List[object],
+            outputs: typing.List[object],
         ) -> typing.Counter[str]:
             """
             A dummy handle function for fully connected layers. This overwrites

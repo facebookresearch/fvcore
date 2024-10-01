@@ -110,7 +110,9 @@ class TestSqueezeExcitation(unittest.TestCase):
 
     @staticmethod
     def _get_inputs(
-        num_channels: int = 8, is_3d: bool = False
+        num_channels: int = 8,
+        # pyre-fixme[11]: Annotation `bool` is not defined as a type.
+        is_3d: bool = False,
     ) -> Iterable[torch.Tensor]:
         """
         Provide different tensors as test cases.

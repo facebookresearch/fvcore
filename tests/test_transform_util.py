@@ -12,8 +12,11 @@ class TestTransformUtil(unittest.TestCase):
     def test_convert(self) -> None:
         N, C, H, W = 4, 64, 14, 14
         np.random.seed(0)
+        # pyre-fixme[24]: Generic type `np.ndarray` expects 2 type parameters.
         array_HW: np.ndarray = np.random.rand(H, W)
+        # pyre-fixme[24]: Generic type `np.ndarray` expects 2 type parameters.
         array_HWC: np.ndarray = np.random.rand(H, W, C)
+        # pyre-fixme[24]: Generic type `np.ndarray` expects 2 type parameters.
         array_NHWC: np.ndarray = np.random.rand(N, H, W, C)
         arrays = [
             array_HW,

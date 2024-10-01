@@ -648,7 +648,8 @@ class TestJitModelAnalysis(unittest.TestCase):
         # Overwrite an op handle
         def make_dummy_op(name: str, output: int) -> Handle:
             def dummy_ops_handle(
-                inputs: List[Any], outputs: List[Any]
+                inputs: List[Any],
+                outputs: List[Any],
             ) -> typing.Counter[str]:
                 return Counter({name: output})
 
@@ -657,7 +658,8 @@ class TestJitModelAnalysis(unittest.TestCase):
         dummy_name = "dummy_op"
         dummy_out = 1000
         analyzer.set_op_handle(
-            "aten::{}".format(self.lin_op), make_dummy_op(dummy_name, dummy_out)
+            "aten::{}".format(self.lin_op),
+            make_dummy_op(dummy_name, dummy_out),
         )
 
         dummy_flops = {}

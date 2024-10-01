@@ -22,14 +22,19 @@ def main() -> None:
             if isfile(f) and not f.endswith("bm_main.py")
         ]
 
+    # pyre-fixme[16]: `List` has no attribute `__iter__`.
     for module_name in module_names:
         module = importlib.import_module(module_name)
         for attr in dir(module):
             # Run all the functions with names "bm_*" in the module.
             if attr.startswith("bm_"):
+                # pyre-fixme[16]: `str` has no attribute `__add__`.
+                # pyre-fixme[58]: `+` is not supported for operand types `str` and
+                #  `Any`.
                 print("Running benchmarks for " + module_name + "/" + attr + "...")
                 getattr(module, attr)()
 
 
+# pyre-fixme[16]: `str` has no attribute `__eq__`.
 if __name__ == "__main__":
     main()  # pragma: no cover

@@ -35,7 +35,9 @@ class TestWeightInit(unittest.TestCase):
 
     @staticmethod
     def weight_and_bias_dist_match(
-        weight: torch.Tensor, bias: torch.Tensor, target_std: torch.Tensor
+        weight: torch.Tensor,
+        bias: torch.Tensor,
+        target_std: torch.Tensor,
     ) -> bool:
         # When the size of the weight is relative small, sampling on a small
         # number of elements would not give us a standard deviation that close
@@ -74,9 +76,9 @@ class TestWeightInit(unittest.TestCase):
                     spatial_dim = k_size**3
 
                 # Calculate fan_in and fan_out.
-                # pyre-fixme[61]: `spatial_dim` may not be initialized here.
+                # pyre-fixme[61]: `spatial_dim` is undefined, or not always defined.
                 fan_in = c_in_dim * spatial_dim
-                # pyre-fixme[61]: `spatial_dim` may not be initialized here.
+                # pyre-fixme[61]: `spatial_dim` is undefined, or not always defined.
                 fan_out = c_out_dim * spatial_dim
 
                 # Msra weight init check.
@@ -84,10 +86,10 @@ class TestWeightInit(unittest.TestCase):
                 self.assertTrue(
                     TestWeightInit.weight_and_bias_dist_match(
                         model.weight,
-                        # pyre-fixme[6]: For 2nd param expected `Tensor` but got
+                        # pyre-fixme[6]: For 2nd argument expected `Tensor` but got
                         #  `Optional[Tensor]`.
                         model.bias,
-                        # pyre-fixme[6]: Expected `Tensor` for 3rd param but got
+                        # pyre-fixme[6]: For 3rd argument expected `Tensor` but got
                         #  `float`.
                         TestWeightInit.msra_fill_std(fan_out),
                     )
@@ -98,10 +100,10 @@ class TestWeightInit(unittest.TestCase):
                 self.assertTrue(
                     TestWeightInit.weight_and_bias_dist_match(
                         model.weight,
-                        # pyre-fixme[6]: For 2nd param expected `Tensor` but got
+                        # pyre-fixme[6]: For 2nd argument expected `Tensor` but got
                         #  `Optional[Tensor]`.
                         model.bias,
-                        # pyre-fixme[6]: Expected `Tensor` for 3rd param but got
+                        # pyre-fixme[6]: For 3rd argument expected `Tensor` but got
                         #  `float`.
                         TestWeightInit.xavier_fill_std(fan_in),
                     )
@@ -130,7 +132,7 @@ class TestWeightInit(unittest.TestCase):
                     TestWeightInit.weight_and_bias_dist_match(
                         model.weight,
                         model.bias,
-                        # pyre-fixme[6]: Expected `Tensor` for 3rd param but got
+                        # pyre-fixme[6]: For 3rd argument expected `Tensor` but got
                         #  `float`.
                         TestWeightInit.msra_fill_std(fan_out),
                     )
@@ -142,7 +144,7 @@ class TestWeightInit(unittest.TestCase):
                     TestWeightInit.weight_and_bias_dist_match(
                         model.weight,
                         model.bias,
-                        # pyre-fixme[6]: Expected `Tensor` for 3rd param but got
+                        # pyre-fixme[6]: For 3rd argument expected `Tensor` but got
                         #  `float`.
                         TestWeightInit.xavier_fill_std(fan_in),
                     )

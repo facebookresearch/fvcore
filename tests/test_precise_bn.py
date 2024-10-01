@@ -19,7 +19,9 @@ class TestPreciseBN(unittest.TestCase):
 
     @staticmethod
     def compute_bn_stats(
-        tensors: List[torch.Tensor], dims: List[int]
+        tensors: List[torch.Tensor],
+        # pyre-fixme[11]: Annotation `int` is not defined as a type.
+        dims: List[int],
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Given a list of random initialized tensors, compute the mean and
