@@ -22,10 +22,8 @@ class TestHistoryBuffer(unittest.TestCase):
 
     @staticmethod
     def create_buffer_with_init(
-        # pyre-fixme[11]: Annotation `int` is not defined as a type.
         num_values: int,
         buffer_len: int = 1000000,
-        # pyre-fixme[11]: Annotation `object` is not defined as a type.
         # pyre-fixme[24]: Generic type `np.ndarray` expects 2 type parameters.
     ) -> typing.Callable[[], typing.Union[object, np.ndarray]]:
         """
@@ -42,7 +40,6 @@ class TestHistoryBuffer(unittest.TestCase):
 
         # pyre-fixme[24]: Generic type `np.ndarray` expects 2 type parameters.
         def create_buffer() -> typing.Union[object, np.ndarray]:
-            # pyre-fixme[29]: `type[HistoryBuffer]` is not a function.
             buf = HistoryBuffer(buffer_len)
             for v in values:
                 buf.update(v)
@@ -70,12 +67,9 @@ class TestHistoryBuffer(unittest.TestCase):
             self.assertEqual(len(values), buffer_len)
             self.assertEqual(len(iterations), buffer_len)
             self.assertTrue((values == gt[-buffer_len:]).all())
-            # pyre-fixme[16]: `int` has no attribute `__sub__`.
-            # pyre-fixme[58]: `-` is not supported for operand types `int` and `Any`.
             iterations_gt = np.arange(gt_len - buffer_len, gt_len)
             self.assertTrue(
                 (iterations == iterations_gt).all(),
-                # pyre-fixme[16]: `str` has no attribute `join`.
                 ", ".join(str(x) for x in iterations),
             )
             self.assertAlmostEqual(buf.global_avg(), gt.mean())
@@ -85,7 +79,6 @@ class TestHistoryBuffer(unittest.TestCase):
                 buf.median(w),
                 np.median(gt[-effective_w:]),
                 None,
-                # pyre-fixme[16]: `str` has no attribute `join`.
                 " ".join(str(x) for x in gt[-effective_w:]),
             )
             self.assertAlmostEqual(
@@ -101,49 +94,35 @@ class TestTimer(unittest.TestCase):
         """
         Test basic timer functions (pause, resume, and reset).
         """
-        # pyre-fixme[29]: `type[Timer]` is not a function.
         timer = Timer()
         time.sleep(0.5)
-        # pyre-fixme[16]: `float` has no attribute `__gt__`.
-        # pyre-fixme[58]: `>` is not supported for operand types `float` and `Any`.
         self.assertTrue(0.99 > timer.seconds() >= 0.5)
 
         timer.pause()
         time.sleep(0.5)
 
-        # pyre-fixme[58]: `>` is not supported for operand types `float` and `Any`.
         self.assertTrue(0.99 > timer.seconds() >= 0.5)
 
         timer.resume()
         time.sleep(0.5)
-        # pyre-fixme[58]: `>` is not supported for operand types `float` and `Any`.
         self.assertTrue(1.49 > timer.seconds() >= 1.0)
 
         timer.reset()
-        # pyre-fixme[58]: `>` is not supported for operand types `float` and `Any`.
         self.assertTrue(0.49 > timer.seconds() >= 0)
 
     def test_avg_second(self) -> None:
         """
         Test avg_seconds that counts the average time.
         """
-        # pyre-fixme[16]: `Tuple` has no attribute `__iter__`.
         for pause_second in (0.1, 0.15):
-            # pyre-fixme[29]: `type[Timer]` is not a function.
             timer = Timer()
-            # pyre-fixme[16]: `Tuple` has no attribute `__mul__`.
-            # pyre-fixme[58]: `*` is not supported for operand types `Tuple[Any]`
-            #  and `int`.
             for t in (pause_second,) * 10:
                 if timer.is_paused():
                     timer.resume()
                 time.sleep(t)
                 timer.pause()
                 self.assertTrue(
-                    # pyre-fixme[6]: For 3rd argument expected `Union[SupportsFloat,
-                    #  SupportsIndex]` but got `float`.
                     math.isclose(pause_second, timer.avg_seconds(), rel_tol=1e-1),
-                    # pyre-fixme[16]: `str` has no attribute `format`.
                     msg="{}: {}".format(pause_second, timer.avg_seconds()),
                 )
 
@@ -151,7 +130,6 @@ class TestTimer(unittest.TestCase):
 class TestCfgNode(unittest.TestCase):
     @staticmethod
     def gen_default_cfg() -> CfgNode:
-        # pyre-fixme[29]: `type[CfgNode]` is not a function.
         cfg = CfgNode()
         cfg.KEY1 = "default"
         cfg.KEY2 = "default"
@@ -240,7 +218,6 @@ class TestRegistry(unittest.TestCase):
         """
         Test registering and accessing objects in the Registry.
         """
-        # pyre-fixme[29]: `type[Registry]` is not a function.
         OBJECT_REGISTRY = Registry("OBJECT")
 
         @OBJECT_REGISTRY.register()

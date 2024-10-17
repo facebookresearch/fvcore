@@ -22,17 +22,13 @@ class SmallConvNet(nn.Module):
     layers for activation count.
     """
 
-    # pyre-fixme[11]: Annotation `int` is not defined as a type.
     def __init__(self, input_dim: int) -> None:
         super(SmallConvNet, self).__init__()
         conv_dim1 = 8
         conv_dim2 = 4
         conv_dim3 = 2
-        # pyre-fixme[29]: `type[Conv2d]` is not a function.
         self.conv1 = nn.Conv2d(input_dim, conv_dim1, 1, 1)
-        # pyre-fixme[29]: `type[Conv2d]` is not a function.
         self.conv2 = nn.Conv2d(conv_dim1, conv_dim2, 1, 2)
-        # pyre-fixme[29]: `type[Conv2d]` is not a function.
         self.conv3 = nn.Conv2d(conv_dim2, conv_dim3, 1, 2)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -41,7 +37,6 @@ class SmallConvNet(nn.Module):
         x = self.conv3(x)
         return x
 
-    # pyre-fixme[11]: Annotation `tuple` is not defined as a type.
     def get_gt_activation(self, x: torch.Tensor) -> Tuple[int, int, int]:
         x = self.conv1(x)
         count1 = prod(list(x.size()))
@@ -60,14 +55,11 @@ class TestActivationCountAnalysis(unittest.TestCase):
     def setUp(self) -> None:
         # nn.Linear uses a different operator based on version, so make sure
         # we are testing the right thing.
-        # pyre-fixme[29]: `type[Linear]` is not a function.
         lin = nn.Linear(10, 10)
         lin_x: torch.Tensor = torch.randn(10, 10)
         trace = torch.jit.trace(lin, (lin_x,))
         node_kinds = [node.kind() for node in trace.graph.nodes()]
-        # pyre-fixme[58]: `in` is not supported for right operand type `List[Any]`.
         assert "aten::addmm" in node_kinds or "aten::linear" in node_kinds
-        # pyre-fixme[58]: `in` is not supported for right operand type `List[Any]`.
         if "aten::addmm" in node_kinds:
             self.lin_op = "addmm"
         else:
@@ -81,12 +73,10 @@ class TestActivationCountAnalysis(unittest.TestCase):
         input_dim = 3
         spatial_dim = 32
         x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
-        # pyre-fixme[29]: `type[SmallConvNet]` is not a function.
         convNet = SmallConvNet(input_dim)
         ac_dict, _ = activation_count(convNet, (x,))
         gt_count = sum(convNet.get_gt_activation(x))
 
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict["conv"] = gt_count / 1e6
         self.assertDictEqual(
@@ -102,14 +92,10 @@ class TestActivationCountAnalysis(unittest.TestCase):
         batch_size = 1
         input_dim = 10
         output_dim = 20
-        # pyre-fixme[29]: `type[Linear]` is not a function.
         netLinear = nn.Linear(input_dim, output_dim)
         x = torch.randn(batch_size, input_dim)
         ac_dict, _ = activation_count(netLinear, (x,))
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_count = batch_size * output_dim
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict[self.lin_op] = gt_count / 1e6
         self.assertEqual(
@@ -121,27 +107,18 @@ class TestActivationCountAnalysis(unittest.TestCase):
         Test the activation count for user provided handles.
         """
 
-        # pyre-fixme[11]: Annotation `list` is not defined as a type.
-        # pyre-fixme[11]: Annotation `str` is not defined as a type.
         def dummy_handle(inputs: List[Any], outputs: List[Any]) -> typing.Counter[str]:
-            # pyre-fixme[29]: `type[Counter]` is not a function.
             return Counter({"conv": 100})
 
         batch_size = 1
         input_dim = 3
         spatial_dim = 32
         x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
-        # pyre-fixme[29]: `type[SmallConvNet]` is not a function.
         convNet = SmallConvNet(input_dim)
-        # pyre-fixme[11]: Annotation `Handle` is not defined as a type.
-        # pyre-fixme[11]: Annotation `dict` is not defined as a type.
         sp_ops: Dict[str, Handle] = {"aten::_convolution": dummy_handle}
         ac_dict, _ = activation_count(convNet, (x,), sp_ops)
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         conv_layers = 3
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_dict["conv"] = 100 * conv_layers / 1e6
         self.assertDictEqual(
             gt_dict,
@@ -156,13 +133,9 @@ class TestActivationCountAnalysis(unittest.TestCase):
         batch_size = 1
         input_dim = 10
         output_dim = 20
-        # pyre-fixme[29]: `type[Linear]` is not a function.
         netLinear = nn.Linear(input_dim, output_dim)
         x = torch.randn(batch_size, input_dim)
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_count = batch_size * output_dim
-        # pyre-fixme[29]: `type[Counter]` is not a function.
         gt_dict = Counter(
             {
                 "": gt_count,
@@ -175,11 +148,9 @@ class TestActivationCountAnalysis(unittest.TestCase):
         input_dim = 3
         spatial_dim = 32
         x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
-        # pyre-fixme[29]: `type[SmallConvNet]` is not a function.
         convNet = SmallConvNet(input_dim)
         acts_counter = ActivationCountAnalysis(convNet, (x,))
         gt_counts = convNet.get_gt_activation(x)
-        # pyre-fixme[29]: `type[Counter]` is not a function.
         gt_dict = Counter(
             {
                 "": sum(gt_counts),

@@ -33,17 +33,12 @@ class ThreeNet(nn.Module):
     fully connected layers.
     """
 
-    # pyre-fixme[11]: Annotation `int` is not defined as a type.
     def __init__(self, input_dim: int, conv_dim: int, linear_dim: int) -> None:
         super(ThreeNet, self).__init__()
-        # pyre-fixme[29]: `type[Conv2d]` is not a function.
         self.conv = nn.Conv2d(input_dim, conv_dim, 1, 1)
         out_dim = 1
-        # pyre-fixme[29]: `type[AdaptiveAvgPool2d]` is not a function.
         self.pool: "nn.Module" = nn.AdaptiveAvgPool2d((out_dim, out_dim))
-        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.linear1 = nn.Linear(conv_dim, linear_dim)
-        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.linear2 = nn.Linear(linear_dim, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -61,7 +56,6 @@ class ConvNet(nn.Module):
     count for convolution layers.
     """
 
-    # pyre-fixme[30]: Terminating analysis - type `type` not defined.
     def __init__(
         self,
         conv_dim: int,
@@ -109,7 +103,6 @@ class LinearNet(nn.Module):
 
     def __init__(self, input_dim: int, output_dim: int) -> None:
         super(LinearNet, self).__init__()
-        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.linear = nn.Linear(input_dim, output_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -123,7 +116,6 @@ class EinsumNet(nn.Module):
     flop count for torch.einsum.
     """
 
-    # pyre-fixme[11]: Annotation `str` is not defined as a type.
     def __init__(self, equation: str) -> None:
         super(EinsumNet, self).__init__()
         self.eq: str = equation
@@ -166,9 +158,7 @@ class CustomNet(nn.Module):
 
     def __init__(self, input_dim: int, output_dim: int) -> None:
         super(CustomNet, self).__init__()
-        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.conv = nn.Linear(input_dim, output_dim)
-        # pyre-fixme[29]: `type[Sigmoid]` is not a function.
         self.sigmoid: "nn.Module" = nn.Sigmoid()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -185,14 +175,11 @@ class TestFlopCountAnalysis(unittest.TestCase):
     def setUp(self) -> None:
         # nn.Linear uses a different operator based on version, so make sure
         # we are testing the right thing.
-        # pyre-fixme[29]: `type[Linear]` is not a function.
         lin = nn.Linear(10, 10)
         lin_x: torch.Tensor = torch.randn(10, 10)
         trace = torch.jit.trace(lin, (lin_x,))
         node_kinds = [node.kind() for node in trace.graph.nodes()]
-        # pyre-fixme[58]: `in` is not supported for right operand type `list[Any]`.
         assert "aten::addmm" in node_kinds or "aten::linear" in node_kinds
-        # pyre-fixme[58]: `in` is not supported for right operand type `list[Any]`.
         if "aten::addmm" in node_kinds:
             self.lin_op = "addmm"
         else:
@@ -208,7 +195,6 @@ class TestFlopCountAnalysis(unittest.TestCase):
 
         # New handle for a new operation.
         def dummy_sigmoid_flop_jit(
-            # pyre-fixme[11]: Annotation `list` is not defined as a type.
             inputs: typing.List[Any],
             outputs: typing.List[Any],
         ) -> typing.Counter[str]:
@@ -216,7 +202,6 @@ class TestFlopCountAnalysis(unittest.TestCase):
             A dummy handle function for sigmoid. Note the handle here does
             not compute actual flop count. This is used for test only.
             """
-            # pyre-fixme[29]: `type[Counter]` is not a function.
             flop_dict = Counter()
             flop_dict["sigmoid"] = 10000
             return flop_dict
@@ -224,15 +209,10 @@ class TestFlopCountAnalysis(unittest.TestCase):
         batch_size = 10
         input_dim = 5
         output_dim = 4
-        # pyre-fixme[29]: `type[CustomNet]` is not a function.
         customNet = CustomNet(input_dim, output_dim)
-        # pyre-fixme[11]: Annotation `Handle` is not defined as a type.
-        # pyre-fixme[11]: Annotation `dict` is not defined as a type.
         custom_ops: Dict[str, Handle] = {"aten::sigmoid": dummy_sigmoid_flop_jit}
         x = torch.rand(batch_size, input_dim)
         flop_dict1, _ = flop_count(customNet, (x,), supported_ops=custom_ops)
-        # pyre-fixme[16]: `int` has no attribute `__truediv__`.
-        # pyre-fixme[58]: `/` is not supported for operand types `int` and `float`.
         flop_sigmoid = 10000 / 1e9
         self.assertEqual(
             flop_dict1["sigmoid"],
@@ -243,7 +223,6 @@ class TestFlopCountAnalysis(unittest.TestCase):
         # New handle that overwrites a default handle addmm. So now the new
         # handle counts flops for the fully connected layer.
         def addmm_dummy_flop_jit(
-            # pyre-fixme[11]: Annotation `object` is not defined as a type.
             inputs: typing.List[object],
             outputs: typing.List[object],
         ) -> typing.Counter[str]:
@@ -252,18 +231,14 @@ class TestFlopCountAnalysis(unittest.TestCase):
             the default handle. Note the handle here does not compute actual
             flop count. This is used for test only.
             """
-            # pyre-fixme[29]: `type[Counter]` is not a function.
             flop_dict = Counter()
             flop_dict[self.lin_op] = 400000
             return flop_dict
 
         custom_ops2: Dict[str, Handle] = {
-            # pyre-fixme[16]: `str` has no attribute `format`.
             "aten::{}".format(self.lin_op): addmm_dummy_flop_jit
         }
         flop_dict2, _ = flop_count(customNet, (x,), supported_ops=custom_ops2)
-        # pyre-fixme[16]: `int` has no attribute `__truediv__`.
-        # pyre-fixme[58]: `/` is not supported for operand types `int` and `float`.
         flop = 400000 / 1e9
         self.assertEqual(
             flop_dict2[self.lin_op],
@@ -280,12 +255,8 @@ class TestFlopCountAnalysis(unittest.TestCase):
         input_dim = 8
         output_dim = 4
         x = torch.randn(batch_size, input_dim)
-        # pyre-fixme[29]: `type[Linear]` is not a function.
         flop_dict, _ = flop_count(nn.Linear(input_dim, output_dim), (x,))
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_flop = batch_size * input_dim * output_dim / 1e9
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict[self.lin_op] = gt_flop
         self.assertDictEqual(
@@ -299,11 +270,9 @@ class TestFlopCountAnalysis(unittest.TestCase):
         batch_size = 10
         input_dim = 5
         output_dim = 4
-        # pyre-fixme[29]: `type[CustomNet]` is not a function.
         customNet = CustomNet(input_dim, output_dim)
         x = torch.rand(batch_size, input_dim)
         _, skip_dict = flop_count(customNet, (x,))
-        # pyre-fixme[29]: `type[Counter]` is not a function.
         gt_dict = Counter()
         gt_dict["aten::sigmoid"] = 1
         self.assertDictEqual(
@@ -317,14 +286,10 @@ class TestFlopCountAnalysis(unittest.TestCase):
         batch_size = 5
         input_dim = 10
         output_dim = 20
-        # pyre-fixme[29]: `type[LinearNet]` is not a function.
         linearNet = LinearNet(input_dim, output_dim)
         x = torch.randn(batch_size, input_dim)
         flop_dict, _ = flop_count(linearNet, (x,))
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_flop = batch_size * input_dim * output_dim / 1e9
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict[self.lin_op] = gt_flop
         self.assertDictEqual(
@@ -342,9 +307,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
         extra_dim = 5
         x = torch.randn(batch_size, extra_dim, input_dim)
         flop_dict, _ = flop_count(linearNet, (x,))
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_flop = batch_size * input_dim * extra_dim * output_dim / 1e9
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict[self.lin_op] = gt_flop
         self.assertDictEqual(
@@ -371,11 +334,9 @@ class TestFlopCountAnalysis(unittest.TestCase):
             padding: int,
             stride: int,
             group_size: int,
-            # pyre-fixme[11]: Annotation `bool` is not defined as a type.
             transpose: bool = False,
             output_padding: int = 0,
         ) -> None:
-            # pyre-fixme[29]: `type[ConvNet]` is not a function.
             convNet = ConvNet(
                 conv_dim,
                 input_dim,
@@ -387,12 +348,9 @@ class TestFlopCountAnalysis(unittest.TestCase):
                 transpose,
                 output_padding,
             )
-            # pyre-fixme[58]: `in` is not supported for right operand type `list[int]`.
             assert conv_dim in [1, 2, 3], "Convolution dimension needs to be 1, 2, or 3"
-            # pyre-fixme[16]: `Union` has no attribute `__eq__`.
             if conv_dim == 1:
                 x = torch.randn(batch_size, input_dim, spatial_dim)
-            # pyre-fixme[16]: `Union` has no attribute `__eq__`.
             elif conv_dim == 2:
                 x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
             else:
@@ -404,7 +362,6 @@ class TestFlopCountAnalysis(unittest.TestCase):
             if transpose:
                 spatial_size = spatial_dim
             else:
-                # pyre-fixme[16]: `int` has no attribute `__mul__`.
                 spatial_size = ((spatial_dim + 2 * padding) - kernel_size) // stride + 1
             gt_flop = (
                 batch_size
@@ -415,7 +372,6 @@ class TestFlopCountAnalysis(unittest.TestCase):
                 / group_size
                 / 1e9
             )
-            # pyre-fixme[29]: `type[defaultdict]` is not a function.
             gt_dict = defaultdict(float)
             gt_dict["conv"] = gt_flop
             self.assertDictEqual(
@@ -635,15 +591,11 @@ class TestFlopCountAnalysis(unittest.TestCase):
         m = 20
         n = 10
         p = 100
-        # pyre-fixme[29]: `type[MatmulNet]` is not a function.
         mNet = MatmulNet()
         x = torch.randn(m, n)
         y = torch.randn(n, p)
         flop_dict, _ = flop_count(mNet, (x, y))
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_flop = m * n * p / 1e9
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict["matmul"] = gt_flop
         self.assertDictEqual(
@@ -657,15 +609,11 @@ class TestFlopCountAnalysis(unittest.TestCase):
         m = 20
         n = 10
         p = 100
-        # pyre-fixme[29]: `type[MatmulNet]` is not a function.
         mNet = MatmulNet()
         x = torch.randn(1, m, n)
         y = torch.randn(1, n, p)
         flop_dict, _ = flop_count(mNet, (x, y))
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_flop = m * n * p / 1e9
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict["matmul"] = gt_flop
         self.assertDictEqual(
@@ -675,10 +623,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
         x = torch.randn(2, 2, m, n)
         y = torch.randn(2, 2, n, p)
         flop_dict, _ = flop_count(mNet, (x, y))
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_flop = 4 * m * n * p / 1e9
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict["matmul"] = gt_flop
         self.assertDictEqual(
@@ -688,9 +633,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
         x = torch.randn(1, m, n)
         y = torch.randn(n, p)
         flop_dict, _ = flop_count(mNet, (x, y))
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_flop = m * n * p / 1e9
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict["matmul"] = gt_flop
         self.assertDictEqual(
@@ -700,10 +643,7 @@ class TestFlopCountAnalysis(unittest.TestCase):
         x = torch.randn(2, m, n)
         y = torch.randn(n, p)
         flop_dict, _ = flop_count(mNet, (x, y))
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_flop = 2 * m * n * p / 1e9
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict["matmul"] = gt_flop
         self.assertDictEqual(
@@ -719,15 +659,11 @@ class TestFlopCountAnalysis(unittest.TestCase):
         c = 5
         t = 2
         p = 12
-        # pyre-fixme[29]: `type[BMMNet]` is not a function.
         eNet = BMMNet()
         x = torch.randn(n, c, t)
         y = torch.randn(n, t, p)
         flop_dict, _ = flop_count(eNet, (x, y))
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_flop = n * t * p * c / 1e9
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict["bmm"] = gt_flop
         self.assertDictEqual(
@@ -747,15 +683,11 @@ class TestFlopCountAnalysis(unittest.TestCase):
         c = 5
         t = 2
         p = 12
-        # pyre-fixme[29]: `type[EinsumNet]` is not a function.
         eNet = EinsumNet(equation)
         x = torch.randn(n, c, t)
         y = torch.randn(n, c, p)
         flop_dict, _ = flop_count(eNet, (x, y))
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_flop = n * t * p * c / 1e9
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict["einsum"] = gt_flop
         self.assertDictEqual(
@@ -766,14 +698,11 @@ class TestFlopCountAnalysis(unittest.TestCase):
 
         equation = "ntg,ncg->nct"
         g = 6
-        # pyre-fixme[29]: `type[EinsumNet]` is not a function.
         eNet = EinsumNet(equation)
         x = torch.randn(n, t, g)
         y = torch.randn(n, c, g)
         flop_dict, _ = flop_count(eNet, (x, y))
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_flop = n * t * g * c / 1e9
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict["einsum"] = gt_flop
         self.assertDictEqual(
@@ -790,14 +719,10 @@ class TestFlopCountAnalysis(unittest.TestCase):
         # Test for BatchNorm1d.
         batch_size = 10
         input_dim = 10
-        # pyre-fixme[29]: `type[BatchNorm1d]` is not a function.
         batch_1d = nn.BatchNorm1d(input_dim, affine=False).eval()
         x = torch.randn(batch_size, input_dim)
         flop_dict, _ = flop_count(batch_1d, (x,))
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_flop = batch_size * input_dim / 1e9
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict["batch_norm"] = gt_flop
         self.assertDictEqual(
@@ -809,14 +734,10 @@ class TestFlopCountAnalysis(unittest.TestCase):
         input_dim = 10
         spatial_dim_x = 5
         spatial_dim_y = 5
-        # pyre-fixme[29]: `type[BatchNorm2d]` is not a function.
         batch_2d = nn.BatchNorm2d(input_dim, affine=False)
         x = torch.randn(batch_size, input_dim, spatial_dim_x, spatial_dim_y)
         flop_dict, _ = flop_count(batch_2d, (x,))
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         gt_flop = 4 * batch_size * input_dim * spatial_dim_x * spatial_dim_y / 1e9
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict["batch_norm"] = gt_flop
         self.assertDictEqual(
@@ -829,14 +750,12 @@ class TestFlopCountAnalysis(unittest.TestCase):
         spatial_dim_x = 5
         spatial_dim_y = 5
         spatial_dim_z = 5
-        # pyre-fixme[29]: `type[BatchNorm3d]` is not a function.
         batch_3d = nn.BatchNorm3d(input_dim, affine=False)
         x = torch.randn(
             batch_size, input_dim, spatial_dim_x, spatial_dim_y, spatial_dim_z
         )
         flop_dict, _ = flop_count(batch_3d, (x,))
         gt_flop = (
-            # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
             4
             * batch_size
             * input_dim
@@ -845,7 +764,6 @@ class TestFlopCountAnalysis(unittest.TestCase):
             * spatial_dim_z
             / 1e9
         )
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict["batch_norm"] = gt_flop
         self.assertDictEqual(
@@ -863,18 +781,12 @@ class TestFlopCountAnalysis(unittest.TestCase):
         spatial_dim = 10
         linear_dim = 3
         x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
-        # pyre-fixme[29]: `type[ThreeNet]` is not a function.
         threeNet = ThreeNet(input_dim, conv_dim, linear_dim)
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         flop1 = batch_size * conv_dim * input_dim * spatial_dim * spatial_dim / 1e9
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         flop_linear1 = batch_size * conv_dim * linear_dim / 1e9
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         flop_linear2 = batch_size * linear_dim * 1 / 1e9
         flop2 = flop_linear1 + flop_linear2
         flop_dict, _ = flop_count(threeNet, (x,))
-        # pyre-fixme[29]: `type[defaultdict]` is not a function.
         gt_dict = defaultdict(float)
         gt_dict["conv"] = flop1
         gt_dict[self.lin_op] = flop2
@@ -895,17 +807,11 @@ class TestFlopCountAnalysis(unittest.TestCase):
         spatial_dim = 10
         linear_dim = 3
         x = torch.randn(batch_size, input_dim, spatial_dim, spatial_dim)
-        # pyre-fixme[29]: `type[ThreeNet]` is not a function.
         threeNet = ThreeNet(input_dim, conv_dim, linear_dim)
-        # pyre-fixme[16]: `int` has no attribute `__mul__`.
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         flop1 = batch_size * conv_dim * input_dim * spatial_dim * spatial_dim
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         flop_linear1 = batch_size * conv_dim * linear_dim
-        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         flop_linear2 = batch_size * linear_dim * 1
         flop_counter = FlopCountAnalysis(threeNet, (x,))
-        # pyre-fixme[29]: `type[Counter]` is not a function.
         gt_dict = Counter(
             {
                 "conv": flop1,
@@ -924,7 +830,6 @@ class TestFlopCountAnalysis(unittest.TestCase):
             def forward(self, x):
                 return _CustomOp.apply(x)
 
-        # pyre-fixme[29]: `type[Mod]` is not a function.
         flop = FlopCountAnalysis(Mod(), (torch.rand(4, 5),)).set_op_handle(
             "prim::PythonOp._CustomOp", lambda *args, **kwargs: 42
         )
@@ -941,14 +846,12 @@ class TestFlopCountAnalysis(unittest.TestCase):
                 f = torch.jit.script(func)
                 return f(x * x)
 
-        # pyre-fixme[29]: `type[Mod]` is not a function.
         flop = FlopCountAnalysis(Mod(), (torch.rand(5, 5),))
         _ = flop.total()
         self.assertIn("prim::CallFunction", flop.unsupported_ops())
 
 
 class TestFlopCountHandles(unittest.TestCase):
-    # pyre-fixme[11]: Annotation `tuple` is not defined as a type.
     def _count_function(self, func, inputs, name) -> Tuple[Any, Any]:
         tensor_inputs = [x for x in inputs if isinstance(x, torch.Tensor)]
 
@@ -958,7 +861,6 @@ class TestFlopCountHandles(unittest.TestCase):
         graph = torch.jit.trace(f, tuple(tensor_inputs), check_trace=False).graph
         nodes = [k for k in graph.nodes() if k.kind() == name]
         self.assertEqual(len(nodes), 1)
-        # pyre-fixme[16]: `list` has no attribute `__getitem__`.
         node = nodes[0]
         return list(node.inputs()), list(node.outputs())
 
@@ -1009,8 +911,6 @@ class TestFlopCountHandles(unittest.TestCase):
         nodes = self._count_function(
             F.interpolate, (torch.rand(2, 2, 2, 2), None, 2, "bilinear", False), op_name
         )
-        # pyre-fixme[16]: `int` has no attribute `__pow__`.
-        # pyre-fixme[58]: `**` is not supported for operand types `int` and `int`.
         self.assertEqual(counter(*nodes), 2**4 * 4 * 4)
 
     def test_complicated_einsum(self):
