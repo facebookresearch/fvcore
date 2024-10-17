@@ -27,7 +27,10 @@ class TestTransformUtil(unittest.TestCase):
             (array_NHWC * 255).astype(np.uint8),
         ]
 
+        # pyre-fixme[16]: `list` has no attribute `__iter__`.
         for array in arrays:
             converted_tensor = to_float_tensor(array)
+            # pyre-fixme[6]: For 2nd argument expected `List[Any]` but got
+            #  `tuple[int, ...]`.
             converted_array = to_numpy(converted_tensor, array.shape, array.dtype)
             self.assertTrue(np.allclose(array, converted_array))

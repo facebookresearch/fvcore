@@ -18,6 +18,9 @@ from fvcore.common.checkpoint import Checkpointer, PeriodicCheckpointer
 from torch import nn
 
 
+# pyre-fixme[11]: Annotation `int` is not defined as a type.
+# pyre-fixme[11]: Annotation `tuple` is not defined as a type.
+# pyre-fixme[16]: `TorchVersion` has no attribute `split`.
 TORCH_VERSION: Tuple[int, ...] = tuple(int(x) for x in torch.__version__.split(".")[:2])
 if TORCH_VERSION >= (1, 11):
     from torch.ao import quantization
@@ -46,21 +49,32 @@ class TestCheckpointer(unittest.TestCase):
         """
         Create a simple model.
         """
+        # pyre-fixme[29]: `type[Sequential]` is not a function.
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         return nn.Sequential(nn.Linear(2, 3), nn.Linear(3, 1))
 
     def _create_complex_model(
         self,
+        # pyre-fixme[11]: Annotation `dict` is not defined as a type.
+        # pyre-fixme[11]: Annotation `str` is not defined as a type.
     ) -> typing.Tuple[nn.Module, typing.Dict[str, torch.Tensor]]:
         """
         Create a complex model.
         """
+        # pyre-fixme[29]: `type[Module]` is not a function.
         m = nn.Module()
+        # pyre-fixme[29]: `type[Module]` is not a function.
         m.block1 = nn.Module()
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         m.block1.layer1 = nn.Linear(2, 3)
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         m.layer2 = nn.Linear(3, 2)
+        # pyre-fixme[29]: `type[Module]` is not a function.
         m.res = nn.Module()
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         m.res.layer2 = nn.Linear(3, 2)
 
+        # pyre-fixme[29]: `type[OrderedDict]` is not a function.
         state_dict = OrderedDict()
         state_dict["layer1.weight"] = torch.rand(3, 2)
         state_dict["layer1.bias"] = torch.rand(3)
@@ -78,6 +92,8 @@ class TestCheckpointer(unittest.TestCase):
     )
     def test_loading_objects_with_expected_shape_mismatches(self) -> None:
         def _get_model() -> torch.nn.Module:
+            # pyre-fixme[29]: `type[Sequential]` is not a function.
+            # pyre-fixme[29]: `type[Conv2d]` is not a function.
             m = nn.Sequential(nn.Conv2d(2, 2, 1))
             m.qconfig = get_default_qat_qconfig("fbgemm")
             m = prepare_qat(m)
@@ -88,11 +104,14 @@ class TestCheckpointer(unittest.TestCase):
         m1(torch.randn(4, 2, 4, 4))
         # Load m1's checkpoint into m2. This should work without errors even
         # though the shapes of per-channel observer buffers do not match.
+        # pyre-fixme[29]: `type[TemporaryDirectory]` is not a function.
         with TemporaryDirectory() as f:
+            # pyre-fixme[29]: `type[Checkpointer]` is not a function.
             checkpointer = Checkpointer(m1, save_dir=f)
             checkpointer.save("checkpoint_file")
 
             # in the same folder
+            # pyre-fixme[29]: `type[Checkpointer]` is not a function.
             fresh_checkpointer = Checkpointer(m2, save_dir=f)
             self.assertTrue(fresh_checkpointer.has_checkpoint())
             self.assertEqual(
@@ -111,21 +130,29 @@ class TestCheckpointer(unittest.TestCase):
         """
         test that loading works even if they differ by a prefix.
         """
+        # pyre-fixme[16]: `list` has no attribute `__iter__`.
         for trained_model, fresh_model in [
             (self._create_model(), self._create_model()),
+            # pyre-fixme[29]: `type[DataParallel]` is not a function.
             (nn.DataParallel(self._create_model()), self._create_model()),
+            # pyre-fixme[29]: `type[DataParallel]` is not a function.
             (self._create_model(), nn.DataParallel(self._create_model())),
             (
+                # pyre-fixme[29]: `type[DataParallel]` is not a function.
                 nn.DataParallel(self._create_model()),
+                # pyre-fixme[29]: `type[DataParallel]` is not a function.
                 nn.DataParallel(self._create_model()),
             ),
         ]:
 
+            # pyre-fixme[29]: `type[TemporaryDirectory]` is not a function.
             with TemporaryDirectory() as f:
+                # pyre-fixme[29]: `type[Checkpointer]` is not a function.
                 checkpointer = Checkpointer(trained_model, save_dir=f)
                 checkpointer.save("checkpoint_file")
 
                 # in the same folder
+                # pyre-fixme[29]: `type[Checkpointer]` is not a function.
                 fresh_checkpointer = Checkpointer(fresh_model, save_dir=f)
                 self.assertTrue(fresh_checkpointer.has_checkpoint())
                 self.assertEqual(
@@ -146,23 +173,32 @@ class TestCheckpointer(unittest.TestCase):
         """
         test that loading works even if they differ by a prefix.
         """
+        # pyre-fixme[16]: `list` has no attribute `__iter__`.
         for trained_model, fresh_model in [
             (self._create_model(), self._create_model()),
+            # pyre-fixme[29]: `type[DataParallel]` is not a function.
             (nn.DataParallel(self._create_model()), self._create_model()),
+            # pyre-fixme[29]: `type[DataParallel]` is not a function.
             (self._create_model(), nn.DataParallel(self._create_model())),
             (
+                # pyre-fixme[29]: `type[DataParallel]` is not a function.
                 nn.DataParallel(self._create_model()),
+                # pyre-fixme[29]: `type[DataParallel]` is not a function.
                 nn.DataParallel(self._create_model()),
             ),
         ]:
+            # pyre-fixme[29]: `type[TemporaryDirectory]` is not a function.
             with TemporaryDirectory() as f:
+                # pyre-fixme[29]: `type[Checkpointer]` is not a function.
                 checkpointer = Checkpointer(
                     trained_model, save_dir=f, save_to_disk=True
                 )
                 checkpointer.save("checkpoint_file")
 
                 # on different folders.
+                # pyre-fixme[29]: `type[TemporaryDirectory]` is not a function.
                 with TemporaryDirectory() as g:
+                    # pyre-fixme[29]: `type[Checkpointer]` is not a function.
                     fresh_checkpointer = Checkpointer(fresh_model, save_dir=g)
                     self.assertFalse(fresh_checkpointer.has_checkpoint())
                     self.assertEqual(fresh_checkpointer.get_checkpoint_file(), "")
@@ -220,8 +256,11 @@ class TestCheckpointer(unittest.TestCase):
                 self.state = copy.deepcopy(state)
 
         trained_model, fresh_model = self._create_model(), self._create_model()
+        # pyre-fixme[29]: `type[TemporaryDirectory]` is not a function.
         with TemporaryDirectory() as f:
+            # pyre-fixme[29]: `type[CheckpointableObj]` is not a function.
             checkpointables = CheckpointableObj()
+            # pyre-fixme[29]: `type[Checkpointer]` is not a function.
             checkpointer = Checkpointer(
                 trained_model,
                 save_dir=f,
@@ -230,6 +269,7 @@ class TestCheckpointer(unittest.TestCase):
             )
             checkpointer.save("checkpoint_file")
             # in the same folder
+            # pyre-fixme[29]: `type[Checkpointer]` is not a function.
             fresh_checkpointer = Checkpointer(fresh_model, save_dir=f)
             self.assertTrue(fresh_checkpointer.has_checkpoint())
             self.assertEqual(
@@ -252,11 +292,15 @@ class TestCheckpointer(unittest.TestCase):
                 if has_y:
                     self.y = self.x
 
+        # pyre-fixme[29]: `type[Model]` is not a function.
         model = Model(has_y=False)
         model.x.bias.data.fill_(5.0)
         data = {"model": model.state_dict()}
+        # pyre-fixme[29]: `type[Model]` is not a function.
         new_model = Model(has_y=True)
+        # pyre-fixme[29]: `type[Checkpointer]` is not a function.
         chkpt = Checkpointer(new_model)
+        # pyre-fixme[29]: `type[MagicMock]` is not a function.
         chkpt.logger = logger = MagicMock()
         incompatible = chkpt._load_model(data)
         chkpt._log_incompatible_keys(incompatible)
@@ -271,15 +315,20 @@ class TestCheckpointer(unittest.TestCase):
     )
     def test_load_lazy_module(self) -> None:
         def _get_model() -> nn.Sequential:
+            # pyre-fixme[29]: `type[Sequential]` is not a function.
+            # pyre-fixme[29]: `type[LazyLinear]` is not a function.
             return nn.Sequential(nn.LazyLinear(10))
 
         m1, m2 = _get_model(), _get_model()
         m1(torch.randn(4, 2, 4, 4))  # initialize m1, but not m2
         # Load m1's checkpoint into m2.
+        # pyre-fixme[29]: `type[TemporaryDirectory]` is not a function.
         with TemporaryDirectory() as f:
+            # pyre-fixme[29]: `type[Checkpointer]` is not a function.
             checkpointer = Checkpointer(m1, save_dir=f)
             checkpointer.save("checkpoint_file")
 
+            # pyre-fixme[29]: `type[Checkpointer]` is not a function.
             fresh_checkpointer = Checkpointer(m2, save_dir=f)
             self.assertTrue(fresh_checkpointer.has_checkpoint())
             self.assertEqual(
@@ -295,6 +344,8 @@ class TestPeriodicCheckpointer(unittest.TestCase):
         """
         Create a simple model.
         """
+        # pyre-fixme[29]: `type[Sequential]` is not a function.
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         return nn.Sequential(nn.Linear(2, 3), nn.Linear(3, 1))
 
     def test_periodic_checkpointer(self) -> None:
@@ -303,17 +354,23 @@ class TestPeriodicCheckpointer(unittest.TestCase):
         """
         _period = 10
         _max_iter = 100
+        # pyre-fixme[16]: `list` has no attribute `__iter__`.
         for trained_model in [
             self._create_model(),
+            # pyre-fixme[29]: `type[DataParallel]` is not a function.
             nn.DataParallel(self._create_model()),
         ]:
+            # pyre-fixme[29]: `type[TemporaryDirectory]` is not a function.
             with TemporaryDirectory() as f:
+                # pyre-fixme[29]: `type[Checkpointer]` is not a function.
                 checkpointer = Checkpointer(
                     trained_model, save_dir=f, save_to_disk=True
                 )
+                # pyre-fixme[29]: `type[PeriodicCheckpointer]` is not a function.
                 periodic_checkpointer = PeriodicCheckpointer(checkpointer, _period, 99)
                 for iteration in range(_max_iter):
                     periodic_checkpointer.step(iteration)
+                    # pyre-fixme[16]: `str` has no attribute `format`.
                     path = os.path.join(f, "model_{:07d}.pth".format(iteration))
                     if (iteration + 1) % _period == 0:
                         self.assertTrue(os.path.exists(path))
@@ -327,14 +384,19 @@ class TestPeriodicCheckpointer(unittest.TestCase):
         _period = 10
         _max_iter = 100
         _max_to_keep = 3
+        # pyre-fixme[16]: `list` has no attribute `__iter__`.
         for trained_model in [
             self._create_model(),
+            # pyre-fixme[29]: `type[DataParallel]` is not a function.
             nn.DataParallel(self._create_model()),
         ]:
+            # pyre-fixme[29]: `type[TemporaryDirectory]` is not a function.
             with TemporaryDirectory() as f:
+                # pyre-fixme[29]: `type[Checkpointer]` is not a function.
                 checkpointer = Checkpointer(
                     trained_model, save_dir=f, save_to_disk=True
                 )
+                # pyre-fixme[29]: `type[PeriodicCheckpointer]` is not a function.
                 periodic_checkpointer = PeriodicCheckpointer(
                     checkpointer, _period, 99, max_to_keep=_max_to_keep
                 )
@@ -344,9 +406,13 @@ class TestPeriodicCheckpointer(unittest.TestCase):
                     for iteration in range(_max_iter):
                         periodic_checkpointer.step(iteration)
                         if (iteration + 1) % _period == 0:
+                            # pyre-fixme[16]: `str` has no attribute `format`.
                             path = os.path.join(f, "model_{:07d}.pth".format(iteration))
+                            # pyre-fixme[16]: `list` has no attribute `append`.
                             checkpoint_paths.append(path)
 
+                    # pyre-fixme[16]: `list` has no attribute `__getitem__`.
+                    # pyre-fixme[16]: `int` has no attribute `__neg__`.
                     for path in checkpoint_paths[:-_max_to_keep]:
                         self.assertFalse(os.path.exists(path))
 

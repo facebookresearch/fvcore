@@ -530,6 +530,7 @@ def _model_stats_table(
             row.append(row_str)
         return row
 
+    # pyre-fixme[53]: Captured variable `root_prefix` is not annotated.
     def fill(indent_lvl: int, prefix: str) -> None:
         if indent_lvl > max_depth:
             return

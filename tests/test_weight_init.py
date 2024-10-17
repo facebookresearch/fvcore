@@ -20,10 +20,13 @@ class TestWeightInit(unittest.TestCase):
         torch.set_rng_state(torch.manual_seed(42).get_state())
 
     @staticmethod
+    # pyre-fixme[11]: Annotation `int` is not defined as a type.
+    # pyre-fixme[11]: Annotation `float` is not defined as a type.
     def msra_fill_std(fan_out: int) -> float:
         # Given the fan_out, calculate the expected standard deviation for msra
         # fill.
         # pyre-fixme[7]: Expected `float` but got `Tensor`.
+        # pyre-fixme[16]: `float` has no attribute `__truediv__`.
         return torch.as_tensor(math.sqrt(2.0 / fan_out))
 
     @staticmethod
@@ -31,6 +34,7 @@ class TestWeightInit(unittest.TestCase):
         # Given the fan_in, calculate the expected standard deviation for
         # xavier fill.
         # pyre-fixme[7]: Expected `float` but got `Tensor`.
+        # pyre-fixme[16]: `float` has no attribute `__truediv__`.
         return torch.as_tensor(math.sqrt(1.0 / fan_in))
 
     @staticmethod
@@ -38,6 +42,7 @@ class TestWeightInit(unittest.TestCase):
         weight: torch.Tensor,
         bias: torch.Tensor,
         target_std: torch.Tensor,
+        # pyre-fixme[11]: Annotation `bool` is not defined as a type.
     ) -> bool:
         # When the size of the weight is relative small, sampling on a small
         # number of elements would not give us a standard deviation that close
@@ -49,6 +54,7 @@ class TestWeightInit(unittest.TestCase):
         bias_dist_match = torch.nonzero(bias).nelement() == 0
         return weight_dist_match and bias_dist_match
 
+    # pyre-fixme[30]: Terminating analysis - type `type` not defined.
     def test_conv_weight_init(self) -> None:
         # Test weight initialization for convolutional layers.
         kernel_sizes = [1, 3]
@@ -114,7 +120,9 @@ class TestWeightInit(unittest.TestCase):
         channel_in_dims = [128, 256, 512, 1024]
         channel_out_dims = [256, 512, 1024, 2048]
 
+        # pyre-fixme[16]: `list` has no attribute `__iter__`.
         for layer in [nn.Linear]:
+            # pyre-fixme[29]: `type[product]` is not a function.
             for c_in_dim, c_out_dim in itertools.product(
                 channel_in_dims, channel_out_dims
             ):

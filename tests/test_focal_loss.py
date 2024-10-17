@@ -17,6 +17,7 @@ from torch.nn import functional as F
 
 
 def logit(p: torch.Tensor) -> torch.Tensor:
+    # pyre-fixme[16]: `int` has no attribute `__sub__`.
     return torch.log(p / (1 - p))
 
 
@@ -62,7 +63,11 @@ class TestFocalLoss(unittest.TestCase):
         ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
         loss_ratio = (ce_loss / focal_loss).squeeze()
         prob = torch.sigmoid(inputs)
+        # pyre-fixme[16]: `int` has no attribute `__sub__`.
         p_t = prob * targets + (1 - prob) * (1 - targets)
+        # pyre-fixme[16]: `float` has no attribute `__truediv__`.
+        # pyre-fixme[58]: `/` is not supported for operand types `float` and `Any`.
+        # pyre-fixme[16]: `float` has no attribute `__sub__`.
         correct_ratio = 1.0 / ((1.0 - p_t) ** 2)
         self.assertTrue(np.allclose(loss_ratio, correct_ratio))
 
@@ -77,6 +82,9 @@ class TestFocalLoss(unittest.TestCase):
         focal_loss = sigmoid_focal_loss(inputs, targets, gamma=2, alpha=0.5)
         ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
         loss_ratio = (ce_loss / focal_loss).squeeze()
+        # pyre-fixme[16]: `float` has no attribute `__truediv__`.
+        # pyre-fixme[58]: `/` is not supported for operand types `float` and `Any`.
+        # pyre-fixme[16]: `float` has no attribute `__sub__`.
         correct_ratio = 2.0 / ((1.0 - inputs.squeeze().sigmoid()) ** 2)
         self.assertTrue(np.allclose(loss_ratio, correct_ratio))
 
@@ -89,6 +97,9 @@ class TestFocalLoss(unittest.TestCase):
         focal_loss = sigmoid_focal_loss(inputs, targets, gamma=2, alpha=-1)
         ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
         loss_ratio = (ce_loss / focal_loss).squeeze()
+        # pyre-fixme[16]: `float` has no attribute `__truediv__`.
+        # pyre-fixme[58]: `/` is not supported for operand types `float` and `Any`.
+        # pyre-fixme[16]: `float` has no attribute `__sub__`.
         correct_ratio = 1.0 / ((1.0 - inputs.sigmoid()) ** 2)
         self.assertTrue(np.allclose(loss_ratio, correct_ratio))
 
@@ -197,6 +208,7 @@ class TestFocalLoss(unittest.TestCase):
         """
         No weighting of easy/hard (gamma = 0) or positive/negative (alpha = 0).
         """
+        # pyre-fixme[29]: `type[device]` is not a function.
         device = torch.device("cuda:0")
         N = 5
         inputs = logit(torch.rand(N)).to(device)
@@ -208,7 +220,10 @@ class TestFocalLoss(unittest.TestCase):
         self.assertTrue(np.allclose(ce_loss, focal_loss.cpu()))
 
     @staticmethod
+    # pyre-fixme[11]: Annotation `int` is not defined as a type.
+    # pyre-fixme[11]: Annotation `float` is not defined as a type.
     def focal_loss_with_init(N: int, alpha: float = -1) -> typing.Callable[[], None]:
+        # pyre-fixme[29]: `type[device]` is not a function.
         device = torch.device("cuda:0")
         inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
         targets: torch.Tensor = (
@@ -229,6 +244,7 @@ class TestFocalLoss(unittest.TestCase):
     def focal_loss_jit_with_init(
         N: int, alpha: float = -1
     ) -> typing.Callable[[], None]:
+        # pyre-fixme[29]: `type[device]` is not a function.
         device = torch.device("cuda:0")
         inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
         targets: torch.Tensor = (
@@ -418,6 +434,7 @@ class TestFocalLossStar(unittest.TestCase):
         """
         No weighting of easy/hard (gamma = 1) or positive/negative (alpha = 0).
         """
+        # pyre-fixme[29]: `type[device]` is not a function.
         device = torch.device("cuda:0")
         N = 5
         inputs = logit(torch.rand(N)).to(device)
@@ -432,6 +449,7 @@ class TestFocalLossStar(unittest.TestCase):
     def focal_loss_star_with_init(
         N: int, alpha: float = -1
     ) -> typing.Callable[[], None]:
+        # pyre-fixme[29]: `type[device]` is not a function.
         device = torch.device("cuda:0")
         inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
         targets: torch.Tensor = (
@@ -452,6 +470,7 @@ class TestFocalLossStar(unittest.TestCase):
     def focal_loss_star_jit_with_init(
         N: int, alpha: float = -1
     ) -> typing.Callable[[], None]:
+        # pyre-fixme[29]: `type[device]` is not a function.
         device = torch.device("cuda:0")
         inputs: torch.Tensor = logit(torch.rand(N)).to(device).requires_grad_()
         targets: torch.Tensor = (

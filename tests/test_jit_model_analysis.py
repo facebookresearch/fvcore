@@ -23,6 +23,7 @@ class NestedNetInnerModule(nn.Module):
     A submodule for the nested net test module below.
     """
 
+    # pyre-fixme[11]: Annotation `str` is not defined as a type.
     def __init__(self, lin_op: str = "addmm") -> None:
         super().__init__()
         conv_input_size = (2, 5)
@@ -33,20 +34,33 @@ class NestedNetInnerModule(nn.Module):
         fc_in = 10
         fc_out = 10
 
+        # pyre-fixme[29]: `type[Conv1d]` is not a function.
         self.conv = nn.Conv1d(
             in_channels=conv_in,
             out_channels=conv_out,
             kernel_size=kernel_size,
             padding=padding,
         )
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
 
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         fc_flops = fc_in * fc_out
+        # pyre-fixme[29]: `type[Counter]` is not a function.
         fc_flops = Counter({lin_op: fc_flops})
+        # pyre-fixme[16]: `Tuple` has no attribute `__getitem__`.
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `Any`.
+        # pyre-fixme[16]: `int` has no attribute `__floordiv__`.
+        # pyre-fixme[58]: `//` is not supported for operand types `int` and `int`.
         spatial_pos = (conv_input_size[1] + 2 * padding) - 2 * (kernel_size // 2)
         conv_flops = spatial_pos * kernel_size * conv_in * conv_out
+        # pyre-fixme[29]: `type[Counter]` is not a function.
         conv_flops = Counter({"conv": conv_flops})
         model_flops = conv_flops + fc_flops
+        # pyre-fixme[11]: Annotation `dict` is not defined as a type.
         self.flops: "Dict[str, typing.Counter[str]]" = {
             "": model_flops,
             "fc": fc_flops,
@@ -64,6 +78,8 @@ class NestedNetInnerModule(nn.Module):
         x = self.conv(x)
         x = torch.flatten(x, 1)
         # pyre-fixme[9]: x has type `Tensor`; used as `int`.
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `Any`.
         x = 3 * self.fc(x) + 1
         return x
 
@@ -85,8 +101,11 @@ class NestedNet(nn.Module):
         fc_in = 20
         fc_out = 10
 
+        # pyre-fixme[29]: `type[NestedNetInnerModule]` is not a function.
         self.submod = NestedNetInnerModule(lin_op)
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
+        # pyre-fixme[29]: `type[Conv1d]` is not a function.
         self.conv = nn.Conv1d(
             in_channels=conv_in,
             out_channels=conv_out,
@@ -94,10 +113,20 @@ class NestedNet(nn.Module):
             padding=padding,
         )
 
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         fc_flops = fc_in * fc_out
+        # pyre-fixme[29]: `type[Counter]` is not a function.
         fc_flops = Counter({lin_op: fc_flops})
+        # pyre-fixme[16]: `Tuple` has no attribute `__getitem__`.
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `Any`.
+        # pyre-fixme[16]: `int` has no attribute `__floordiv__`.
+        # pyre-fixme[58]: `//` is not supported for operand types `int` and `int`.
         spatial_pos = (self.input_size[1] + 2 * padding) - 2 * (kernel_size // 2)
         conv_flops = spatial_pos * kernel_size * conv_in * conv_out
+        # pyre-fixme[29]: `type[Counter]` is not a function.
         conv_flops = Counter({"conv": conv_flops})
 
         model_flops = conv_flops + fc_flops + self.submod.flops[""]
@@ -139,13 +168,23 @@ class UnusedNet(nn.Module):
         fc2_in, fc2_out = 10, 1
         unused_in, unused_out = 20, 20
 
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.fc1 = nn.Linear(in_features=fc1_in, out_features=fc1_out)
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.fc2 = nn.Linear(in_features=fc2_in, out_features=fc2_out)
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.unused = nn.Linear(in_features=unused_in, out_features=unused_out)
+        # pyre-fixme[29]: `type[ReLU]` is not a function.
         self.act: "nn.Module" = nn.ReLU()
 
+        # pyre-fixme[11]: Annotation `int` is not defined as a type.
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         self.fc1_flops: int = fc1_in * fc1_out
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         self.fc2_flops: int = fc2_in * fc2_out
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         self.unused_flops: int = unused_in * unused_out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -165,10 +204,15 @@ class RepeatedNet(nn.Module):
         self.fc1_num = 3
         self.fc2_num = 2
 
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.fc1 = nn.Linear(in_features=fc1_in, out_features=fc1_out)
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.fc2 = nn.Linear(in_features=fc2_in, out_features=fc2_out)
 
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         self.fc1_flops: int = fc1_in * fc1_out
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         self.fc2_flops: int = fc2_in * fc2_out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -189,8 +233,11 @@ class NonForwardInnerModule(nn.Module):
         self.input_size = (10,)
         fc_in, fc_out = 10, 1
 
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
 
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         self.fc_flops: int = fc_in * fc_out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -210,9 +257,13 @@ class NonForwardNet(nn.Module):
         self.input_size = (10,)
         fc_in, fc_out = 10, 10
 
+        # pyre-fixme[29]: `type[NonForwardInnerModule]` is not a function.
         self.submod = NonForwardInnerModule()
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
 
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         self.fc_flops: int = fc_in * fc_out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -244,14 +295,21 @@ class SharedModuleNet(nn.Module):
         fc1_in, fc1_out = 10, 10
         fc2_in, fc2_out = 10, 1
 
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         inner = nn.Linear(in_features=fc1_in, out_features=fc1_out)
+        # pyre-fixme[29]: `type[SharedInnerModule]` is not a function.
         self.submod1 = SharedInnerModule(inner)
+        # pyre-fixme[29]: `type[SharedInnerModule]` is not a function.
         self.submod2 = SharedInnerModule(inner)
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         multiname = nn.Linear(in_features=fc2_in, out_features=fc2_out)
         self.multiname1: "nn.Module" = multiname
         self.multiname2: "nn.Module" = multiname
 
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         self.multiname_flops: int = fc2_in * fc2_out
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         self.shared_flops: int = fc1_in * fc1_out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -270,8 +328,11 @@ class RecursiveScopeNet(nn.Module):
         self.input_size = (10,)
         fc_in, fc_out = 10, 1
 
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.fc = nn.Linear(in_features=fc_in, out_features=fc_out)
 
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         self.flops: int = fc_in * fc_out
 
     def forward(self, x: torch.Tensor, count: int = 3) -> torch.Tensor:
@@ -293,10 +354,15 @@ class TraceWarningNet(nn.Module):
         fc1_in, fc1_out = 10, 1
         fc2_in, fc2_out = 10, 10
 
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.fc1 = nn.Linear(in_features=fc1_in, out_features=fc1_out)
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.fc2 = nn.Linear(in_features=fc2_in, out_features=fc2_out)
 
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         self.fc1_flops: int = fc1_in * fc1_out
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         self.fc2_flops: int = fc2_in * fc2_out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -316,11 +382,14 @@ class TestJitModelAnalysis(unittest.TestCase):
     def setUp(self) -> None:
         # nn.Linear uses a different operator based on version, so make sure
         # we are testing the right thing.
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         lin = nn.Linear(10, 10)
         lin_x: torch.Tensor = torch.randn(10, 10)
         trace = torch.jit.trace(lin, (lin_x,))
         node_kinds = [node.kind() for node in trace.graph.nodes()]
+        # pyre-fixme[58]: `in` is not supported for right operand type `List[Any]`.
         assert "aten::addmm" in node_kinds or "aten::linear" in node_kinds
+        # pyre-fixme[58]: `in` is not supported for right operand type `List[Any]`.
         if "aten::addmm" in node_kinds:
             self.lin_op = "addmm"
         else:
@@ -332,7 +401,9 @@ class TestJitModelAnalysis(unittest.TestCase):
         counts for string and module inputs.
         """
 
+        # pyre-fixme[29]: `type[NestedNet]` is not a function.
         model = NestedNet(lin_op=self.lin_op)
+        # pyre-fixme[60]: Expected to unpack an iterable, but got `unknown`.
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
@@ -350,7 +421,9 @@ class TestJitModelAnalysis(unittest.TestCase):
         counts in the correctly structured dictionary.
         """
 
+        # pyre-fixme[29]: `type[NestedNet]` is not a function.
         model = NestedNet(lin_op=self.lin_op)
+        # pyre-fixme[60]: Expected to unpack an iterable, but got `unknown`.
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
@@ -366,7 +439,9 @@ class TestJitModelAnalysis(unittest.TestCase):
         counts for string and module inputs.
         """
 
+        # pyre-fixme[29]: `type[NestedNet]` is not a function.
         model = NestedNet(lin_op=self.lin_op)
+        # pyre-fixme[60]: Expected to unpack an iterable, but got `unknown`.
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
@@ -383,7 +458,9 @@ class TestJitModelAnalysis(unittest.TestCase):
         the correct counts in the correct structure.
         """
 
+        # pyre-fixme[29]: `type[NestedNet]` is not a function.
         model = NestedNet(lin_op=self.lin_op)
+        # pyre-fixme[60]: Expected to unpack an iterable, but got `unknown`.
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
@@ -399,11 +476,14 @@ class TestJitModelAnalysis(unittest.TestCase):
         modules that simply have zero flops (like ReLU) are not.
         """
 
+        # pyre-fixme[29]: `type[UnusedNet]` is not a function.
         model = UnusedNet()
+        # pyre-fixme[60]: Expected to unpack an iterable, but got `unknown`.
         inputs = (torch.randn((1, *model.input_size)),)
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
 
         unused_count = 0
+        # pyre-fixme[29]: `type[Counter]` is not a function.
         unused_per_operator = Counter()
         model_count = model.fc1_flops + model.fc2_flops
 
@@ -420,13 +500,16 @@ class TestJitModelAnalysis(unittest.TestCase):
         results to that submodule.
         """
 
+        # pyre-fixme[29]: `type[RepeatedNet]` is not a function.
         model = RepeatedNet()
+        # pyre-fixme[60]: Expected to unpack an iterable, but got `unknown`.
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
         fc1_count = model.fc1_num * model.fc1_flops
         fc2_count = model.fc2_num * model.fc2_flops
         total_count = fc1_count + fc2_count
+        # pyre-fixme[29]: `type[Counter]` is not a function.
         fc1_per_operator = Counter({self.lin_op: fc1_count})
 
         self.assertEqual(analyzer.total("fc1"), fc1_count)
@@ -443,6 +526,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         Also tests that the intermediate module is correctly identified as a skipped module.
         """
 
+        # pyre-fixme[29]: `type[NonForwardNet]` is not a function.
         model = NonForwardNet()
         inputs = (torch.randn((1, 10)),)
         analyzer = FlopCountAnalysis(model=model, inputs=inputs).ancestor_mode("caller")
@@ -469,7 +553,9 @@ class TestJitModelAnalysis(unittest.TestCase):
         names.
         """
 
+        # pyre-fixme[29]: `type[SharedModuleNet]` is not a function.
         model = SharedModuleNet()
+        # pyre-fixme[60]: Expected to unpack an iterable, but got `unknown`.
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = (
@@ -482,6 +568,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         # since only the first name of a module is made the canonical one.
         # The counts associated with these cases are included under
         # `submod1.submod` and `multiname1` respectively.
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
         multiname_flops = 2 * model.multiname_flops  # Called under 2 names
         shared_flops = 2 * model.shared_flops  # Shared under 2 submodules
         total_flops = multiname_flops + shared_flops
@@ -523,7 +610,9 @@ class TestJitModelAnalysis(unittest.TestCase):
         Tests that an op is only counted once per module, even if it is
         in the scope of that module multiple times.
         """
+        # pyre-fixme[29]: `type[RecursiveScopeNet]` is not a function.
         model = RecursiveScopeNet()
+        # pyre-fixme[60]: Expected to unpack an iterable, but got `unknown`.
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = FlopCountAnalysis(model, inputs)
@@ -539,28 +628,39 @@ class TestJitModelAnalysis(unittest.TestCase):
         Tests that a model wrapped in DataParallel still returns results
         labeled by the correct scopes.
         """
+        # pyre-fixme[29]: `type[NestedNet]` is not a function.
         model = NestedNet(lin_op=self.lin_op)
+        # pyre-fixme[60]: Expected to unpack an iterable, but got `unknown`.
         inputs = (torch.randn((1, *model.input_size)),)
 
         # Find flops for wrapper
         flops = {
+            # pyre-fixme[16]: `str` has no attribute `__add__`.
+            # pyre-fixme[58]: `+` is not supported for operand types `str` and
+            #  `Union[str, str]`.
             "module" + ("." if name else "") + name: flop
             for name, flop in model.flops.items()
         }
+        # pyre-fixme[16]: `Dict` has no attribute `__setitem__`.
         flops[""] = model.flops[""]
         name_to_module = {
+            # pyre-fixme[58]: `+` is not supported for operand types `str` and
+            #  `Union[str, str]`.
             "module" + ("." if name else "") + name: mod
             for name, mod in model.name_to_module.items()
         }
         name_to_module[""] = model.name_to_module[""]
 
+        # pyre-fixme[29]: `type[DataParallel]` is not a function.
         model = torch.nn.DataParallel(model).cpu()
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
         analyzer.unsupported_ops_warnings(enabled=False)
 
         # Using a string input
+        # pyre-fixme[16]: `Dict` has no attribute `__iter__`.
         for name in flops:
             with self.subTest(name=name):
+                # pyre-fixme[16]: `Dict` has no attribute `__getitem__`.
                 gt_flops = sum(flops[name].values())
                 self.assertEqual(analyzer.total(name), gt_flops)
 
@@ -572,7 +672,10 @@ class TestJitModelAnalysis(unittest.TestCase):
 
     def test_data_parallel_root_scope(self) -> None:
         # A test case discussed in D32227000
+        # pyre-fixme[29]: `type[DataParallel]` is not a function.
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         model = nn.DataParallel(nn.Linear(10, 10)).cpu()
+        # pyre-fixme[16]: `List` has no attribute `__iter__`.
         for mode in ["caller", "owner"]:
             flop = FlopCountAnalysis(model, (torch.randn(10, 10),))
             flop.ancestor_mode(mode)
@@ -583,9 +686,12 @@ class TestJitModelAnalysis(unittest.TestCase):
         Tests per-module recording of unsupported operations.
         """
 
+        # pyre-fixme[29]: `type[NestedNet]` is not a function.
         model = NestedNet(lin_op=self.lin_op)
+        # pyre-fixme[60]: Expected to unpack an iterable, but got `unknown`.
         inputs = (torch.randn((1, *model.input_size)),)
 
+        # pyre-fixme[29]: `type[JitModelAnalysis]` is not a function.
         analyzer = JitModelAnalysis(model=model, inputs=inputs).set_op_handle(
             "aten::addmm",
             addmm_flop_jit,
@@ -594,14 +700,20 @@ class TestJitModelAnalysis(unittest.TestCase):
         )
         analyzer.total()
 
+        # pyre-fixme[29]: `type[Counter]` is not a function.
         skipped_inner_conv = Counter({"aten::_convolution": 1})
+        # pyre-fixme[29]: `type[Counter]` is not a function.
         skipped_inner_fc = Counter()
+        # pyre-fixme[29]: `type[Counter]` is not a function.
         skipped_inner = Counter({"aten::add": 1, "aten::mul": 1})
         skipped_inner += skipped_inner_fc
         skipped_inner += skipped_inner_conv
 
+        # pyre-fixme[29]: `type[Counter]` is not a function.
         skipped_outer_conv = Counter({"aten::_convolution": 1})
+        # pyre-fixme[29]: `type[Counter]` is not a function.
         skipped_outer_fc = Counter()
+        # pyre-fixme[29]: `type[Counter]` is not a function.
         skipped_outer = Counter({"aten::pow": 1})
         skipped_outer += skipped_outer_conv
         skipped_outer += skipped_outer_fc
@@ -617,21 +729,27 @@ class TestJitModelAnalysis(unittest.TestCase):
         }
 
         # Access by string
+        # pyre-fixme[16]: `Dict` has no attribute `__iter__`.
         for name in skipped:
             with self.subTest(name=name):
+                # pyre-fixme[16]: `Dict` has no attribute `__getitem__`.
                 self.assertEqual(analyzer.unsupported_ops(name), skipped[name])
 
     def test_changing_handles(self) -> None:
         """
         Tests .set_op_handle(), .clear_op_handles()
         """
+        # pyre-fixme[29]: `type[NestedNet]` is not a function.
         model = NestedNet(lin_op=self.lin_op)
+        # pyre-fixme[60]: Expected to unpack an iterable, but got `unknown`.
         inputs = (torch.randn((1, *model.input_size)),)
+        # pyre-fixme[11]: Annotation `Handle` is not defined as a type.
         op_handles: "Dict[str, Handle]" = {
             "aten::addmm": addmm_flop_jit,
             "aten::linear": linear_flop_jit,
         }
 
+        # pyre-fixme[29]: `type[JitModelAnalysis]` is not a function.
         analyzer = JitModelAnalysis(model=model, inputs=inputs).set_op_handle(
             **op_handles
         )
@@ -648,9 +766,11 @@ class TestJitModelAnalysis(unittest.TestCase):
         # Overwrite an op handle
         def make_dummy_op(name: str, output: int) -> Handle:
             def dummy_ops_handle(
+                # pyre-fixme[11]: Annotation `list` is not defined as a type.
                 inputs: List[Any],
                 outputs: List[Any],
             ) -> typing.Counter[str]:
+                # pyre-fixme[29]: `type[Counter]` is not a function.
                 return Counter({name: output})
 
             return dummy_ops_handle
@@ -658,15 +778,21 @@ class TestJitModelAnalysis(unittest.TestCase):
         dummy_name = "dummy_op"
         dummy_out = 1000
         analyzer.set_op_handle(
+            # pyre-fixme[16]: `str` has no attribute `format`.
             "aten::{}".format(self.lin_op),
             make_dummy_op(dummy_name, dummy_out),
         )
 
         dummy_flops = {}
         for name, counts in model.flops.items():
+            # pyre-fixme[16]: `Dict` has no attribute `__setitem__`.
+            # pyre-fixme[29]: `type[Counter]` is not a function.
             dummy_flops[name] = Counter(
                 {op: flop for op, flop in counts.items() if op != self.lin_op}
             )
+        # pyre-fixme[16]: `Dict` has no attribute `__getitem__`.
+        # pyre-fixme[16]: `int` has no attribute `__mul__`.
+        # pyre-fixme[58]: `*` is not supported for operand types `int` and `int`.
         dummy_flops[""][dummy_name] = 2 * dummy_out
         dummy_flops["fc"][dummy_name] = dummy_out
         dummy_flops["submod"][dummy_name] = dummy_out
@@ -677,6 +803,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         # Clear ops handles
         analyzer.clear_op_handles()
 
+        # pyre-fixme[29]: `type[Counter]` is not a function.
         empty_flops = {name: Counter() for name in model.flops}
 
         self.assertEqual(analyzer.by_module_and_operator(), empty_flops)
@@ -686,10 +813,13 @@ class TestJitModelAnalysis(unittest.TestCase):
         Tests .copy(...)
         """
 
+        # pyre-fixme[29]: `type[RepeatedNet]` is not a function.
         model = RepeatedNet()
+        # pyre-fixme[60]: Expected to unpack an iterable, but got `unknown`.
         inputs = (torch.randn((1, *model.input_size)),)
 
         analyzer = (
+            # pyre-fixme[29]: `type[JitModelAnalysis]` is not a function.
             JitModelAnalysis(model=model, inputs=inputs)
             .set_op_handle(
                 "aten::addmm",
@@ -731,8 +861,10 @@ class TestJitModelAnalysis(unittest.TestCase):
         )
 
         # Copy with new model and inputs
+        # pyre-fixme[29]: `type[NonForwardNet]` is not a function.
         new_model = NonForwardNet()
         bs = 5
+        # pyre-fixme[60]: Expected to unpack an iterable, but got `unknown`.
         new_inputs = (torch.randn((bs, *new_model.input_size)),)
         analyzer_new = analyzer.copy(new_model=new_model, new_inputs=new_inputs)
 
@@ -755,7 +887,9 @@ class TestJitModelAnalysis(unittest.TestCase):
         """
         Tests .unsupported_ops_warnings(...) and .tracer_warnings(...)
         """
+        # pyre-fixme[29]: `type[TraceWarningNet]` is not a function.
         model = TraceWarningNet()
+        # pyre-fixme[60]: Expected to unpack an iterable, but got `unknown`.
         inputs = (torch.randn((1, *model.input_size)),)
         analyzer = FlopCountAnalysis(model=model, inputs=inputs)
 
@@ -768,6 +902,7 @@ class TestJitModelAnalysis(unittest.TestCase):
 
         analyzer.tracer_warnings(mode="none")
         analyzer._stats = None  # Manually clear cache so trace is rerun
+        # pyre-fixme[29]: `type[catch_warnings]` is not a function.
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             _ = analyzer.total()
@@ -780,6 +915,7 @@ class TestJitModelAnalysis(unittest.TestCase):
         analyzer._stats = None  # Manually clear cache so trace is rerun
         self.assertWarns(RuntimeWarning, analyzer.total)
         analyzer._stats = None  # Manually clear cache so trace is rerun
+        # pyre-fixme[29]: `type[catch_warnings]` is not a function.
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             _ = analyzer.total()
@@ -819,7 +955,10 @@ class TestJitModelAnalysis(unittest.TestCase):
             def forward(self, x):
                 return self.submod[0](x) + 1
 
+        # pyre-fixme[29]: `type[A]` is not a function.
         mod = A()
+        # pyre-fixme[29]: `type[ModuleList]` is not a function.
+        # pyre-fixme[29]: `type[Linear]` is not a function.
         mod.submod = nn.ModuleList([nn.Linear(3, 3)])
         analyzer = FlopCountAnalysis(model=mod, inputs=torch.rand(1, 3))
         analyzer.unsupported_ops_warnings(enabled=False)

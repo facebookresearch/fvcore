@@ -19,9 +19,12 @@ class TestPreciseBN(unittest.TestCase):
 
     @staticmethod
     def compute_bn_stats(
+        # pyre-fixme[11]: Annotation `list` is not defined as a type.
         tensors: List[torch.Tensor],
         # pyre-fixme[11]: Annotation `int` is not defined as a type.
         dims: List[int],
+        # pyre-fixme[11]: Annotation `tuple` is not defined as a type.
+        # pyre-fixme[24]: Generic type `np.ndarray` expects 2 type parameters.
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Given a list of random initialized tensors, compute the mean and
@@ -43,6 +46,7 @@ class TestPreciseBN(unittest.TestCase):
         var = torch.cat(tensors, dim=0).var(dim=dims, unbiased=False).numpy()
         return mean, mean_of_batch_var, var
 
+    # pyre-fixme[30]: Terminating analysis - type `type` not defined.
     def test_precise_bn(self) -> None:
         # Number of batches to test.
         NB = 8
@@ -85,8 +89,11 @@ class TestPreciseBN(unittest.TestCase):
 
     def test_precise_bn_insufficient_data(self) -> None:
         input_dim = (16, 32, 24, 24)
+        # pyre-fixme[29]: `type[BatchNorm2d]` is not a function.
+        # pyre-fixme[16]: `Tuple` has no attribute `__getitem__`.
         model = nn.BatchNorm2d(input_dim[1])
         model.train()
         tensor = torch.randn(input_dim)
         with self.assertRaises(AssertionError):
+            # pyre-fixme[29]: `type[repeat]` is not a function.
             update_bn_stats(model, itertools.repeat(tensor, 10), 20)
