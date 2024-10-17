@@ -22,7 +22,6 @@ class TestSqueezeExcitation(unittest.TestCase):
         """
         Test SE model builder.
         """
-        # pyre-fixme[29]: `type[product]` is not a function.
         for layer, num_channels, is_3d in itertools.product(
             (
                 SqueezeExcitation,
@@ -54,14 +53,12 @@ class TestSqueezeExcitation(unittest.TestCase):
                 self.assertEqual(
                     input_shape,
                     output_shape,
-                    # pyre-fixme[16]: `str` has no attribute `format`.
                     "Input shape {} is different from output shape {}".format(
                         input_shape, output_shape
                     ),
                 )
 
     @staticmethod
-    # pyre-fixme[11]: Annotation `int` is not defined as a type.
     def _get_inputs3d(num_channels: int = 8) -> Iterable[torch.Tensor]:
         """
         Provide different tensors as test cases.
@@ -114,7 +111,6 @@ class TestSqueezeExcitation(unittest.TestCase):
     @staticmethod
     def _get_inputs(
         num_channels: int = 8,
-        # pyre-fixme[11]: Annotation `bool` is not defined as a type.
         is_3d: bool = False,
     ) -> Iterable[torch.Tensor]:
         """

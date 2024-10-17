@@ -74,9 +74,6 @@ stat2 = {
 
 stat3 = {"": 0, "a2.b1": 40}
 
-# pyre-fixme[11]: Annotation `dict` is not defined as a type.
-# pyre-fixme[11]: Annotation `int` is not defined as a type.
-# pyre-fixme[11]: Annotation `str` is not defined as a type.
 ungrouped_stats: Dict[str, Dict[str, int]] = {
     "stat1": stat1,
     "stat2": stat2,
@@ -87,9 +84,7 @@ ungrouped_stats: Dict[str, Dict[str, int]] = {
 class A2B1(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.c1 = nn.Linear(10, 10)
-        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.c2 = nn.Linear(10, 10)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -99,7 +94,6 @@ class A2B1(nn.Module):
 class A2(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        # pyre-fixme[29]: `type[A2B1]` is not a function.
         self.b1 = A2B1()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -109,9 +103,7 @@ class A2(nn.Module):
 class A1B1C1(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        # pyre-fixme[29]: `type[Linear]` is not a function.
         self.d1 = nn.Linear(10, 10)
-        # pyre-fixme[29]: `type[ReLU]` is not a function.
         self.d2: "nn.Module" = nn.ReLU()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -121,7 +113,6 @@ class A1B1C1(nn.Module):
 class A1B1(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        # pyre-fixme[29]: `type[A1B1C1]` is not a function.
         self.c1 = A1B1C1()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -131,7 +122,6 @@ class A1B1(nn.Module):
 class A1(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        # pyre-fixme[29]: `type[A1B1]` is not a function.
         self.b1 = A1B1()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -141,9 +131,7 @@ class A1(nn.Module):
 class TestNet(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        # pyre-fixme[29]: `type[A1]` is not a function.
         self.a1 = A1()
-        # pyre-fixme[29]: `type[A2]` is not a function.
         self.a2 = A2()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -238,9 +226,7 @@ class TestPrintModelStatistics(unittest.TestCase):
         self.assertEqual(stats["a1.b1.c1.d1"]["stat2"], 0)
 
         # Test requiring children to be zero
-        # pyre-fixme[16]: `Dict` has no attribute `items`.
         modified_test = {mod: stats.copy() for mod, stats in test_statistics.items()}
-        # pyre-fixme[16]: `Dict` has no attribute `__setitem__`.
         modified_test["a1.b1.c1.d1.e1"] = {"stat1": 40}  # Non-zero child
         modified_test["a2.b1.c2.d1"] = {"stat1": 0}  # Zero child
 
@@ -295,7 +281,6 @@ class TestPrintModelStatistics(unittest.TestCase):
         }
 
         filled_stats = {"stat1": stat1, "stat2": stat2, "stat3": stat3}
-        # pyre-fixme[29]: `type[TestNet]` is not a function.
         model = TestNet()
         filled = _fill_missing_statistics(model, ungrouped_stats)
         self.assertEqual(filled_stats, filled)
@@ -305,7 +290,6 @@ class TestPrintModelStatistics(unittest.TestCase):
         Test the output of printing a model with statistics.
         """
 
-        # pyre-fixme[29]: `type[TestNet]` is not a function.
         model = TestNet()
         model_str = _model_stats_str(model, string_statistics)
 
@@ -395,11 +379,9 @@ class TestPrintModelStatistics(unittest.TestCase):
 
     def test_flop_count_table(self) -> None:
 
-        # pyre-fixme[29]: `type[TestNet]` is not a function.
         model = TestNet()
         inputs = (torch.randn((1, 10)),)
 
-        # pyre-fixme[29]: `type[FlopCountAnalysis]` is not a function.
         table = flop_count_table(FlopCountAnalysis(model, inputs))
 
         self.assertFalse(" a1 " in table)  # Wrapper skipping successful
@@ -429,9 +411,7 @@ class TestPrintModelStatistics(unittest.TestCase):
 
         # Test activations and no parameter shapes
         table = flop_count_table(
-            # pyre-fixme[29]: `type[FlopCountAnalysis]` is not a function.
             flops=FlopCountAnalysis(model, inputs),
-            # pyre-fixme[29]: `type[ActivationCountAnalysis]` is not a function.
             activations=ActivationCountAnalysis(model, inputs),
             show_param_shapes=False,
         )
@@ -461,11 +441,9 @@ class TestPrintModelStatistics(unittest.TestCase):
         Tests calculating model flops and outputing them in model print format.
         """
 
-        # pyre-fixme[29]: `type[TestNet]` is not a function.
         model = TestNet()
         inputs = (torch.randn((1, 10)),)
         model_str = flop_count_str(
-            # pyre-fixme[29]: `type[FlopCountAnalysis]` is not a function.
             FlopCountAnalysis(model, inputs).ancestor_mode("caller")
         )
 
@@ -515,9 +493,7 @@ class TestPrintModelStatistics(unittest.TestCase):
 
         # Test with activations
         model_str = flop_count_str(
-            # pyre-fixme[29]: `type[FlopCountAnalysis]` is not a function.
             FlopCountAnalysis(model, inputs).ancestor_mode("caller"),
-            # pyre-fixme[29]: `type[ActivationCountAnalysis]` is not a function.
             activations=ActivationCountAnalysis(model, inputs).ancestor_mode("caller"),
         )
 
@@ -563,13 +539,10 @@ class TestPrintModelStatistics(unittest.TestCase):
         # ")"
 
     def test_flop_count_empty(self) -> None:
-        # pyre-fixme[29]: `type[ReLU]` is not a function.
         model = nn.ReLU()
         inputs = (torch.randn((1, 10)),)
-        # pyre-fixme[29]: `type[FlopCountAnalysis]` is not a function.
         table = flop_count_table(FlopCountAnalysis(model, inputs))
         self.assertGreater(len(table), 0)
 
-        # pyre-fixme[29]: `type[FlopCountAnalysis]` is not a function.
         out = flop_count_str(FlopCountAnalysis(model, inputs))
         self.assertGreater(len(out), 0)
