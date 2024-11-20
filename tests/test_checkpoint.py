@@ -55,10 +55,16 @@ class TestCheckpointer(unittest.TestCase):
         Create a complex model.
         """
         m = nn.Module()
+        # pyre-fixme[16]: `Module` has no attribute `block1`.
         m.block1 = nn.Module()
+        # pyre-fixme[16]: `Module` has no attribute `layer1`.
+        # pyre-fixme[16]: `Tensor` has no attribute `layer1`.
         m.block1.layer1 = nn.Linear(2, 3)
+        # pyre-fixme[16]: `Module` has no attribute `layer2`.
         m.layer2 = nn.Linear(3, 2)
+        # pyre-fixme[16]: `Module` has no attribute `res`.
         m.res = nn.Module()
+        # pyre-fixme[16]: `Tensor` has no attribute `layer2`.
         m.res.layer2 = nn.Linear(3, 2)
 
         state_dict = OrderedDict()
@@ -79,6 +85,7 @@ class TestCheckpointer(unittest.TestCase):
     def test_loading_objects_with_expected_shape_mismatches(self) -> None:
         def _get_model() -> torch.nn.Module:
             m = nn.Sequential(nn.Conv2d(2, 2, 1))
+            # pyre-fixme[16]: `Sequential` has no attribute `qconfig`.
             m.qconfig = get_default_qat_qconfig("fbgemm")
             m = prepare_qat(m)
             return m

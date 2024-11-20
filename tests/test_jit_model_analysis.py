@@ -820,6 +820,7 @@ class TestJitModelAnalysis(unittest.TestCase):
                 return self.submod[0](x) + 1
 
         mod = A()
+        # pyre-fixme[16]: `A` has no attribute `submod`.
         mod.submod = nn.ModuleList([nn.Linear(3, 3)])
         analyzer = FlopCountAnalysis(model=mod, inputs=torch.rand(1, 3))
         analyzer.unsupported_ops_warnings(enabled=False)

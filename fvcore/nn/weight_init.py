@@ -15,8 +15,11 @@ def c2_xavier_fill(module: nn.Module) -> None:
     """
     # Caffe2 implementation of XavierFill in fact
     # corresponds to kaiming_uniform_ in PyTorch
+    # pyre-fixme[6]: For 1st argument expected `Tensor` but got `Union[Module, Tensor]`.
     nn.init.kaiming_uniform_(module.weight, a=1)
     if module.bias is not None:
+        # pyre-fixme[6]: For 1st argument expected `Tensor` but got `Union[Module,
+        #  Tensor]`.
         nn.init.constant_(module.bias, 0)
 
 
@@ -28,6 +31,9 @@ def c2_msra_fill(module: nn.Module) -> None:
     Args:
         module (torch.nn.Module): module to initialize.
     """
+    # pyre-fixme[6]: For 1st argument expected `Tensor` but got `Union[Module, Tensor]`.
     nn.init.kaiming_normal_(module.weight, mode="fan_out", nonlinearity="relu")
     if module.bias is not None:
+        # pyre-fixme[6]: For 1st argument expected `Tensor` but got `Union[Module,
+        #  Tensor]`.
         nn.init.constant_(module.bias, 0)
