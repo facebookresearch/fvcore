@@ -127,7 +127,6 @@ class TestCheckpointer(unittest.TestCase):
                 nn.DataParallel(self._create_model()),
             ),
         ]:
-
             with TemporaryDirectory() as f:
                 checkpointer = Checkpointer(trained_model, save_dir=f)
                 checkpointer.save("checkpoint_file")

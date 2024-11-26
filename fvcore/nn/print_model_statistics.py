@@ -81,7 +81,7 @@ def _pretty_statistics(
 
 
 def _group_by_module(
-    statistics: Dict[str, Dict[str, Any]]
+    statistics: Dict[str, Dict[str, Any]],
 ) -> Dict[str, Dict[str, Any]]:
     """
     Converts statistics organized first by statistic type and then by module

@@ -265,9 +265,11 @@ class TestTransforms(unittest.TestCase):
         for array_type, input_shape, init in itertools.product(
             [np.uint8, np.float32], ["hw", "hwc", "nhwc"], ["grid", "random"]
         ):
-            yield locals()["img_{}_{}".format(input_shape, init)].astype(
-                array_type
-            ), array_type, input_shape
+            yield (
+                locals()["img_{}_{}".format(input_shape, init)].astype(array_type),
+                array_type,
+                input_shape,
+            )
 
     def test_abstract(self):
         with self.assertRaises(TypeError):

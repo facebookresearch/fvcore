@@ -204,7 +204,9 @@ class TestHTTPIO(unittest.TestCase):
     def test_bad_args(self) -> None:
         with self.assertRaises(NotImplementedError):
             PathManager.copy(
-                self._remote_uri, self._remote_uri, foo="foo"  # type: ignore
+                self._remote_uri,
+                self._remote_uri,
+                foo="foo",  # type: ignore
             )
         with self.assertRaises(NotImplementedError):
             PathManager.exists(self._remote_uri, foo="foo")  # type: ignore

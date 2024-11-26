@@ -333,7 +333,6 @@ class TestPrintModelStatistics(unittest.TestCase):
         # ")"
 
     def test_model_stats_table(self) -> None:
-
         stat_columns = ["stat1", "stat2", "stat3"]
         table = _model_stats_table(string_statistics, stat_columns=stat_columns)
 
@@ -378,7 +377,6 @@ class TestPrintModelStatistics(unittest.TestCase):
         # "|   a2.b1       |   0     |   100   |   40    |"
 
     def test_flop_count_table(self) -> None:
-
         model = TestNet()
         inputs = (torch.randn((1, 10)),)
 
