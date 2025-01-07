@@ -5,7 +5,6 @@ from .activation_count import activation_count, ActivationCountAnalysis
 from .flop_count import flop_count, FlopCountAnalysis
 from .focal_loss import (
     sigmoid_focal_loss,
-    sigmoid_focal_loss_jit,
     sigmoid_focal_loss_star,
     sigmoid_focal_loss_star_jit,
 )

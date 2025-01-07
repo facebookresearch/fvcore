@@ -51,11 +51,6 @@ def sigmoid_focal_loss(
     return loss
 
 
-# pyre-fixme[9]: sigmoid_focal_loss_jit has type `ScriptModule`; used as
-#  `ScriptFunction[..., typing.Any]`.
-sigmoid_focal_loss_jit: "torch.jit.ScriptModule" = torch.jit.script(sigmoid_focal_loss)
-
-
 def sigmoid_focal_loss_star(
     inputs: torch.Tensor,
     targets: torch.Tensor,
@@ -96,10 +91,3 @@ def sigmoid_focal_loss_star(
         loss = loss.sum()
 
     return loss
-
-
-# pyre-fixme[9]: sigmoid_focal_loss_star_jit has type `ScriptModule`; used as
-#  `ScriptFunction[..., typing.Any]`.
-sigmoid_focal_loss_star_jit: "torch.jit.ScriptModule" = torch.jit.script(
-    sigmoid_focal_loss_star
-)
