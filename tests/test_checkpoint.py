@@ -293,6 +293,7 @@ class TestCheckpointer(unittest.TestCase):
                 os.path.join(f, "checkpoint_file.pth"),
             )
             fresh_checkpointer.load(fresh_checkpointer.get_checkpoint_file())
+            # pyre-fixme[6]: Incompatible parameter type: In call `torch._C._VariableFunctions.eq...
             self.assertTrue(torch.equal(m1[0].weight, m2[0].weight))
 
 
