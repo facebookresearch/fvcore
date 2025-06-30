@@ -6,7 +6,7 @@
 import logging
 import os
 from collections import defaultdict
-from typing import Any, cast, Dict, IO, Iterable, List, NamedTuple, Optional, Tuple
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Tuple
 
 import numpy as np
 import torch
@@ -125,8 +125,7 @@ class Checkpointer:
         assert os.path.basename(save_file) == basename, basename
         self.logger.info("Saving checkpoint to {}".format(save_file))
         with self.path_manager.open(save_file, "wb") as f:
-            # pyre-fixme[22]: The cast is redundant.
-            torch.save(data, cast(IO[bytes], f))
+            torch.save(data, f)
         self.tag_last_checkpoint(basename)
 
     def load(
@@ -250,8 +249,7 @@ class Checkpointer:
                 to torch.Tensor or numpy arrays.
         """
         with self.path_manager.open(f, "rb") as file:
-            # pyre-fixme[22]: The cast is redundant.
-            return torch.load(cast(IO[bytes], file), map_location=torch.device("cpu"))
+            return torch.load(file, map_location=torch.device("cpu"))
 
     def _load_model(self, checkpoint: Any) -> _IncompatibleKeys:
         """
