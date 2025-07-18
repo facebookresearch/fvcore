@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 # pyre-strict
+# pyre-ignore-all-errors[58]
 
 import torch
 from torch.nn import functional as F
