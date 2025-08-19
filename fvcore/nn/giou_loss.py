@@ -27,7 +27,8 @@ def giou_loss(
                  'sum': The output will be summed.
         eps (float): small number to prevent division by zero
     """
-
+    boxes1 = boxes1.float()
+    boxes2 = boxes2.float()
     x1, y1, x2, y2 = boxes1.unbind(dim=-1)
     x1g, y1g, x2g, y2g = boxes2.unbind(dim=-1)
 
