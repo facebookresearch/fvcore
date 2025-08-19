@@ -47,6 +47,19 @@ pip install -U 'git+https://github.com/facebookresearch/fvcore'
 git clone https://github.com/facebookresearch/fvcore
 pip install -e fvcore
 ```
+## Example of usage
+Some utilites provided by the fvcore repository is the ability to write and read in JSON.
+```
+from fvcore.common.file_io import PathManager
+
+data = {"key": "value"}
+
+# Write to a JSON file
+PathManager.write_json("data.json", data)
+
+# Read from a JSON file
+loaded_data = PathManager.read_json("data.json")
+```
 
 ## License
 
