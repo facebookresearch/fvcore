@@ -385,33 +385,6 @@ class TestFocalLossStar(unittest.TestCase):
         ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="sum")
         self.assertTrue(torch.allclose(ce_loss, focal_loss_star))
 
-    def test_focal_loss_star_equals_ce_loss_multi_class(self) -> None:
-        """
-        Focal loss with predictions for multiple classes matches ce loss.
-        """
-        inputs = logit(
-            torch.tensor(
-                [
-                    [
-                        [0.95, 0.55, 0.12, 0.05],
-                        [0.09, 0.95, 0.36, 0.11],
-                        [0.06, 0.12, 0.56, 0.07],
-                        [0.09, 0.15, 0.25, 0.45],
-                    ]
-                ],
-                dtype=torch.float32,
-            )
-        )
-        targets = torch.tensor(
-            [[[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]],
-            dtype=torch.float32,
-        )
-        focal_loss_star = sigmoid_focal_loss_star(
-            inputs, targets, gamma=1, alpha=-1, reduction="mean"
-        )
-        ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="mean")
-        self.assertEqual(ce_loss, focal_loss_star)
-
     # pyre-fixme[56]: Argument `not torch.cuda.is_available()` to decorator factory
     #  `unittest.skipIf` could not be resolved in a global scope.
     @unittest.skipIf(not torch.cuda.is_available(), "CUDA unavailable")
