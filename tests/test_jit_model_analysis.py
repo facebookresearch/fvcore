@@ -8,13 +8,14 @@ import typing
 import unittest
 import warnings
 from collections import Counter
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import torch
 import torch.nn as nn
 from fvcore.nn.flop_count import FlopCountAnalysis
 from fvcore.nn.jit_analysis import JitModelAnalysis
 from fvcore.nn.jit_handles import addmm_flop_jit, conv_flop_jit, Handle, linear_flop_jit
+from torch.nn import functional as F
 
 
 class NestedNetInnerModule(nn.Module):
@@ -286,20 +287,28 @@ class TraceWarningNet(nn.Module):
     will be skipped and raise a warning.
     """
 
+    class IntLinear(nn.Linear):
+        """
+        A linear that outputs int, therefore cannot be traced.
+        """
+
+        def forward(self, x) -> Union[float, int]:
+            return F.linear(x, self.weight, self.bias).item()
+
     def __init__(self) -> None:
         super().__init__()
         self.input_size = (10,)
         fc1_in, fc1_out = 10, 1
         fc2_in, fc2_out = 10, 10
 
-        self.fc1 = nn.Linear(in_features=fc1_in, out_features=fc1_out)
+        self.fc1 = TraceWarningNet.IntLinear(in_features=fc1_in, out_features=fc1_out)
         self.fc2 = nn.Linear(in_features=fc2_in, out_features=fc2_out)
 
         self.fc1_flops: int = fc1_in * fc1_out
         self.fc2_flops: int = fc2_in * fc2_out
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        y = self.fc1(x).item()
+        y = self.fc1(x)
         warnings.warn("Dummy RuntimeWarning.", RuntimeWarning)
         if y < 0.0:
             x = self.fc2(x)
@@ -810,6 +819,24 @@ class TestJitModelAnalysis(unittest.TestCase):
         self.assertTrue(any(skipeed_msg in s for s in cm.output))
         self.assertTrue(any(uncalled_msg in s for s in cm.output))
         self.assertTrue(any(uncalled_modules in s for s in cm.output))
+
+    def test_capture_intermediate_outputs(self) -> None:
+        class TestCaptureNet(nn.Module):
+            def __init__(self) -> None:
+                super().__init__()
+                self.fc1 = nn.Linear(10, 1)
+                self.fc2 = nn.Linear(10, 10)
+
+            def forward(self, x: torch.Tensor) -> torch.Tensor:
+                y = self.fc1(x)
+                del y  # unused by output
+                return self.fc2(x) + 2
+
+        model = TestCaptureNet()
+        inputs = (torch.randn((1, 10)),)
+        analyzer = FlopCountAnalysis(model=model, inputs=inputs)
+        _ = analyzer.total()
+        self.assertEqual(analyzer.uncalled_modules(), set())
 
     def test_skip_uncalled_containers_warnings(self) -> None:
         # uncalled containers should not warn
