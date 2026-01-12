@@ -723,6 +723,10 @@ class CropTransform(Transform):
             else:
                 cropped = [cropped]
             # one polygon may be cropped to multiple ones
+            if isinstance(cropped, geometry.MultiPolygon) or isinstance(
+                cropped, geometry.GeometryCollection
+            ):
+                cropped = cropped.geoms
             for poly in cropped:
                 # It could produce lower dimensional objects like lines or
                 # points, which we want to ignore
