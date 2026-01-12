@@ -143,13 +143,13 @@ def update_bn_stats(
     def get_bn_batch_size_hook(
         module: nn.Module, input: Tuple[torch.Tensor]
     ) -> Tuple[torch.Tensor]:
-        assert (
-            module not in batch_size_per_bn_layer
-        ), "Some BN layers are reused. This is not supported and probably not desired."
+        assert module not in batch_size_per_bn_layer, (
+            "Some BN layers are reused. This is not supported and probably not desired."
+        )
         x = input[0]
-        assert isinstance(
-            x, torch.Tensor
-        ), f"BN layer should take tensor as input. Got {input}"
+        assert isinstance(x, torch.Tensor), (
+            f"BN layer should take tensor as input. Got {input}"
+        )
         # consider spatial dimensions as batch as well
         batch_size = x.numel() // x.shape[1]
         batch_size_per_bn_layer[module] = batch_size

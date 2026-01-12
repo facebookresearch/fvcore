@@ -9,7 +9,6 @@ from typing import Any, Dict, Tuple
 
 import torch
 import torch.nn as nn
-
 from fvcore.nn.flop_count import _DEFAULT_SUPPORTED_OPS, flop_count, FlopCountAnalysis
 from fvcore.nn.jit_handles import Handle
 from torch.autograd.function import Function
@@ -74,9 +73,9 @@ class ConvNet(nn.Module):
             kwargs = {"output_padding": output_padding}
         else:
             conv_layers = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
-            assert (
-                output_padding == 0
-            ), "output_padding is not supported for un-transposed convolutions."
+            assert output_padding == 0, (
+                "output_padding is not supported for un-transposed convolutions."
+            )
             kwargs = {}
         convLayer = conv_layers[conv_dim - 1]
 

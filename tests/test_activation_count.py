@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Tuple
 
 import torch
 import torch.nn as nn
-
 from fvcore.nn.activation_count import activation_count, ActivationCountAnalysis
 from fvcore.nn.jit_handles import Handle
 from numpy import prod

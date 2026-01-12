@@ -187,10 +187,10 @@ class Transform(metaclass=ABCMeta):
 
             return wrapper
 
-        assert callable(
-            func
-        ), "You can only register a callable to a Transform. Got {} instead.".format(
-            func
+        assert callable(func), (
+            "You can only register a callable to a Transform. Got {} instead.".format(
+                func
+            )
         )
         argspec = inspect.getfullargspec(func)
         assert len(argspec.args) == 2, (
@@ -269,9 +269,9 @@ class TransformList(Transform):
         # complexities in e.g, telling whether a TransformList contains certain Transform
         tfms_flatten = []
         for t in transforms:
-            assert isinstance(
-                t, Transform
-            ), f"TransformList requires a list of Transform. Got type {type(t)}!"
+            assert isinstance(t, Transform), (
+                f"TransformList requires a list of Transform. Got type {type(t)}!"
+            )
             if isinstance(t, TransformList):
                 tfms_flatten.extend(t.transforms)
             else:
@@ -528,9 +528,9 @@ class ScaleTransform(Transform):
             h, w = img.shape[:2]
         else:
             raise ("Unsupported input with shape of {}".format(img.shape))
-        assert (
-            self.h == h and self.w == w
-        ), "Input size mismatch h w {}:{} -> {}:{}".format(self.h, self.w, h, w)
+        assert self.h == h and self.w == w, (
+            "Input size mismatch h w {}:{} -> {}:{}".format(self.h, self.w, h, w)
+        )
         interp_method = interp if interp is not None else self.interp
         # Option of align_corners is only supported for linear, bilinear,
         # and bicubic.
@@ -736,9 +736,9 @@ class CropTransform(Transform):
         return [self.apply_coords(p) for p in cropped_polygons]
 
     def inverse(self) -> Transform:
-        assert (
-            self.orig_w is not None and self.orig_h is not None
-        ), "orig_w, orig_h are required for CropTransform to be invertible!"
+        assert self.orig_w is not None and self.orig_h is not None, (
+            "orig_w, orig_h are required for CropTransform to be invertible!"
+        )
         pad_x1 = self.orig_w - self.x0 - self.w
         pad_y1 = self.orig_h - self.y0 - self.h
         return PadTransform(
@@ -800,9 +800,9 @@ class PadTransform(Transform):
         return coords
 
     def inverse(self) -> Transform:
-        assert (
-            self.orig_w is not None and self.orig_h is not None
-        ), "orig_w, orig_h are required for PadTransform to be invertible!"
+        assert self.orig_w is not None and self.orig_h is not None, (
+            "orig_w, orig_h are required for PadTransform to be invertible!"
+        )
         neww = self.orig_w + self.x0 + self.x1
         newh = self.orig_h + self.y0 + self.y1
         return CropTransform(

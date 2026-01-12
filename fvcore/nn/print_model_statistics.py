@@ -10,9 +10,7 @@ import torch
 from torch import nn
 
 from .activation_count import ActivationCountAnalysis
-
 from .flop_count import FlopCountAnalysis
-
 from .parameter_count import parameter_count
 
 
