@@ -49,7 +49,7 @@ def _format_size(x: int, sig_figs: int = 3, hide_zero: bool = False) -> str:
         return fmt(x / 1e6) + "M"
     if abs(x) > 1e2:
         return fmt(x / 1e3) + "K"
-    return str(x)
+    return fmt(x)
 
 
 def _pretty_statistics(
