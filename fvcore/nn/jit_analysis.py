@@ -113,6 +113,22 @@ def _named_modules_without_dup(model: nn.Module) -> Iterator[Tuple[str, nn.Modul
             yield name, mod
 
 
+def _maybe_flatten(object) -> List[torch.Tensor]:
+    # Try its best to find all tensors within the object and put them
+    # into a flattened list. Custom stuctures cannot be recognized.
+    # TODO: improve coverage of other structures, e.g. by using __dict__
+    ret = []
+    if isinstance(object, torch.Tensor):
+        ret.append(object)
+    if isinstance(object, (list, tuple)):
+        for x in object:
+            ret.extend(_maybe_flatten(x))
+    if isinstance(object, dict):
+        for x in object.values():
+            ret.extend(_maybe_flatten(x))
+    return ret
+
+
 def _get_scoped_trace_graph(
     module: nn.Module,
     inputs: Union[Tensor, Tuple[Tensor, ...]],
@@ -151,8 +167,11 @@ def _get_scoped_trace_graph(
             tracing_state = torch._C._get_tracing_state()
             if tracing_state:
                 tracing_state.pop_scope()
+            # Don't save all intermediate tensors on GPU. There could be a lot.
+            all_output_tensors.extend([x.cpu() for x in _maybe_flatten(outputs)])
             return outputs
 
+    all_output_tensors: List[torch.Tensor] = []
     hook_handles: List[Any] = []
 
     def register_hooks(mod: nn.Module, name: str) -> None:
@@ -174,6 +193,27 @@ def _get_scoped_trace_graph(
     for name, mod in _named_modules_without_dup(module):
         name = aliases[mod]
         register_hooks(mod, name)
+
+    class WrapperModule(nn.Module):
+        def __init__(self, module):
+            super().__init__()
+            self._wrapped = module
+
+        def forward(self, *args):
+            # Some intermediate tensors may not be directly connected to the final model
+            # output, for example due to:
+            # * control flow not observed by tracing
+            # * tensor -> numpy/int conversion
+            # Operations that produce such tensors will get pruned by pytorch's DCE,
+            # but we want to include them in the graph.
+            # There is currently no way to disable DCE. So we capture all tensors we can
+            # and return them here, to reduce missing flops.
+            outputs = self._wrapped(*args)
+            return outputs, all_output_tensors
+
+    # Hooks are registered before wrapping with their original scope names, so
+    # adding a wrapper here won't affect scopes.
+    module = WrapperModule(module)
 
     graph, _ = _get_trace_graph(module, inputs)
 
