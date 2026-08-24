@@ -57,7 +57,7 @@ class ConstantParamScheduler(ParamScheduler):
         self._value = value
 
     def __call__(self, where: float) -> float:
-        if where >= 1.0:
+        if where > 1.0:
             raise RuntimeError(
                 f"where in ParamScheduler must be in [0, 1]: got {where}"
             )
