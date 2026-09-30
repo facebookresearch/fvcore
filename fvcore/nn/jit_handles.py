@@ -221,11 +221,13 @@ def matmul_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     Count flops for matmul.
     """
     # Inputs should be a list of length 2.
-    # Inputs contains the shapes of two matrices.
     input_shapes = [get_shape(v) for v in inputs]
     assert len(input_shapes) == 2, input_shapes
-    assert input_shapes[0][-1] == input_shapes[1][-2], input_shapes
-    flop = prod(input_shapes[0]) * input_shapes[-1][-1]
+    # A vector on the right has no penultimate dimension. Each output
+    # element still requires a dot product over the shared input dimension.
+    right_contract_dim = -1 if len(input_shapes[1]) == 1 else -2
+    assert input_shapes[0][-1] == input_shapes[1][right_contract_dim], input_shapes
+    flop = prod(get_shape(outputs[0])) * input_shapes[0][-1]
     return flop
 
 

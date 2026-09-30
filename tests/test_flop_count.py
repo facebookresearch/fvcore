@@ -601,6 +601,22 @@ class TestFlopCountAnalysis(unittest.TestCase):
             flop_dict, gt_dict, "Matmul operation failed to pass the flop count test."
         )
 
+    def test_matmul_vectors(self) -> None:
+        """Matmul counts vector operands, including batched matrices."""
+        cases = [
+            ((10,), (10,), 10),
+            ((20, 10), (10,), 200),
+            ((2, 20, 10), (10,), 400),
+            ((10,), (10, 20), 200),
+            ((10,), (2, 10, 20), 400),
+        ]
+        for left, right, expected in cases:
+            with self.subTest(left=left, right=right):
+                inputs = (torch.randn(*left), torch.randn(*right))
+                self.assertEqual(
+                    FlopCountAnalysis(MatmulNet(), inputs).total(), expected
+                )
+
     def test_matmul_broadcast(self) -> None:
         """
         Test flop count for operation matmul.
