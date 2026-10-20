@@ -92,3 +92,54 @@ class TestPreciseBN(unittest.TestCase):
         tensor = torch.randn(input_dim)
         with self.assertRaises(AssertionError):
             update_bn_stats(model, itertools.repeat(tensor, 10), 20)
+
+        self.assertEqual(model.momentum, 0.1)
+        self.assertEqual(len(model._forward_pre_hooks), 0)
+        model(tensor)
+
+    def test_precise_bn_error_cleanup(self) -> None:
+        for failure in ["forward", "loader"]:
+            with self.subTest(failure=failure):
+                model = nn.Sequential(nn.BatchNorm1d(2), nn.BatchNorm1d(2))
+                model[0].momentum = 0.3
+                model[1].momentum = None
+                tensor = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+                hook_calls = []
+                caller_hook = model[0].register_forward_pre_hook(
+                    lambda module, inputs: hook_calls.append(module)
+                )
+
+                def fail_forward(module, inputs, output):
+                    raise RuntimeError("forward failed")
+
+                def fail_loader():
+                    yield tensor
+                    raise RuntimeError("loader failed")
+
+                failing_hook = (
+                    model.register_forward_hook(fail_forward)
+                    if failure == "forward"
+                    else None
+                )
+                try:
+                    with self.assertRaisesRegex(RuntimeError, failure + " failed"):
+                        update_bn_stats(
+                            model,
+                            [tensor] if failure == "forward" else fail_loader(),
+                            num_iters=2,
+                        )
+                finally:
+                    if failing_hook is not None:
+                        failing_hook.remove()
+
+                self.assertEqual([bn.momentum for bn in model], [0.3, None])
+                self.assertEqual(list(model[0]._forward_pre_hooks), [caller_hook.id])
+                self.assertEqual(len(model[1]._forward_pre_hooks), 0)
+                self.assertEqual(len(hook_calls), 1)
+                model(tensor)
+                update_bn_stats(model, [tensor], num_iters=1)
+                self.assertEqual(len(hook_calls), 3)
+                self.assertEqual([bn.momentum for bn in model], [0.3, None])
+                self.assertEqual(list(model[0]._forward_pre_hooks), [caller_hook.id])
+                self.assertEqual(len(model[1]._forward_pre_hooks), 0)
+                caller_hook.remove()
