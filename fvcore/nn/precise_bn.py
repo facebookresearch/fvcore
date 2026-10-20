@@ -143,13 +143,13 @@ def update_bn_stats(
     def get_bn_batch_size_hook(
         module: nn.Module, input: Tuple[torch.Tensor]
     ) -> Tuple[torch.Tensor]:
-        assert module not in batch_size_per_bn_layer, (
-            "Some BN layers are reused. This is not supported and probably not desired."
-        )
+        assert (
+            module not in batch_size_per_bn_layer
+        ), "Some BN layers are reused. This is not supported and probably not desired."
         x = input[0]
-        assert isinstance(x, torch.Tensor), (
-            f"BN layer should take tensor as input. Got {input}"
-        )
+        assert isinstance(
+            x, torch.Tensor
+        ), f"BN layer should take tensor as input. Got {input}"
         # consider spatial dimensions as batch as well
         batch_size = x.numel() // x.shape[1]
         batch_size_per_bn_layer[module] = batch_size
@@ -159,39 +159,42 @@ def update_bn_stats(
         bn.register_forward_pre_hook(get_bn_batch_size_hook) for bn in bn_layers
     ]
 
-    estimators = [
-        _PopulationVarianceEstimator(bn.running_mean, bn.running_var)
-        for bn in bn_layers
-    ]
+    try:
+        estimators = [
+            _PopulationVarianceEstimator(bn.running_mean, bn.running_var)
+            for bn in bn_layers
+        ]
 
-    ind = -1
-    for inputs in tqdm.tqdm(
-        itertools.islice(data_loader, num_iters),
-        total=num_iters,
-        disable=progress != "tqdm",
-    ):
-        ind += 1
-        batch_size_per_bn_layer.clear()
-        model(inputs)
+        ind = -1
+        for inputs in tqdm.tqdm(
+            itertools.islice(data_loader, num_iters),
+            total=num_iters,
+            disable=progress != "tqdm",
+        ):
+            ind += 1
+            batch_size_per_bn_layer.clear()
+            model(inputs)
+
+            for i, bn in enumerate(bn_layers):
+                # Accumulates the bn stats.
+                batch_size = batch_size_per_bn_layer.get(bn, None)
+                if batch_size is None:
+                    continue  # the layer was unused in this forward
+                estimators[i].update(bn.running_mean, bn.running_var, batch_size)
+        assert ind == num_iters - 1, (
+            "update_bn_stats is meant to run for {} iterations, "
+            "but the dataloader stops at {} iterations.".format(num_iters, ind)
+        )
 
         for i, bn in enumerate(bn_layers):
-            # Accumulates the bn stats.
-            batch_size = batch_size_per_bn_layer.get(bn, None)
-            if batch_size is None:
-                continue  # the layer was unused in this forward
-            estimators[i].update(bn.running_mean, bn.running_var, batch_size)
-    assert ind == num_iters - 1, (
-        "update_bn_stats is meant to run for {} iterations, "
-        "but the dataloader stops at {} iterations.".format(num_iters, ind)
-    )
-
-    for i, bn in enumerate(bn_layers):
-        # Sets the precise bn stats.
-        bn.running_mean = estimators[i].pop_mean
-        bn.running_var = estimators[i].pop_var
-        bn.momentum = momentum_actual[i]
-    for hook in hooks_to_remove:
-        hook.remove()
+            # Sets the precise bn stats.
+            bn.running_mean = estimators[i].pop_mean
+            bn.running_var = estimators[i].pop_var
+    finally:
+        for i, bn in enumerate(bn_layers):
+            bn.momentum = momentum_actual[i]
+        for hook in hooks_to_remove:
+            hook.remove()
 
 
 def get_bn_modules(model: nn.Module) -> List[nn.Module]:
