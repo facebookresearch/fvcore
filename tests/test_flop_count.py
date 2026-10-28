@@ -710,6 +710,44 @@ class TestFlopCountAnalysis(unittest.TestCase):
             "Einsum operation ntg,ncg->nct failed to pass the flop count test.",
         )
 
+    def test_einsum_batch_broadcast(self) -> None:
+        for equation in ["nct,ncp->ntp", "ntg,ncg->nct"]:
+            for left_batch, right_batch, output_batch in [
+                (1, 4, 4),
+                (4, 1, 4),
+                (4, 4, 4),
+                (1, 1, 1),
+                (1, 0, 0),
+                (0, 1, 0),
+                (0, 0, 0),
+            ]:
+                with self.subTest(
+                    equation=equation, left_batch=left_batch, right_batch=right_batch
+                ):
+                    if equation == "nct,ncp->ntp":
+                        x = torch.ones(left_batch, 5, 2)
+                        y = torch.ones(right_batch, 5, 3)
+                        bmm_inputs = (
+                            x.expand(output_batch, 5, 2).transpose(1, 2),
+                            y.expand(output_batch, 5, 3),
+                        )
+                    else:
+                        x = torch.ones(left_batch, 2, 5)
+                        y = torch.ones(right_batch, 3, 5)
+                        bmm_inputs = (
+                            y.expand(output_batch, 3, 5),
+                            x.expand(output_batch, 2, 5).transpose(1, 2),
+                        )
+                    model = EinsumNet(equation)
+                    self.assertTrue(torch.equal(model(x, y), torch.bmm(*bmm_inputs)))
+                    expected = output_batch * 2 * 3 * 5
+                    self.assertEqual(
+                        FlopCountAnalysis(BMMNet(), bmm_inputs).total(), expected
+                    )
+                    analysis = FlopCountAnalysis(model, (x, y))
+                    self.assertEqual(analysis.total(), expected)
+                    self.assertEqual(analysis.unsupported_ops(), Counter())
+
     def test_batchnorm(self) -> None:
         """
         Test flop count for operation batchnorm. The test cases include

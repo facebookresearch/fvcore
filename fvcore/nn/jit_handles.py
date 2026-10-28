@@ -195,13 +195,15 @@ def einsum_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
     equation = equation.translate(mapping)
 
     if equation == "abc,abd->acd":
-        n, c, t = input_shapes[0]
+        _, c, t = input_shapes[0]
+        n = get_shape(outputs[0])[0]
         p = input_shapes[-1][-1]
         flop = n * c * t * p
         return flop
 
     elif equation == "abc,adc->adb":
-        n, t, g = input_shapes[0]
+        _, t, g = input_shapes[0]
+        n = get_shape(outputs[0])[0]
         c = input_shapes[-1][1]
         flop = n * t * g * c
         return flop
